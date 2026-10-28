@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publish or Perish</title>
+<link rel="icon" href="data:,">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
+</script>
+<style>
+:root {
+  --ink: #1f2a1f; --sub: #5d6b5a; --card: rgba(255, 252, 243, 0.94); --line: #e3d9bf;
+  --green: #4caf50; --gold: #e8a923; --red: #e05244; --blue: #3b82c4; --amber: #f0a020;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd8f5;
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; color: var(--ink); }
+#scene { position: fixed; inset: 0; }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: 16px;
+  box-shadow: 0 6px 18px rgba(40, 50, 30, 0.18); }
+code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monospace; }
+
+/* 左上: レベルとお金 */
+#status { position: fixed; left: 16px; top: 16px; padding: 12px 16px; display: flex; gap: 14px; align-items: center; }
+#lv { width: 58px; height: 58px; border-radius: 50%; background: linear-gradient(160deg, #ffd45a, #e8a923);
+  display: grid; place-items: center; color: #5a3a00; font-weight: 800; font-size: 13px; line-height: 1;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.15); text-align: center; }
+#lv b { display: block; font-size: 24px; }
+#title { font-weight: 700; font-size: 15px; }
+#xpbar { width: 180px; height: 10px; border-radius: 6px; background: #eadfc4; margin: 5px 0 3px; overflow: hidden; }
+#xpfill { height: 100%; width: 0; background: linear-gradient(90deg, #7bc96f, #3fa34d); transition: width .6s; }
+#xptext { font-size: 11px; color: var(--sub); }
+#money { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 26px; padding-left: 10px;
+  border-left: 2px solid var(--line); }
+#money.bump { animation: bump .4s; }
+@keyframes bump { 40% { transform: scale(1.18); } }
+
+/* 右上: ROS の状態 */
+#ros { position: fixed; right: 16px; top: 16px; padding: 10px 14px; font-size: 13px; min-width: 250px; }
+#ros .row { display: flex; justify-content: space-between; gap: 12px; margin: 2px 0; }
+#ros .k { color: var(--sub); }
+.pill { display: inline-block; padding: 1px 10px; border-radius: 99px; font-weight: 700; font-size: 12px; }
+.pill.auto { background: #d9f5d3; color: #237a2a; animation: glow 1.6s infinite; }
+.pill.cli { background: #ffe9c2; color: #8a5600; }
+.pill.off { background: #eee; color: #888; }
+.pill.bad { background: #ffd9d4; color: #a3271a; }
+@keyframes glow { 50% { box-shadow: 0 0 0 4px rgba(76, 175, 80, .25); } }
+
+/* 右: 課題 */
+#quest { position: fixed; right: 16px; top: 128px; width: 370px; max-height: calc(100vh - 220px); overflow-y: auto; padding: 14px 16px; }
+#quest h2 { margin: 0; font-size: 17px; }
+#quest .lesson { font-size: 12px; color: var(--sub); margin: 2px 0 10px; }
+#stagebar { display: flex; gap: 4px; margin-bottom: 8px; }
+#stagebar span { flex: 1; height: 6px; border-radius: 3px; background: #eadfc4; }
+#stagebar span.done { background: var(--green); }
+#stagebar span.now { background: var(--gold); }
+.m { border-top: 1px dashed var(--line); padding: 9px 0; }
+.m .head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.m .check { width: 20px; height: 20px; border-radius: 6px; border: 2px solid #c9bc98; flex: none; display: grid; place-items: center; }
+.m.done .check { background: var(--green); border-color: var(--green); color: #fff; }
+.m.done .head { color: var(--sub); text-decoration: line-through; }
+.m .reward { margin-left: auto; font-size: 12px; color: #9a6b00; font-weight: 700; }
+.m .bar { height: 7px; border-radius: 4px; background: #eadfc4; margin: 6px 0 2px 28px; overflow: hidden; }
+.m .bar i { display: block; height: 100%; background: var(--gold); transition: width .4s; }
+.m .num { font-size: 11px; color: var(--sub); margin-left: 28px; }
+.m .desc { font-size: 12.5px; line-height: 1.6; margin: 6px 0 0 28px; white-space: pre-wrap; }
+.m .hint { margin: 6px 0 0 28px; background: #263238; color: #d7f5c9; border-radius: 8px; padding: 7px 34px 7px 10px;
+  font-size: 11.5px; position: relative; word-break: break-all; }
+.m .hint button { position: absolute; right: 4px; top: 4px; border: 0; border-radius: 6px; background: #445a63; color: #fff;
+  font-size: 11px; padding: 2px 6px; cursor: pointer; }
+#upcoming { margin-top: 10px; font-size: 12px; color: #a39a80; }
+#upcoming div { margin: 3px 0; }
+
+/* 左下: ログ */
+#log { position: fixed; left: 16px; bottom: 16px; width: 560px; max-width: calc(100vw - 420px); padding: 8px 12px;
+  background: rgba(24, 32, 30, 0.86); color: #cfe8cf; border-radius: 12px; font-size: 12px; line-height: 1.55; }
+#log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#log .ng { color: #ffb4a8; }
+#log .t { color: #7b9a7b; margin-right: 8px; }
+
+/* 右下: ボタン */
+#buttons { position: fixed; right: 16px; bottom: 16px; display: flex; gap: 8px; }
+.btn { border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 9px 14px; font-weight: 700;
+  font-size: 14px; cursor: pointer; color: var(--ink); box-shadow: 0 4px 0 #d8caa3; font-family: inherit; }
+.btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #d8caa3; }
+.btn .badge { background: var(--gold); color: #fff; border-radius: 99px; padding: 0 7px; font-size: 11px; margin-left: 4px; }
+
+/* お店・実績 */
+.modal { position: fixed; inset: 0; background: rgba(30, 40, 30, .35); display: none; place-items: center; z-index: 20; }
+.modal.open { display: grid; }
+.modal .card { width: min(560px, 92vw); max-height: 80vh; overflow-y: auto; padding: 18px 20px; }
+.modal h2 { margin: 0 0 10px; font-size: 19px; display: flex; justify-content: space-between; }
+.modal h2 button { border: 0; background: none; font-size: 22px; cursor: pointer; color: var(--sub); }
+.item { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px dashed var(--line); }
+.item .name { font-weight: 700; }
+.item .d { font-size: 12px; color: var(--sub); }
+.item .btn { margin-left: auto; white-space: nowrap; }
+.item .btn:disabled { opacity: .45; cursor: default; }
+.ach { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.ach div { border: 2px solid var(--line); border-radius: 12px; padding: 10px; font-size: 12px; color: var(--sub); background: #fbf7ea; }
+.ach div b { display: block; font-size: 14px; color: #b5ab90; }
+.ach div.got { border-color: var(--gold); background: #fff6d8; color: var(--ink); }
+.ach div.got b { color: #9a6b00; }
+
+/* 配線図 */
+.modal .card.wide { width: min(860px, 94vw); }
+.legend { font-size: 12px; color: var(--sub); margin-bottom: 8px; }
+.wire { display: grid; grid-template-columns: 1fr 260px 1fr; align-items: center; gap: 0; padding: 8px 0; border-top: 1px dashed var(--line); }
+.wire .ends { display: flex; flex-direction: column; gap: 4px; }
+.wire .ends.r { align-items: flex-start; }
+.wire .ends.l { align-items: flex-end; }
+.node { font-family: "Cascadia Code", "DejaVu Sans Mono", monospace; font-size: 12px; padding: 3px 9px; border-radius: 8px; border: 2px solid; background: #fff; }
+.node.player { border-color: #4caf50; } .node.cli { border-color: #f0a020; } .node.farm { border-color: #3b82c4; } .node.tool { border-color: #bbb; color: #888; }
+.node.none { border-style: dashed; border-color: #e05244; color: #e05244; }
+.mid { position: relative; text-align: center; }
+.mid svg { position: absolute; left: 0; right: 0; top: 50%; width: 100%; height: 4px; transform: translateY(-50%); overflow: visible; }
+.mid line { stroke: #9a8f70; stroke-width: 2.5; stroke-dasharray: 6 6; animation: flow linear infinite; }
+.mid.dead line { stroke: #e05244; animation: none; opacity: .5; }
+@keyframes flow { to { stroke-dashoffset: -24; } }
+.pill2 { position: relative; display: inline-block; background: #263238; color: #d7f5c9; border-radius: 99px; padding: 4px 12px;
+  font-family: "Cascadia Code", "DejaVu Sans Mono", monospace; font-size: 12px; }
+.pill2 small { display: block; color: #9fc49a; font-size: 10.5px; }
+.warnline { grid-column: 1 / 4; margin-top: 4px; font-size: 12.5px; color: #a3271a; background: #ffe9e6; border-radius: 8px; padding: 5px 10px; }
+.warnline b { color: #237a2a; }
+
+/* 通知 */
+#toasts { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 30; pointer-events: none; }
+.toast { padding: 10px 22px; border-radius: 14px; background: var(--card); border: 2px solid var(--gold); text-align: center;
+  box-shadow: 0 8px 22px rgba(0,0,0,.2); animation: drop .45s cubic-bezier(.2, 1.4, .4, 1), fade .5s 3.6s forwards; }
+.toast b { display: block; font-size: 16px; }
+.toast span { font-size: 13px; color: var(--sub); }
+.toast.achievement { border-color: #9b6bd6; }
+.toast.stage { border-color: var(--green); }
+@keyframes drop { from { transform: translateY(-30px) scale(.9); opacity: 0; } }
+@keyframes fade { to { opacity: 0; transform: translateY(-10px); } }
+#banner { position: fixed; inset: 0; display: none; place-items: center; z-index: 25; pointer-events: none; }
+#banner.show { display: grid; }
+#banner div { background: linear-gradient(160deg, #ffe27a, #f0a020); color: #4a2c00; padding: 22px 60px; border-radius: 22px;
+  text-align: center; box-shadow: 0 16px 40px rgba(0,0,0,.25); animation: pop .7s cubic-bezier(.2, 1.6, .4, 1); }
+#banner b { display: block; font-size: 40px; }
+@keyframes pop { from { transform: scale(.3) rotate(-8deg); opacity: 0; } }
+
+/* マスの情報 */
+#tip { position: fixed; pointer-events: none; padding: 8px 11px; font-size: 12px; line-height: 1.55; display: none; z-index: 10; }
+#tip .mono { color: var(--blue); }
+.float { position: fixed; pointer-events: none; font-weight: 800; font-size: 20px; color: #fff; z-index: 9;
+  text-shadow: 0 2px 0 #7a5200, 0 0 6px rgba(0,0,0,.4); animation: rise 1.4s ease-out forwards; }
+@keyframes rise { to { transform: translateY(-60px); opacity: 0; } }
+#connect { position: fixed; inset: 0; display: grid; place-items: center; z-index: 40; background: rgba(159, 216, 245, .7); }
+#connect .card { padding: 22px 28px; max-width: 520px; line-height: 1.7; }
+#connect.hide { display: none; }
+#sound { position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); font-size: 12px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+
+<div id="status" class="card">
+  <div id="lv">Lv<b>1</b></div>
+  <div>
+    <div id="title">見習い農家</div>
+    <div id="xpbar"><div id="xpfill"></div></div>
+    <div id="xptext">0 / 100 XP</div>
+  </div>
+  <div id="money"><svg width="26" height="26" viewBox="0 0 26 26"><circle cx="13" cy="13" r="11" fill="#f5c542" stroke="#c48a10" stroke-width="2"/><text x="13" y="18" text-anchor="middle" font-size="13" font-weight="800" fill="#9a6400">G</text></svg><span id="moneyv">0</span></div>
+</div>
+
+<div id="ros" class="card">
+  <div class="row"><span class="k">接続</span><span id="conn" class="pill off">未接続</span></div>
+  <div class="row"><span class="k">運転</span><span id="mode" class="pill off">停止中</span></div>
+  <div class="row"><span class="k">あなたのノード</span><span id="players" class="mono">なし</span></div>
+  <div class="row"><span class="k">ロボット</span><span id="botinfo">-</span></div>
+</div>
+
+<div id="quest" class="card">
+  <div id="stagebar"></div>
+  <h2 id="stagetitle">-</h2>
+  <div class="lesson" id="lesson"></div>
+  <div id="missions"></div>
+  <div id="upcoming"></div>
+</div>
+
+<div id="log"></div>
+
+<div id="buttons">
+  <button class="btn" id="speedbtn">時間 ×1</button>
+  <button class="btn" id="wirebtn">配線 <span class="badge" id="wirewarn" style="display:none;background:#e05244">!</span></button>
+  <button class="btn" id="shopbtn">お店</button>
+  <button class="btn" id="achbtn">実績 <span class="badge" id="achcount">0</span></button>
+  <button class="btn" id="soundbtn">音: 切</button>
+</div>
+
+<div class="modal" id="shop"><div class="card"><h2>お店 <button data-close>×</button></h2><div id="shopitems"></div></div></div>
+<div class="modal" id="wires"><div class="card wide"><h2>配線図 <button data-close>×</button></h2>
+  <div class="legend">送り手 → topic (頻度 ・ 1 秒あたりのデータ量) → 受け手。点線が流れる速さは頻度に比例する。</div>
+  <div id="wireitems"></div></div></div>
+<div class="modal" id="achs"><div class="card"><h2>実績 <button data-close>×</button></h2><div class="ach" id="achitems"></div></div></div>
+<div id="toasts"></div>
+<div id="banner"><div><span id="bannersub">LEVEL UP</span><b id="bannertext">Lv 2</b></div></div>
+<div id="tip" class="card"></div>
+<div id="connect"><div class="card">
+  <b>農場に接続しています…</b><br>
+  ターミナルで次を起動してください。<br>
+  <code>ros2 launch publish_or_perish farm.launch.xml</code><br>
+  <span style="font-size:12px;color:#5d6b5a">rosbridge (ポート 9090) につながると自動で始まります。</span>
+</div></div>
+
+<script type="module" src="./app.js"></script>
+</body>
+</html>

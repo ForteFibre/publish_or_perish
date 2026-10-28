@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publish or Perish 大会モード</title>
+<link rel="icon" href="data:,">
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
+</script>
+<style>
+:root { --ink: #1f2a1f; --sub: #5d6b5a; --card: rgba(255, 252, 243, 0.94); --line: #e3d9bf; --gold: #e8a923; --green: #4caf50; --red: #e05244; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd8f5;
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif; color: var(--ink); }
+#scene { position: fixed; inset: 0; }
+.card { background: var(--card); border: 2px solid var(--line); border-radius: 16px; box-shadow: 0 6px 18px rgba(40, 50, 30, .18); }
+#timer { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); padding: 8px 28px; text-align: center; }
+#timer .phase { display: inline-block; padding: 1px 12px; border-radius: 99px; background: #ffe9c2; color: #8a5600; font-weight: 700; font-size: 13px; }
+#timer b { display: block; font-size: 42px; font-variant-numeric: tabular-nums; line-height: 1.1; }
+#score { position: fixed; left: 16px; top: 16px; padding: 12px 18px; min-width: 200px; }
+#score .k { font-size: 12px; color: var(--sub); }
+#score b { font-size: 34px; }
+#score .best { font-size: 12px; color: var(--sub); }
+#checks { position: fixed; right: 16px; top: 16px; width: 300px; padding: 12px 16px; font-size: 13px; }
+#checks h3 { margin: 0 0 6px; font-size: 15px; }
+#checks div { display: flex; gap: 8px; align-items: center; padding: 4px 0; border-top: 1px dashed var(--line); }
+#checks i { width: 18px; height: 18px; border-radius: 5px; flex: none; display: grid; place-items: center; font-style: normal; color: #fff; font-size: 12px; }
+#checks .ok i { background: var(--green); }
+#checks .ng i { background: var(--red); }
+#checks .wait i { background: #d8caa3; }
+#note { position: fixed; left: 16px; bottom: 16px; padding: 8px 12px; font-size: 12px; color: var(--sub); }
+</style>
+</head>
+<body>
+<div id="scene"></div>
+<div id="score" class="card"><div class="k">得点</div><b>0</b><div class="best">部内ベスト 120 点 (仮)</div></div>
+<div id="timer" class="card"><span class="phase">セッティング</span><b>1:00</b></div>
+<div id="checks" class="card">
+  <h3>車検</h3>
+  <div class="ok"><i>✓</i>launch ファイルを提出した</div>
+  <div class="ok"><i>✓</i>/md0/motor0〜2/target が出ている</div>
+  <div class="ok"><i>✓</i>/imu/raw_data を受けている</div>
+  <div class="wait"><i></i>非常停止で 0.5 秒以内に止まる</div>
+</div>
+<div id="note" class="card">見た目の試作: SRC2026 のフィールドとロボットを MJCF から読み込んで描いている (動きはまだない)</div>
+<script type="module" src="./match.js"></script>
+</body>
+</html>

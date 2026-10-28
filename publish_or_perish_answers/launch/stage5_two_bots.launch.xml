@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<!--
+  ステージ 5 の解答例: 同じ農家ノードを namespace だけ変えて 2 つ起動し, 畑を左右で分担する.
+  ノードの中の topic 名は / なし (pose, cmd_vel, ...) なので, bot1 / bot2 の下につながる.
+-->
+<launch>
+  <node pkg="publish_or_perish_answers" exec="stage3_farmer" name="farmer" namespace="bot1" output="screen">
+    <param name="x_min" value="0"/>
+    <param name="x_max" value="4"/>
+  </node>
+  <node pkg="publish_or_perish_answers" exec="stage3_farmer" name="farmer" namespace="bot2" output="screen">
+    <param name="x_min" value="4"/>
+    <param name="x_max" value="100"/>
+  </node>
+</launch>

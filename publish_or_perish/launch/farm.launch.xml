@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<!--
+  farm.launch.xml
+  農場 (farm_node), rosbridge, 画面のファイルを配る HTTP サーバーを起動する.
+  起動したらブラウザで http://localhost:8765 を開く.
+    reset     : true で保存を消して最初から
+    web_port  : 画面の HTTP のポート
+    save_path : 保存先 (空なら ~/.publish_or_perish/save.txt)
+-->
+<launch>
+  <arg name="reset" default="false"/>
+  <arg name="web_port" default="8765"/>
+  <arg name="save_path" default=""/>
+
+  <node pkg="publish_or_perish" exec="farm_node" name="farm" output="screen">
+    <param name="reset" value="$(var reset)"/>
+    <param name="web_port" value="$(var web_port)"/>
+    <param name="save_path" value="$(var save_path)"/>
+  </node>
+
+  <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml"/>
+
+  <executable cmd="python3 -m http.server $(var web_port) --directory $(find-pkg-share publish_or_perish)/web"
+    output="log"/>
+</launch>
