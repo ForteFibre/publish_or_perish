@@ -417,6 +417,10 @@ private:
 
   void on_ui(const std::string & cmd)
   {
+    if (cmd.rfind("diag ", 0) == 0) {
+      RCLCPP_INFO(get_logger(), "画面の自己診断: %s", cmd.c_str() + 5);
+      return;
+    }
     if (cmd.rfind("speed ", 0) == 0) {
       const double v = std::atof(cmd.c_str() + 6);
       if (v == 1 || v == 2 || v == 4) {

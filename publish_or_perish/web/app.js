@@ -616,8 +616,8 @@ function hud(s) {
       $('missions').innerHTML = ''
       for (const m of s.stage.missions) {
         const el = document.createElement('div')
-        el.className = `m${m.done ? ' done' : ''}`
         const open = !m.done && !opened
+        el.className = `m${m.done ? ' done' : ''}${open ? ' open' : ''}`
         if (open) opened = true
         const pct = Math.min(100, m.value / m.goal * 100)
         const val = m.unit === 'm' ? m.value.toFixed(1) : Math.floor(m.value)
@@ -683,6 +683,7 @@ function renderAch(s) {
   })
 }
 
+$('stagetitle').onclick = () => $('quest').classList.toggle('collapsed')
 $('shopbtn').onclick = () => { $('shop').classList.add('open'); $('shopitems').dataset.key = ''; state && renderShop(state) }
 $('achbtn').onclick = () => { $('achs').classList.add('open'); state && renderAch(state) }
 document.querySelectorAll('.modal').forEach(m => {
@@ -876,10 +877,13 @@ $('speedbtn').onclick = () => {
 let camSet = false
 function retarget() {
   const cx = fieldW / 2, cz = -fieldH / 2
-  // 右の課題パネルの分だけ畑を左に寄せて見せる
-  controls.target.set(cx + 1.6, 0, cz - 0.6)
+  // 右の課題パネルの分だけ畑を左に寄せて見せる (狭い画面ほどパネルが占める割合が大きい)
+  const target = new THREE.Vector3(cx + (innerWidth < 1100 ? 2.6 : 1.6), 0, cz - 0.6)
+  controls.target.copy(target)
   if (!camSet) {
-    camera.position.set(cx + 0.2, 6.5 + fieldH * 0.75, cz + 6.5 + fieldH * 0.95)
+    // 縦長に近い画面では横に映る範囲が狭いので, その分カメラを引く
+    const k = Math.min(2, Math.max(1, 1.5 / (innerWidth / innerHeight)))
+    camera.position.copy(target).add(new THREE.Vector3(-1.4, 6.5 + fieldH * 0.75, 7.1 + fieldH * 0.95).multiplyScalar(k))
     camSet = true
   }
   sun.target.position.set(cx, 0, cz)
@@ -928,8 +932,24 @@ function loop() {
   stepFlows(dt)
   controls.update()
   renderer.render(scene, camera)
+  frames++
   requestAnimationFrame(loop)
 }
+// ---------------------------------------------------------------- 自己診断
+// 開いて 5 秒後に, 描画の方式・フレームレート・音が使えるかを農場に送る (ログに残る).
+// WSL などで GPU を使えず CPU で描いている (llvmpipe, SwiftShader) と遅くなるので, その確認に使う.
+let frames = 0
+function diagnose() {
+  const gl = renderer.getContext()
+  const ext = gl.getExtension('WEBGL_debug_renderer_info')
+  const gpu = ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)
+  const fps = frames / 5
+  const where = /Code\/[\d.]+/.exec(navigator.userAgent)?.[0] ?? 'browser'
+  const audio = typeof AudioContext !== 'undefined' ? 'audio:yes' : 'audio:no'
+  ros.publish('/farm/ui', `diag ${where} fps:${fps.toFixed(0)} ${audio} gl:${gpu}`)
+}
+setTimeout(() => { frames = 0; setTimeout(diagnose, 5000) }, 2000)
+
 buildField(8, 5)
 ros.connect()
 loop()

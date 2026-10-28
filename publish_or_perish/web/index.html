@@ -75,6 +75,7 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
 /* 左下: ログ */
 #log { position: fixed; left: 16px; bottom: 16px; width: 560px; max-width: calc(100vw - 420px); padding: 8px 12px;
   background: rgba(24, 32, 30, 0.86); color: #cfe8cf; border-radius: 12px; font-size: 12px; line-height: 1.55; }
+#log:empty { display: none; }
 #log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #log .ng { color: #ffb4a8; }
 #log .t { color: #7b9a7b; margin-right: 8px; }
@@ -123,6 +124,28 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
 .pill2 small { display: block; color: #9fc49a; font-size: 10.5px; }
 .warnline { grid-column: 1 / 4; margin-top: 4px; font-size: 12.5px; color: #a3271a; background: #ffe9e6; border-radius: 8px; padding: 5px 10px; }
 .warnline b { color: #237a2a; }
+
+/* 課題パネルを畳む (見出しをクリック) */
+#stagetitle { cursor: pointer; }
+#stagetitle::after { content: ' ▾'; color: var(--sub); font-size: 13px; }
+#quest.collapsed #stagetitle::after { content: ' ▸'; }
+#quest.collapsed .m:not(.open), #quest.collapsed .m .desc, #quest.collapsed .m .hint, #quest.collapsed #upcoming, #quest.collapsed .lesson { display: none; }
+
+/* 狭い画面 (VSCode の中でコードと並べたとき) */
+@media (max-width: 1100px) {
+  #status { padding: 8px 12px; gap: 10px; top: 10px; left: 10px; }
+  #lv { width: 44px; height: 44px; font-size: 11px; } #lv b { font-size: 18px; }
+  #xpbar { width: 110px; } #money { font-size: 20px; } #title { font-size: 13px; }
+  #ros { top: 10px; right: 10px; min-width: 0; font-size: 11.5px; padding: 6px 10px; }
+  #ros .row:nth-child(4) { display: none; }
+  #quest { top: 104px; right: 10px; width: 290px; padding: 10px 12px; max-height: calc(100vh - 180px); }
+  #quest h2 { font-size: 15px; }
+  .m .desc { font-size: 12px; } .m .hint { font-size: 11px; }
+  #log { left: 10px; bottom: 62px; width: calc(100vw - 20px); max-width: none; font-size: 11px; }
+  #log div:nth-last-child(n+4) { display: none; }
+  #buttons { right: 10px; bottom: 10px; gap: 6px; }
+  .btn { padding: 6px 10px; font-size: 12.5px; }
+}
 
 /* 通知 */
 #toasts { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 30; pointer-events: none; }
