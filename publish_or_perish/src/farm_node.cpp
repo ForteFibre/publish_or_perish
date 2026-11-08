@@ -105,6 +105,11 @@ public:
     save_path_ = declare_parameter("save_path", std::string(""));
     if (save_path_.empty()) {save_path_ = std::string(home ? home : ".") + "/.publish_or_perish/save.txt";}
     if (!declare_parameter("reset", false)) {load();}
+    // 試すとき用: このステージより前の課題を済みにして, ここから始める (遊んだ記録とは別の save_path と一緒に使う)
+    const long start = declare_parameter("start_stage", 0L);
+    for (long i = 0; i + 1 < start && i < static_cast<long>(progress_.stages.size()); ++i) {
+      for (auto & m : progress_.stages[i].missions) {m.done = true; m.value = m.goal;}
+    }
     port_ = declare_parameter("web_port", 8765);
     // 点検するワークスペースとパッケージ (講習と同じ ~/src26_ws と tutorial_nodes)
     std::string ws = declare_parameter("workspace", std::string("~/src26_ws"));

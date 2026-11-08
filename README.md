@@ -21,6 +21,14 @@ ros2 launch publish_or_perish farm.launch.xml
 ブラウザで http://localhost:8765 を開く (WSL の場合も Windows 側のブラウザで開ける見込み。未確認)。
 進み具合は `~/.publish_or_perish/save.txt` に保存される。最初からにするときは `reset:=true`、別の保存先は `save_path:=<path>` を付ける。
 
+途中のステージから試すときは `start_stage:=<番号>` を付ける (前のステージは済みになる)。今の記録を残すため、保存先も分ける。
+ステージ 3 を、もう遊んだワークスペースで試し直す例 (別の名前のパッケージを使うので、遊んだ `tutorial_nodes` は変わらない):
+
+```bash
+cd ~/src26_ws/src && ros2 pkg create try_nodes
+ros2 launch publish_or_perish farm.launch.xml start_stage:=3 package:=try_nodes save_path:=$HOME/.publish_or_perish/try.txt
+```
+
 rosbridge が入っていなければ `sudo apt install ros-jazzy-rosbridge-server` で入れる。
 
 ### VSCode の中で遊ぶ

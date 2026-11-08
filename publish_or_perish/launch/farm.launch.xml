@@ -8,6 +8,7 @@
     save_path : 保存先 (空なら ~/.publish_or_perish/save.txt)
     workspace : 点検するワークスペース (ステージ 2・3 の判定にも使う)
     package   : 点検するパッケージ
+    start_stage : このステージから始める (前のステージは済みにする. 試すとき用. 0 なら記録どおり)
 -->
 <launch>
   <arg name="reset" default="false"/>
@@ -15,6 +16,7 @@
   <arg name="save_path" default=""/>
   <arg name="workspace" default="~/src26_ws"/>
   <arg name="package" default="tutorial_nodes"/>
+  <arg name="start_stage" default="0"/>
 
   <node pkg="publish_or_perish" exec="farm_node" name="farm" output="screen">
     <param name="reset" value="$(var reset)"/>
@@ -22,6 +24,7 @@
     <param name="save_path" value="$(var save_path)"/>
     <param name="workspace" value="$(var workspace)"/>
     <param name="package" value="$(var package)"/>
+    <param name="start_stage" value="$(var start_stage)"/>
   </node>
 
   <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml"/>
