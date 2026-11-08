@@ -3,6 +3,7 @@
 //   畑を小窓で開く : そのタブを浮動ウィンドウに移し, 常に手前・タイトルなしの表示にする (コードを書きながら隅で見る)
 //   ステータスバー : rosbridge から /farm/state を 1 秒ごとに読み, 今の課題と進み具合を出す
 //   問題パネル     : 農場の点検 (ワークスペース・package.xml・ビルドの間違い) を, ファイルと行に付けて出す
+//   説明を開く     : 今の課題の説明 (畑の guide/<id>.md) を, エディタの横に Markdown のプレビューで開く
 const vscode = require('vscode')
 
 const cfg = key => vscode.workspace.getConfiguration('publishOrPerish').get(key)
@@ -22,7 +23,7 @@ function html(url) {
 </head><body><iframe src="${url}" allow="autoplay; clipboard-read; clipboard-write"></iframe>
 <script nonce="${nonce}">
 const api = acquireVsCodeApi()
-window.addEventListener('message', e => { if (e.data && e.data.type === 'open') api.postMessage(e.data) })
+window.addEventListener('message', e => { if (e.data && (e.data.type === 'open' || e.data.type === 'guide')) api.postMessage(e.data) })
 </script></body></html>`
 }
 
@@ -42,7 +43,10 @@ function openPanel() {
     { enableScripts: true, retainContextWhenHidden: true })
   panel.iconPath = new vscode.ThemeIcon('home')
   panel.webview.html = html(cfg('url'))
-  panel.webview.onDidReceiveMessage(m => { if (m.type === 'open' && m.file) openFile(m.file, m.line) })
+  panel.webview.onDidReceiveMessage(m => {
+    if (m.type === 'open' && m.file) openFile(m.file, m.line)
+    if (m.type === 'guide' && m.id) openGuide(m.id)
+  })
   panel.onDidDispose(() => { panel = null })
   return panel
 }
@@ -55,6 +59,38 @@ async function openPip() {
   await new Promise(r => setTimeout(r, 400))
   await vscode.commands.executeCommand('workbench.action.enableCompactAuxiliaryWindow')
   await vscode.commands.executeCommand('workbench.action.enableWindowAlwaysOnTop')
+}
+
+// ---------------------------------------------------------------- 課題の説明
+let storage = null      // 説明の .md を書き出す場所 (拡張ごとの保存場所)
+let lastState = null
+
+// 文中の ~/src26_ws と tutorial_nodes を, 農場の起動引数の値に置き換える (web/guide.js と同じ規則)
+function substitute(text, ws, pkg) {
+  if (!ws) return text
+  const name = ws.split('/').pop()
+  return text.replaceAll('~/src26_ws', ws).replaceAll('src26_ws', name).replaceAll('tutorial_nodes', pkg || 'tutorial_nodes')
+}
+
+async function openGuide(id) {
+  id = id ?? lastState?.stage?.missions.find(m => !m.done)?.id
+  if (!id) {
+    vscode.window.showInformationMessage('今の課題がない (農場が起動していないか, すべてクリアした)')
+    return
+  }
+  let text
+  try {
+    const r = await fetch(`${cfg('url')}/guide/${id}.md`, { cache: 'no-cache' })
+    if (!r.ok) throw new Error(String(r.status))
+    text = await r.text()
+  } catch {
+    vscode.window.showInformationMessage('この課題の説明はまだない')
+    return
+  }
+  const uri = vscode.Uri.joinPath(storage, `${id}.md`)
+  await vscode.workspace.fs.createDirectory(storage)
+  await vscode.workspace.fs.writeFile(uri, Buffer.from(substitute(text, lastState?.workspace, lastState?.package)))
+  await vscode.commands.executeCommand('markdown.showPreviewToSide', uri)
 }
 
 // ---------------------------------------------------------------- ステータスバー
@@ -94,7 +130,9 @@ function showState(s) {
   bar.text = `$(home) ${stage}${cur ? ' ・ ' + cur.title + prog : ''}${errors ? `  $(error) 点検 ${errors}` : warns ? `  $(warning) 点検 ${warns}` : ''}${warn ? '  $(warning) 配線' : ''}`
   bar.backgroundColor = errors ? new vscode.ThemeColor('statusBarItem.errorBackground')
     : warn || warns ? new vscode.ThemeColor('statusBarItem.warningBackground') : undefined
+  lastState = s
   const md = new vscode.MarkdownString()
+  md.isTrusted = { enabledCommands: ['publishOrPerish.guide'] }
   for (const f of doctor.filter(f => f.level !== 'info')) {
     md.appendMarkdown(`**${f.level === 'error' ? 'エラー' : '注意'}: ${f.title}**\n\n`)
     md.appendText(f.detail + '\n\n')
@@ -104,6 +142,7 @@ function showState(s) {
   if (cur) {
     md.appendText(cur.desc + '\n\n')
     md.appendCodeblock(cur.hint, 'text')
+    md.appendMarkdown('[説明を開く (Ctrl+Alt+G)](command:publishOrPerish.guide)\n\n')
   }
   md.appendMarkdown(`\n\nLv ${s.level} ・ ${s.money.toLocaleString()} G ・ クリックで畑を小窓で開く`)
   bar.tooltip = md
@@ -146,9 +185,11 @@ function connect() {
 }
 
 function activate(context) {
+  storage = vscode.Uri.joinPath(context.globalStorageUri, 'guide')
   context.subscriptions.push(
     vscode.commands.registerCommand('publishOrPerish.open', openPanel),
     vscode.commands.registerCommand('publishOrPerish.pip', openPip),
+    vscode.commands.registerCommand('publishOrPerish.guide', () => openGuide()),
     bar,
     diagnostics,
     { dispose: () => { stopped = true; clearTimeout(timer); ws?.close() } },

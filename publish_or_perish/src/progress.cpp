@@ -163,10 +163,29 @@ Progress::Progress()
     "実践 第2回 (ノード) ・第3回 (CMakeLists.txt と package.xml) ・第4回 (colcon)", {}};
   {
     auto m = mission(
-      "node_write", "hello_node を書いて登録する",
-      "tutorial_nodes/src/hello_node.cpp に rclcpp::Node を継承したクラスと main() を書く。\n"
-      "package.xml を ament_cmake_auto と <depend>rclcpp</depend> に書き換え, CMakeLists.txt に実行ファイルを登録する。",
-      "ament_auto_add_executable(hello_node src/hello_node.cpp)", 1, "", 60, 60);
+      "node_cpp", "hello_node.cpp を書く",
+      "tutorial_nodes/src/hello_node.cpp を作り, rclcpp::Node を継承したクラスと main() を書く。\n"
+      "書く中身は「説明」に全部ある。",
+      "~/src26_ws/src/tutorial_nodes/src/hello_node.cpp", 1, "", 40, 40);
+    m.on_tick = ws_fact("main:hello_node");
+    s_node.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "node_xml", "package.xml を書き換える",
+      "package.xml の <buildtool_depend> を ament_cmake_auto にし, <depend>rclcpp</depend> を足す。",
+      "<buildtool_depend>ament_cmake_auto</buildtool_depend>", 1, "", 30, 30);
+    m.on_tick = [](Mission & m, const Graph & g, const World &) {
+        // 判定は package.xml だけを見る (点検の "auto" は CMakeLists.txt も見るので使わない)
+        if (g.ws.count("xml:ament_cmake_auto") && g.ws.count("xml:rclcpp")) {m.value = m.goal;}
+      };
+    s_node.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "node_cmake", "CMakeLists.txt に登録する",
+      "CMakeLists.txt を ament_cmake_auto の形に書き直し, hello_node を実行ファイルとして登録する。",
+      "ament_auto_add_executable(hello_node src/hello_node.cpp)", 1, "", 40, 40);
     m.on_tick = [](Mission & m, const Graph & g, const World &) {
         if (g.ws.count("exe:hello_node") && g.ws.count("auto")) {m.value = m.goal;}
       };

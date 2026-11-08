@@ -279,6 +279,7 @@ void Doctor::check_package(DoctorReport & r) const
   for (auto it = std::sregex_iterator(xml.begin(), xml.end(), dep_re); it != std::sregex_iterator(); ++it) {
     depends.insert((*it)[2]);
   }
+  for (const auto & d : depends) {r.facts.insert("xml:" + d);}
   const bool uses_auto = cmake.find("ament_auto_") != std::string::npos;
   if (uses_auto && !depends.count("ament_cmake_auto")) {
     const size_t at = xml.find("<buildtool_depend>");
@@ -314,6 +315,11 @@ void Doctor::check_package(DoctorReport & r) const
   }
   for (const auto & f : sources) {
     const std::string rel = fs::relative(f, pkg).lexically_normal().string();
+    const std::string body = read_file(f);
+    r.facts.insert("cpp:" + f.stem().string());
+    if (body.find("rclcpp::init") != std::string::npos && body.find("rclcpp::spin") != std::string::npos) {
+      r.facts.insert("main:" + f.stem().string());
+    }
     if (!listed.count(rel)) {
       const std::string name = f.stem().string();
       r.findings.push_back({"not_built", "warn", rel + " がビルドされない",

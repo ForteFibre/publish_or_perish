@@ -121,7 +121,9 @@ public:
     {
       const std::string h = home ? home : "";
       const bool under_home = !h.empty() && ws.rfind(h + "/", 0) == 0;
-      progress_.set_workspace(under_home ? "~" + ws.substr(h.size()) : ws, pkg);
+      ws_shown_ = under_home ? "~" + ws.substr(h.size()) : ws;
+      pkg_ = pkg;
+      progress_.set_workspace(ws_shown_, pkg);
     }
     for (auto & [name, b] : world_.bots) {declare_parameter(name + ".seed", b.seed);}
     param_cb_ = add_on_set_parameters_callback(
@@ -523,13 +525,14 @@ private:
       first = false;
     }
     const size_t si = progress_.stage_index();
-    o << "],\"stage_index\":" << si << ",\"stage_count\":" << progress_.stages.size();
+    o << "],\"stage_index\":" << si << ",\"stage_count\":" << progress_.stages.size()
+      << ",\"workspace\":" << q(ws_shown_) << ",\"package\":" << q(pkg_);
     if (si < progress_.stages.size()) {
       const auto & s = progress_.stages[si];
       o << ",\"stage\":{\"title\":" << q(s.title) << ",\"lesson\":" << q(s.lesson) << ",\"missions\":[";
       first = true;
       for (const auto & m : s.missions) {
-        o << (first ? "" : ",") << "{\"title\":" << q(m.title) << ",\"desc\":" << q(m.desc)
+        o << (first ? "" : ",") << "{\"id\":" << q(m.id) << ",\"title\":" << q(m.title) << ",\"desc\":" << q(m.desc)
           << ",\"hint\":" << q(m.hint) << ",\"unit\":" << q(m.unit) << ",\"goal\":" << num(m.goal)
           << ",\"value\":" << num(m.value) << ",\"done\":" << (m.done ? 1 : 0)
           << ",\"reward\":" << m.reward << "}";
@@ -729,6 +732,7 @@ private:
   publish_or_perish::DoctorReport report_;
   std::set<std::string> shown_findings_;
   std::string save_path_;
+  std::string ws_shown_, pkg_;   // 画面に出すワークスペース (~ 始まり) とパッケージの名前
   long port_;
   std::deque<Log> logs_;
   std::deque<Fx> fx_;

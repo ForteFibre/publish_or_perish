@@ -13,10 +13,12 @@
   "contributes": {
     "commands": [
       { "command": "publishOrPerish.open", "title": "畑を開く", "category": "Publish or Perish" },
-      { "command": "publishOrPerish.pip", "title": "畑を小窓で開く (常に手前)", "category": "Publish or Perish" }
+      { "command": "publishOrPerish.pip", "title": "畑を小窓で開く (常に手前)", "category": "Publish or Perish" },
+      { "command": "publishOrPerish.guide", "title": "今の課題の説明を開く", "category": "Publish or Perish" }
     ],
     "keybindings": [
-      { "command": "publishOrPerish.pip", "key": "ctrl+alt+h", "mac": "cmd+alt+h" }
+      { "command": "publishOrPerish.pip", "key": "ctrl+alt+h", "mac": "cmd+alt+h" },
+      { "command": "publishOrPerish.guide", "key": "ctrl+alt+g", "mac": "cmd+alt+g" }
     ],
     "configuration": {
       "title": "Publish or Perish",

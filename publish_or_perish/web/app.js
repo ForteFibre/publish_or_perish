@@ -2,6 +2,7 @@
 // 座標: 農場の (x, y) [m] を three.js の (x, 0, -y) に置く. 1 マス = 1 m.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/OrbitControls.js'
+import { render as renderGuide, substitute } from './guide.js'
 
 const $ = id => document.getElementById(id)
 const CROP_NAME = { wheat: '小麦', tomato: 'トマト', pumpkin: 'カボチャ' }
@@ -626,7 +627,8 @@ function hud(s) {
         el.innerHTML = `
           <div class="head"><span class="check">${m.done ? '✓' : ''}</span><span class="t"></span><span class="reward">+${m.reward} G</span></div>
           ${m.goal > 1 || m.unit ? `<div class="bar"><i style="width:${pct}%"></i></div><div class="num">${val} / ${m.goal} ${m.unit}</div>` : ''}
-          ${open ? `<div class="desc"></div><div class="hint mono"><span></span><button>コピー</button></div>` : ''}`
+          ${open ? `<div class="desc"></div><div class="hint mono"><span></span><button>コピー</button></div>
+            <button class="gbtn" style="display:none">説明を読む (書くものと, うまくいかないときの直し方)</button>` : ''}`
         el.querySelector('.t').textContent = m.title
         if (open) {
           el.querySelector('.desc').textContent = m.desc
@@ -635,6 +637,12 @@ function hud(s) {
             navigator.clipboard?.writeText(m.hint)
             e.target.textContent = '済'
           }
+          const gb = el.querySelector('.gbtn')
+          loadGuide(m.id).then(t => {
+            if (!t) return
+            gb.style.display = ''
+            gb.onclick = () => openGuide(m.id)
+          })
         }
         $('missions').appendChild(el)
       }
@@ -734,6 +742,31 @@ function renderAch(s) {
 $('stagetitle').onclick = () => $('quest').classList.toggle('collapsed')
 $('shopbtn').onclick = () => { $('shop').classList.add('open'); $('shopitems').dataset.key = ''; state && renderShop(state) }
 $('achbtn').onclick = () => { $('achs').classList.add('open'); state && renderAch(state) }
+// ---------------------------------------------------------------- 課題の説明 (guide/<id>.md)
+const guides = new Map()   // id -> Promise<文字列 | null>
+function loadGuide(id) {
+  if (!id) return Promise.resolve(null)
+  if (!guides.has(id)) {
+    guides.set(id, fetch(`guide/${id}.md`, { cache: 'no-cache' }).then(r => r.ok ? r.text() : null).catch(() => null))
+  }
+  return guides.get(id)
+}
+async function openGuide(id) {
+  const text = await loadGuide(id)
+  if (!text) return
+  // VSCode の中ではエディタの横にプレビューで開く (コードを書くタブと並べて読める)
+  if (window.parent !== window) {
+    window.parent.postMessage({ type: 'guide', id }, '*')
+    return
+  }
+  $('guidebody').innerHTML = renderGuide(substitute(text, state?.workspace, state?.package))
+  $('guidebody').querySelectorAll('.code button').forEach(b => {
+    b.onclick = () => { navigator.clipboard?.writeText(b.nextElementSibling.textContent); b.textContent = '済' }
+  })
+  $('guide').classList.add('open')
+  $('guidebody').scrollTop = 0
+}
+
 document.querySelectorAll('.modal').forEach(m => {
   m.onclick = e => { if (e.target === m || e.target.hasAttribute('data-close')) m.classList.remove('open') }
 })
