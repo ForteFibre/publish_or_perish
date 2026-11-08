@@ -1,0 +1,29 @@
+{
+  "name": "publish-or-perish",
+  "displayName": "Publish or Perish",
+  "description": "ROS 2 を学ぶ農場ゲームを VSCode の中で開く",
+  "version": "0.1.0",
+  "publisher": "fortefibre",
+  "private": true,
+  "license": "UNLICENSED",
+  "engines": { "vscode": "^1.90.0" },
+  "categories": ["Education"],
+  "main": "./extension.js",
+  "activationEvents": ["onStartupFinished"],
+  "contributes": {
+    "commands": [
+      { "command": "publishOrPerish.open", "title": "畑を開く", "category": "Publish or Perish" },
+      { "command": "publishOrPerish.pip", "title": "畑を小窓で開く (常に手前)", "category": "Publish or Perish" }
+    ],
+    "keybindings": [
+      { "command": "publishOrPerish.pip", "key": "ctrl+alt+h", "mac": "cmd+alt+h" }
+    ],
+    "configuration": {
+      "title": "Publish or Perish",
+      "properties": {
+        "publishOrPerish.url": { "type": "string", "default": "http://localhost:8765", "description": "ゲームの画面の URL" },
+        "publishOrPerish.rosbridge": { "type": "string", "default": "ws://localhost:9090", "description": "rosbridge の URL (ステータスバーの表示に使う)" }
+      }
+    }
+  }
+}

@@ -10,7 +10,9 @@ const CROP_NAME = { wheat: '小麦', tomato: 'トマト', pumpkin: 'カボチャ
 const ros = {
   ws: null, open: false, handlers: {},
   connect() {
-    const ws = new WebSocket(`ws://${location.hostname || 'localhost'}:9090`)
+    // ?rosbridge=<ポート> で別の農場につなぐ (試験用. 普段は 9090)
+    const port = new URLSearchParams(location.search).get('rosbridge') ?? 9090
+    const ws = new WebSocket(`ws://${location.hostname || 'localhost'}:${port}`)
     this.ws = ws
     ws.onopen = () => {
       this.open = true
@@ -485,6 +487,7 @@ let state = null, lastFx = -1, lastNotice = -1, shownMoney = null, missionKey = 
 
 ros.handlers['/farm/state'] = msg => {
   const s = JSON.parse(msg.data)
+  s.doctor ??= []   // 点検のない古い農場のノードでも動くように
   if (!state) {
     // 開いた時点より前のエフェクトと通知は出さない
     lastFx = s.fx.length ? s.fx[s.fx.length - 1].id : -1
@@ -594,12 +597,11 @@ function hud(s) {
     $('moneyv').textContent = s.money.toLocaleString()
   }
   // ROS
-  const mode = $('mode')
   const moving = s.bots.some(b => b.moving)
-  if (s.graph.auto) { mode.className = 'pill auto'; mode.textContent = '無人運転中' }
-  else if (s.graph.cli > 0) { mode.className = 'pill cli'; mode.textContent = `CLI で操作中 (${s.graph.cli})` }
-  else if (moving) { mode.className = 'pill cli'; mode.textContent = '動作中' }
-  else { mode.className = 'pill off'; mode.textContent = '停止中' }
+  const [mcls, mtext, mshort] = s.graph.auto ? ['auto', '無人運転中', '無人'] : s.graph.cli > 0 ? ['cli', `CLI で操作中 (${s.graph.cli})`, 'CLI']
+    : moving ? ['cli', '動作中', '動作中'] : ['off', '停止中', '停止']
+  $('mode').className = `pill ${mcls}`
+  $('mode').textContent = mtext
   $('players').textContent = s.graph.players.length ? s.graph.players.join(', ') : 'なし'
   $('botinfo').textContent = s.bots.map(b => `${b.name} タンク ${b.tank}/${b.tank_max} ・ ${CROP_NAME[b.seed]}`).join(' / ')
   // ステージ
@@ -643,6 +645,7 @@ function hud(s) {
     }
     $('upcoming').innerHTML = s.upcoming.map(u => `<div>準備中: ${u}</div>`).join('')
   }
+  renderDoctor(s)
   // ログ
   $('log').innerHTML = s.log.slice(-8).map(l => `<div class="${l.ok ? '' : 'ng'}"></div>`).join('')
   ;[...$('log').children].forEach((d, i) => { d.textContent = s.log.slice(-8)[i].text })
@@ -654,6 +657,51 @@ function hud(s) {
   if ($('wires').classList.contains('open')) renderWires(s)
   $('wirewarn').style.display = s.wires.some(w => w.warn) ? '' : 'none'
   $('speedbtn').textContent = `時間 ×${s.speed}`
+  // 小窓の 1 行: まだ終わっていない最初の課題と, その進み具合. 点検でエラーがあればそれを先に出す
+  const cur = s.stage?.missions.find(m => !m.done)
+  const bad = s.doctor.find(f => f.level === 'error')
+  $('mini').classList.toggle('bad', !!bad)
+  $('minitext').textContent = bad ? `点検: ${bad.title}`
+    : cur ? `${s.stage.title.split(':')[0]} ・ ${cur.title}` : s.stage ? s.stage.title : 'すべてクリア'
+  $('minibar').style.width = cur ? `${Math.min(100, cur.value / cur.goal * 100)}%` : '100%'
+  $('minigold').textContent = `${s.money.toLocaleString()} G`
+  $('minimode').className = `pill ${mcls}`
+  $('minimode').textContent = mshort
+  $('miniwarn').style.display = s.wires.some(w => w.warn) ? '' : 'none'
+}
+
+// 点検の結果. VSCode の拡張の中 (iframe) なら, ファイルを開くリンクを出す (親の画面に頼んで開いてもらう)
+const inVSCode = window.parent !== window
+let doctorKey = ''
+function renderDoctor(s) {
+  const key = JSON.stringify(s.doctor)
+  if (key === doctorKey) return
+  doctorKey = key
+  const box = $('doctor')
+  box.innerHTML = ''
+  const home = s.doctor.map(f => /^(\/home\/[^/]+)\//.exec(f.file)?.[1]).find(Boolean)
+  for (const f of s.doctor) {
+    const el = document.createElement('div')
+    el.className = `dr ${f.level}`
+    el.innerHTML = `<b></b><div class="where"></div><div class="d"></div>${f.fix ? '<div class="hint mono"><span></span><button>コピー</button></div>' : ''}`
+    el.querySelector('b').textContent = { error: 'エラー: ', warn: '注意: ', info: '' }[f.level] + f.title
+    const where = el.querySelector('.where')
+    if (f.file) {
+      where.textContent = (home ? f.file.replace(home, '~') : f.file) + (f.line ? `:${f.line}` : '')
+      if (inVSCode) {
+        const a = document.createElement('a')
+        a.textContent = '開く'
+        a.onclick = () => window.parent.postMessage({ type: 'open', file: f.file, line: f.line }, '*')
+        where.appendChild(a)
+      }
+    } else where.remove()
+    el.querySelector('.d').textContent = f.detail
+    if (f.fix) {
+      el.querySelector('.hint span').textContent = f.fix
+      el.querySelector('.hint button').onclick = e => { navigator.clipboard?.writeText(f.fix); e.target.textContent = '済' }
+    }
+    box.appendChild(el)
+  }
 }
 
 function renderShop(s) {
@@ -875,24 +923,41 @@ $('speedbtn').onclick = () => {
 
 // ---------------------------------------------------------------- 描画ループ
 let camSet = false
+// 幅 560 px 未満か高さ 420 px 未満を小窓として扱う (VSCode の浮動ウィンドウ, ブラウザの小窓など)
+const isMini = () => innerWidth < 560 || innerHeight < 420
 function retarget() {
   const cx = fieldW / 2, cz = -fieldH / 2
-  // 右の課題パネルの分だけ畑を左に寄せて見せる (狭い画面ほどパネルが占める割合が大きい)
-  const target = new THREE.Vector3(cx + (innerWidth < 1100 ? 2.6 : 1.6), 0, cz - 0.6)
+  const mini = isMini()
+  // 右の課題パネルの分だけ畑を左に寄せて見せる (狭い画面ほどパネルが占める割合が大きい). 小窓にはパネルがない
+  const target = new THREE.Vector3(cx + (mini ? -0.4 : innerWidth < 1100 ? 2.6 : 1.6), 0, cz - (mini ? 0.3 : 0.6))
   controls.target.copy(target)
-  if (!camSet) {
-    // 縦長に近い画面では横に映る範囲が狭いので, その分カメラを引く
-    const k = Math.min(2, Math.max(1, 1.5 / (innerWidth / innerHeight)))
-    camera.position.copy(target).add(new THREE.Vector3(-1.4, 6.5 + fieldH * 0.75, 7.1 + fieldH * 0.95).multiplyScalar(k))
+  // 小窓は畑を広げたときや窓の大きさを変えたときも収まるように毎回置き直す
+  if (!camSet || mini) {
+    if (mini) {
+      // 畑の幅と奥行きが両方収まる距離まで引く. 上の 1 行の分だけ少し余分に引く
+      const vfov = camera.fov * Math.PI / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * innerWidth / innerHeight)
+      const dist = Math.max((fieldW + 2.4) / 2 / Math.tan(hfov / 2), (fieldH + 1.5) / 2 / Math.tan(vfov / 2) * 1.35) * 0.98
+      camera.position.copy(target).add(new THREE.Vector3(0, 0.78, 0.62).normalize().multiplyScalar(dist))
+    } else {
+      // 縦長に近い画面では横に映る範囲が狭いので, その分カメラを引く
+      const k = Math.min(2, Math.max(1, 1.5 / (innerWidth / innerHeight)))
+      camera.position.copy(target).add(new THREE.Vector3(-1.4, 6.5 + fieldH * 0.75, 7.1 + fieldH * 0.95).multiplyScalar(k))
+    }
     camSet = true
   }
   sun.target.position.set(cx, 0, cz)
   sun.position.set(cx - 8, 16, cz + 10)
 }
+let wasMini = null
 function resize() {
   renderer.setSize(innerWidth, innerHeight)
   camera.aspect = innerWidth / innerHeight
   camera.updateProjectionMatrix()
+  // 小窓と大きい画面を行き来したら, その画面に合う位置にカメラを置き直す
+  const mini = isMini()
+  document.body.classList.toggle('mini', mini)
+  if (mini !== wasMini) { wasMini = mini; camSet = false }
+  if (fieldW) retarget()
 }
 addEventListener('resize', resize)
 resize()

@@ -23,17 +23,54 @@ ros2 launch publish_or_perish farm.launch.xml
 
 rosbridge が入っていなければ `sudo apt install ros-jazzy-rosbridge-server` で入れる。
 
+### VSCode の中で遊ぶ
+
+`vscode/` に VSCode 拡張がある。VSCode の拡張機能のフォルダにリンクを張って入れ、VSCode のコマンドパレットで「Developer: Reload Window」(ウィンドウの再読み込み) をする。リンクなので、`vscode/` を直すと再読み込みだけで反映される。
+
+```bash
+ln -s ~/src26_ws/src/publish_or_perish/vscode ~/.vscode/extensions/fortefibre.publish-or-perish-0.1.0
+```
+
+ほかの PC に配るときは `python3 vscode/pack.py` で `vscode/publish-or-perish.vsix` を作り、`code --install-extension publish-or-perish.vsix` で入れる。
+
+- **畑を小窓で開く** (Ctrl+Alt+H、またはステータスバーの課題をクリック): 畑を VSCode の浮動ウィンドウに出し、常に手前に置く。窓を小さくする (幅 560 px 未満か高さ 420 px 未満) と、上に今の課題を 1 行で出し、畑全体が収まる表示になる。最初は 1024×768 で開くので、角をつまんで縮める
+- **畑を開く** (コマンドパレットの「Publish or Perish: 畑を開く」): エディタのタブとして開く
+- **ステータスバー**: 今のステージ、課題、進み具合、配線の警告を出す。カーソルを乗せると課題の説明とヒントが出る
+
 ## ステージ
 
 | ステージ | 内容 | 講習 |
 |---|---|---|
 | 1 手で動かしてみよう | `ros2 topic pub` / `ros2 topic echo` / `ros2 service call` | 入門 第8・9回 |
-| 2 自分のノードで動かそう | タイマーと Publisher | 実践 第2・5・6回 |
-| 3 畑を見て判断しよう | Subscriber と service の client で無人農場 | 実践 第7回 |
-| 4 パラメータで作物を選ぼう | `ros2 param set /farm bot1.seed tomato` | 入門 第10回・実践 第12回 |
-| 5 ロボットを 2 台にしよう | namespace と launch で同じノードを 2 つ動かす | 実践 第11回 |
+| 2 ワークスペースを作ろう | `mkdir -p ~/src26_ws/src`、`ros2 pkg create`、`colcon build`、`~/.bashrc` | 実践 第1回 |
+| 3 最初のノードを動かそう | `hello_node` を書き、package.xml と CMakeLists.txt を ament_cmake_auto にし、ビルドして `ros2 run` | 実践 第2・3・4回 |
+| 4 自分のノードで動かそう | タイマーと Publisher | 実践 第2・5・6回 |
+| 5 畑を見て判断しよう | Subscriber と service の client で無人農場 | 実践 第7回 |
+| 6 パラメータで作物を選ぼう | `ros2 param set /farm bot1.seed tomato` | 入門 第10回・実践 第12回 |
+| 7 ロボットを 2 台にしよう | namespace と launch で同じノードを 2 つ動かす | 実践 第11回 |
+
+ステージ 2・3 は農場がファイルを見て判定する。調べるのは `~/src26_ws` の `tutorial_nodes` (変えるときは `workspace:=<path>` と `package:=<名前>`。課題文のパスとコマンドもその値になる)。
 
 ## 画面の機能
+
+- **点検** (課題パネルの上、VSCode では「問題」パネル): ターミナルにはエラーが出ないか、出ても原因が分かりにくい間違いを、ファイル・`~/.bashrc`・動いているプロセスを外から見て見つける。ファイルは読むだけで書き換えない
+
+  | 見つける間違い | 調べ方 |
+  |---|---|
+  | `src` やホームで `colcon build` した | その場の `build/COLCON_IGNORE`、`install/setup.bash` |
+  | 最初のビルドで `--merge-install` を付け忘れた | `install/.colcon_install_layout` が `isolated` |
+  | `--symlink-install` を付け忘れた | `install/share/<pkg>/package.xml` がリンクでない |
+  | パッケージを `src` の外・パッケージの中に作った | `package.xml` の場所 |
+  | ワークスペースの名前の打ち間違い | ホームにある、`src` を持つ似た名前 (編集距離 2 以内) のディレクトリ |
+  | `~/.bashrc` の source の重複・打ち間違い・相対パス | `~/.bashrc` の各行と、source 先があるか |
+  | .cpp を `CMakeLists.txt` に書いていない | `src/*.cpp` と `add_executable` の突き合わせ |
+  | `CMakeLists.txt` に書いたファイルがない | 同上 |
+  | `ament_auto_...` を使うのに package.xml が `ament_cmake` のまま | `<buildtool_depend>` |
+  | include したパッケージが package.xml にない | `#include <pkg/...>` と `<depend>` の突き合わせ |
+  | ビルドに失敗した | `log/latest_build` の最初のエラーを取り出し、よくあるものは日本語で意味を出す |
+  | 直したあとビルドしていない | ソースと実行ファイルの更新時刻 |
+  | ビルドし直したのに古いプロセスが動いている | `/proc/<pid>/exe` が `(deleted)`、または起動時刻より実行ファイルが新しい |
+  | `ROS_DOMAIN_ID` が農場と違う | 動いているプロセスの環境変数 (`/proc/<pid>/environ`) |
 
 - **配線図** (右下の「配線」): topic ごとに送り手・受け手・頻度・データ量を出す。受け手のいない topic、似た名前の打ち間違い、型や QoS の食い違いを警告する
 - **ノードの小屋**: 自分のノードと CLI ごとに畑の奥へ小屋が建ち、メッセージ 1 つが光の粒 1 つになって飛ぶ。届かない粒は小屋の前に落ちる
@@ -43,9 +80,9 @@ rosbridge が入っていなければ `sudo apt install ros-jazzy-rosbridge-serv
 ## 解答例 (講師用)
 
 ```bash
-ros2 run publish_or_perish_answers stage2_patrol                          # ステージ 2
-ros2 run publish_or_perish_answers stage3_farmer --ros-args -r __ns:=/bot1  # ステージ 3・4
-ros2 launch publish_or_perish_answers stage5_two_bots.launch.xml           # ステージ 5
+ros2 run publish_or_perish_answers stage4_patrol                          # ステージ 4
+ros2 run publish_or_perish_answers stage5_farmer --ros-args -r __ns:=/bot1  # ステージ 5・6
+ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ステージ 7
 ```
 
 ## ロボットとのやりとり
@@ -76,6 +113,7 @@ ros2 launch publish_or_perish_answers stage5_two_bots.launch.xml           # ス
 - `publish_or_perish/src/progress.cpp`: 課題・実績・レベル
 - `publish_or_perish/src/farm_node.cpp`: ROS の topic / service、グラフの読み取り、保存、画面用の状態 (`/farm/state`)
 - `publish_or_perish/web/`: three.js の画面。rosbridge (9090) で `/farm/state` を読み、`/farm/ui` にお店と早送りの操作を送る
+- `vscode/`: VSCode 拡張 (畑を小窓で開く、ステータスバーに課題を出す)。colcon は読まない (`COLCON_IGNORE`)
 - `publish_or_perish/web/match.html`: 大会モードの見た目の試作 (動きはまだない)
 - `tools/mjcf_export.py`: MuJoCo のモデル (MJCF) から大会モードの画面用の形を書き出す。出力先 `web/scenes/` は git に入れない
 

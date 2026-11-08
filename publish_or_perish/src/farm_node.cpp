@@ -6,8 +6,11 @@
 #include <deque>
 #include <filesystem>
 #include <fstream>
+#include <memory>
+#include <set>
 #include <sstream>
 
+#include "publish_or_perish/doctor.hpp"
 #include "publish_or_perish/progress.hpp"
 #include "publish_or_perish/world.hpp"
 #include "geometry_msgs/msg/pose2_d.hpp"
@@ -103,6 +106,23 @@ public:
     if (save_path_.empty()) {save_path_ = std::string(home ? home : ".") + "/.publish_or_perish/save.txt";}
     if (!declare_parameter("reset", false)) {load();}
     port_ = declare_parameter("web_port", 8765);
+    // 点検するワークスペースとパッケージ (講習と同じ ~/src26_ws と tutorial_nodes)
+    std::string ws = declare_parameter("workspace", std::string("~/src26_ws"));
+    if (ws.rfind("~/", 0) == 0) {ws = std::string(home ? home : ".") + ws.substr(1);}
+    while (ws.size() > 1 && ws.back() == '/') {ws.pop_back();}
+    const char * dom = std::getenv("ROS_DOMAIN_ID");
+    std::vector<std::string> prefixes;
+    {
+      std::istringstream ps(std::getenv("AMENT_PREFIX_PATH") ? std::getenv("AMENT_PREFIX_PATH") : "");
+      for (std::string p; std::getline(ps, p, ':'); ) {if (!p.empty()) {prefixes.push_back(p);}}
+    }
+    const std::string pkg = declare_parameter("package", std::string("tutorial_nodes"));
+    doctor_ = std::make_unique<publish_or_perish::Doctor>(ws, pkg, home ? home : ".", dom && *dom ? dom : "0", prefixes);
+    {
+      const std::string h = home ? home : "";
+      const bool under_home = !h.empty() && ws.rfind(h + "/", 0) == 0;
+      progress_.set_workspace(under_home ? "~" + ws.substr(h.size()) : ws, pkg);
+    }
     for (auto & [name, b] : world_.bots) {declare_parameter(name + ".seed", b.seed);}
     param_cb_ = add_on_set_parameters_callback(
       [this](const std::vector<rclcpp::Parameter> & ps) {return on_param(ps);});
@@ -242,6 +262,16 @@ private:
     }
     g.automated = g.cli.empty() && !g.players.empty();
     g.now = world_.time;
+    report_ = doctor_->scan();
+    g.ws = report_.facts;
+    // 新しく見つかった間違いはログにも 1 行出す
+    std::set<std::string> now;
+    for (const auto & f : report_.findings) {
+      const std::string key = f.id + f.file + std::to_string(f.line) + f.title;
+      now.insert(key);
+      if (f.level != "info" && !shown_findings_.count(key)) {log("点検: " + f.title, false);}
+    }
+    shown_findings_ = now;
     graph_ = g;
     scan_wires();
   }
@@ -400,6 +430,15 @@ private:
     money_pub_->publish(money);
   }
 
+  // その課題があるステージの番号
+  size_t stage_of(const std::string & mission_id) const
+  {
+    for (size_t i = 0; i < progress_.stages.size(); ++i) {
+      for (const auto & m : progress_.stages[i].missions) {if (m.id == mission_id) {return i;}}
+    }
+    return progress_.stages.size();
+  }
+
   std::vector<ShopItem> shop() const
   {
     std::vector<ShopItem> s;
@@ -409,7 +448,7 @@ private:
     if (!world_.unlocked.count("pumpkin")) {s.push_back({"pumpkin", "カボチャの種", "40 G で植えて 200 G で売れる", 400});}
     const auto & b = world_.bots.at("bot1");
     if (b.tank_max < 30) {s.push_back({"tank", "大きいタンク", "全ロボットのタンク +5", 100 + 20L * (b.tank_max - 10)});}
-    if (!world_.bots.count("bot2") && progress_.stage_index() >= 4) {
+    if (!world_.bots.count("bot2") && progress_.stage_index() >= stage_of("s5_buy")) {
       s.push_back({"bot2", "2 台目のロボット", "/bot2/... で動く bot2 が来る", 500});
     }
     return s;
@@ -534,7 +573,18 @@ private:
       << ",\"players\":[";
     first = true;
     for (const auto & n : graph_.player_full) {o << (first ? "" : ",") << q(n); first = false;}
-    o << "]},\"log\":[";
+    o << "]},\"doctor\":[";
+    first = true;
+    for (const char * level : {"error", "warn", "info"}) {
+      for (const auto & f : report_.findings) {
+        if (f.level != level) {continue;}
+        o << (first ? "" : ",") << "{\"id\":" << q(f.id) << ",\"level\":" << q(f.level) << ",\"title\":" << q(f.title)
+          << ",\"detail\":" << q(f.detail) << ",\"fix\":" << q(f.fix) << ",\"file\":" << q(f.file)
+          << ",\"line\":" << f.line << "}";
+        first = false;
+      }
+    }
+    o << "],\"log\":[";
     first = true;
     for (const auto & l : logs_) {
       o << (first ? "" : ",") << "{\"id\":" << l.id << ",\"text\":" << q(l.text) << ",\"ok\":" << (l.ok ? 1 : 0) << "}";
@@ -675,6 +725,9 @@ private:
   publish_or_perish::World world_;
   publish_or_perish::Progress progress_;
   publish_or_perish::Graph graph_;
+  std::unique_ptr<publish_or_perish::Doctor> doctor_;
+  publish_or_perish::DoctorReport report_;
+  std::set<std::string> shown_findings_;
   std::string save_path_;
   long port_;
   std::deque<Log> logs_;

@@ -69,6 +69,18 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
   font-size: 11.5px; position: relative; word-break: break-all; }
 .m .hint button { position: absolute; right: 4px; top: 4px; border: 0; border-radius: 6px; background: #445a63; color: #fff;
   font-size: 11px; padding: 2px 6px; cursor: pointer; }
+/* 点検: ワークスペース・ビルド・プロセスの間違い */
+#doctor:empty { display: none; }
+#doctor { margin: 0 0 10px; display: flex; flex-direction: column; gap: 6px; }
+.dr { border-radius: 10px; padding: 7px 10px; font-size: 12.5px; line-height: 1.55; border-left: 5px solid; }
+.dr.error { background: #ffe9e6; border-color: var(--red); }
+.dr.warn { background: #fff3d6; border-color: var(--amber); }
+.dr.info { background: #e6f1fb; border-color: var(--blue); }
+.dr b { display: block; font-size: 13px; }
+.dr .where { font-size: 11px; color: var(--sub); word-break: break-all; }
+.dr .where a { color: var(--blue); cursor: pointer; text-decoration: underline; margin-left: 6px; }
+.dr .d { white-space: pre-wrap; margin-top: 2px; }
+.dr .hint { margin: 5px 0 0; }
 #upcoming { margin-top: 10px; font-size: 12px; color: #a39a80; }
 #upcoming div { margin: 3px 0; }
 
@@ -147,6 +159,24 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
   .btn { padding: 6px 10px; font-size: 12.5px; }
 }
 
+/* 小窓 (VSCode の浮動ウィンドウなど). 大きい画面の札はすべて隠し, 上の 1 行にまとめる */
+#mini { display: none; }
+body.mini #status, body.mini #ros, body.mini #quest, body.mini #log, body.mini #buttons, body.mini #sound { display: none; }
+body.mini #mini { display: flex; position: fixed; left: 6px; right: 6px; top: 6px; gap: 8px; align-items: center;
+  padding: 5px 9px; border-radius: 11px; font-size: 12px; }
+#mini .mt { flex: 1; min-width: 0; }
+#mini .mt div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 700; }
+#mini .mt .bar { height: 4px; border-radius: 2px; background: #eadfc4; margin-top: 3px; overflow: hidden; }
+#mini .mt .bar i { display: block; height: 100%; background: var(--gold); transition: width .4s; }
+#mini.bad { border-color: var(--red); }
+#mini.bad #minitext { color: #a3271a; }
+#mini .gold { font-weight: 800; color: #9a6400; white-space: nowrap; }
+#mini .pill { font-size: 10.5px; padding: 0 7px; white-space: nowrap; }
+body.mini #toasts { top: 46px; }
+body.mini .toast { padding: 5px 12px; } body.mini .toast b { font-size: 13px; } body.mini .toast span { font-size: 11px; }
+body.mini #banner b { font-size: 26px; } body.mini #banner div { padding: 12px 30px; }
+body.mini #connect .card { padding: 10px 14px; font-size: 12px; }
+
 /* 通知 */
 #toasts { position: fixed; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-direction: column; gap: 8px; z-index: 30; pointer-events: none; }
 .toast { padding: 10px 22px; border-radius: 14px; background: var(--card); border: 2px solid var(--gold); text-align: center;
@@ -200,11 +230,19 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
   <div id="stagebar"></div>
   <h2 id="stagetitle">-</h2>
   <div class="lesson" id="lesson"></div>
+  <div id="doctor"></div>
   <div id="missions"></div>
   <div id="upcoming"></div>
 </div>
 
 <div id="log"></div>
+
+<div id="mini" class="card">
+  <div class="mt"><div id="minitext">-</div><div class="bar"><i id="minibar"></i></div></div>
+  <span id="minigold" class="gold">0 G</span>
+  <span id="minimode" class="pill off">停止中</span>
+  <span id="miniwarn" class="pill bad" style="display:none">配線 !</span>
+</div>
 
 <div id="buttons">
   <button class="btn" id="speedbtn">時間 ×1</button>

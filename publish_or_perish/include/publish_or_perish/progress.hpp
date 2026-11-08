@@ -27,6 +27,7 @@ struct Graph
   // topic -> publish しているノードの (名前, namespace). namespace は "/bot1" のように先頭の / あり
   std::map<std::string, std::vector<std::pair<std::string, std::string>>> pubs;
   bool automated = false;         // CLI がなく, プレイヤーのノードが動いている
+  std::set<std::string> ws;       // 点検 (Doctor) が調べたワークスペースの事実. 例: "built", "exe:hello_node"
   double now = 0.0;
 };
 
@@ -68,6 +69,10 @@ class Progress
 {
 public:
   Progress();
+
+  // 課題の文とコマンドに書いた講習のワークスペース (~/src26_ws) とパッケージ (tutorial_nodes) を差し替える.
+  // ws はホームからの書き方 (例: "~/pop_ws")
+  void set_workspace(const std::string & ws, const std::string & pkg);
 
   void update(const std::vector<Event> & events, const Graph & g, World & w);
   std::vector<Notice> take_notices();

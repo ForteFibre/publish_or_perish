@@ -112,8 +112,90 @@ Progress::Progress()
   }
   stages.push_back(s1);
 
-  // ---- ステージ 2: 自分のノードから publish する ----
-  Stage s2{"ステージ 2: 自分のノードで動かそう",
+  // ---- ステージ 2: ワークスペースを作る ----
+  // 判定は点検 (Doctor) がファイルを見て決めた事実 (g.ws) を使う. 間違えたときの理由は点検の欄に出る
+  auto ws_fact = [](std::string fact) {
+      return [fact](Mission & m, const Graph & g, const World &) {if (g.ws.count(fact)) {m.value = m.goal;}};
+    };
+  Stage s_ws{"ステージ 2: ワークスペースを作ろう", "実践 第1回 (ワークスペース)", {}};
+  {
+    auto m = mission(
+      "ws_src", "ワークスペースを作る",
+      "ホームに src26_ws を作り, その中に src を作る。src まで作ればワークスペースになる。",
+      "mkdir -p ~/src26_ws/src", 1, "", 30, 30);
+    m.on_tick = ws_fact("src");
+    s_ws.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "ws_pkg", "パッケージを作る",
+      "src の中で ros2 pkg create を実行し, tutorial_nodes パッケージを作る。\n"
+      "このあとのステージのノードは, すべてこのパッケージに入れる。",
+      "cd ~/src26_ws/src && ros2 pkg create tutorial_nodes", 1, "", 40, 40);
+    m.on_tick = ws_fact("pkg");
+    s_ws.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "ws_build", "ビルドする",
+      "ワークスペースの直下 (src と同じ階層) で colcon build する。\n"
+      "--symlink-install と --merge-install は毎回付ける (付けたり付けなかったりすると install/ が壊れる)。",
+      "cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select tutorial_nodes",
+      1, "", 50, 50);
+    m.on_tick = [](Mission & m, const Graph & g, const World &) {
+        if (g.ws.count("built") && g.ws.count("merged") && g.ws.count("symlink")) {m.value = m.goal;}
+      };
+    s_ws.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "ws_bashrc", "source を .bashrc に書く",
+      "ビルドしたパッケージを ros2 が見つけられるように, ~/.bashrc に source の行を 1 回だけ足す。\n"
+      "足したらターミナルを開き直す。",
+      "echo 'source ~/src26_ws/install/setup.bash' >> ~/.bashrc", 1, "", 50, 50);
+    m.on_tick = ws_fact("bashrc");
+    s_ws.missions.push_back(m);
+  }
+  stages.push_back(s_ws);
+
+  // ---- ステージ 3: 最初のノード ----
+  Stage s_node{"ステージ 3: 最初のノードを動かそう",
+    "実践 第2回 (ノード) ・第3回 (CMakeLists.txt と package.xml) ・第4回 (colcon)", {}};
+  {
+    auto m = mission(
+      "node_write", "hello_node を書いて登録する",
+      "tutorial_nodes/src/hello_node.cpp に rclcpp::Node を継承したクラスと main() を書く。\n"
+      "package.xml を ament_cmake_auto と <depend>rclcpp</depend> に書き換え, CMakeLists.txt に実行ファイルを登録する。",
+      "ament_auto_add_executable(hello_node src/hello_node.cpp)", 1, "", 60, 60);
+    m.on_tick = [](Mission & m, const Graph & g, const World &) {
+        if (g.ws.count("exe:hello_node") && g.ws.count("auto")) {m.value = m.goal;}
+      };
+    s_node.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "node_build", "hello_node をビルドする",
+      "colcon build で install/lib/tutorial_nodes/hello_node ができればよい。\n"
+      "失敗したら, 点検の欄に最初のエラーとその意味が出る。",
+      "cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select tutorial_nodes",
+      1, "", 60, 60);
+    m.on_tick = ws_fact("bin:hello_node");
+    s_node.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "node_run", "hello_node を起動する",
+      "ros2 run で hello_node を起動し, 農場から見えるようにする (右上の「あなたのノード」に出る)。",
+      "ros2 run tutorial_nodes hello_node", 1, "", 80, 80);
+    m.on_tick = [](Mission & m, const Graph & g, const World &) {
+        if (g.ws.count("run:hello_node") && !g.players.empty()) {m.value = m.goal;}
+      };
+    s_node.missions.push_back(m);
+  }
+  stages.push_back(s_node);
+
+  // ---- ステージ 4: 自分のノードから publish する ----
+  Stage s2{"ステージ 4: 自分のノードで動かそう",
     "実践 第2回 (ノード) ・第5回 (タイマー) ・第6回 (Publisher)", {}};
   {
     auto m = mission(
@@ -140,8 +222,8 @@ Progress::Progress()
   }
   stages.push_back(s2);
 
-  // ---- ステージ 3: subscribe して判断する ----
-  Stage s3{"ステージ 3: 畑を見て判断しよう", "実践 第7回 (Subscriber) ・入門 第9回 (service)", {}};
+  // ---- ステージ 5: subscribe して判断する ----
+  Stage s3{"ステージ 5: 畑を見て判断しよう", "実践 第7回 (Subscriber) ・入門 第9回 (service)", {}};
   {
     auto m = mission(
       "s3_sub", "畑の水分を読む",
@@ -187,8 +269,8 @@ Progress::Progress()
   }
   stages.push_back(s3);
 
-  // ---- ステージ 4: パラメータ ----
-  Stage s4{"ステージ 4: パラメータで作物を選ぼう", "入門 第10回 ・実践 第12回 (パラメータ)", {}};
+  // ---- ステージ 6: パラメータ ----
+  Stage s4{"ステージ 6: パラメータで作物を選ぼう", "入門 第10回 ・実践 第12回 (パラメータ)", {}};
   {
     auto m = mission(
       "s4_tomato", "トマトを植える",
@@ -208,8 +290,8 @@ Progress::Progress()
   }
   stages.push_back(s4);
 
-  // ---- ステージ 5: namespace と launch で 2 台 ----
-  Stage s5{"ステージ 5: ロボットを 2 台にしよう", "実践 第11回 (launch) ・namespace", {}};
+  // ---- ステージ 7: namespace と launch で 2 台 ----
+  Stage s5{"ステージ 7: ロボットを 2 台にしよう", "実践 第11回 (launch) ・namespace", {}};
   {
     auto m = mission(
       "s5_buy", "2 台目を買う",
@@ -264,9 +346,9 @@ Progress::Progress()
   stages.push_back(s5);
 
   upcoming = {
-    "ステージ 6: action で「ここへ行け」",
-    "ステージ 7: 収穫ロボと運搬ロボの連携",
-    "ステージ 8: Behavior Tree で農場を回す",
+    "ステージ 8: action で「ここへ行け」",
+    "ステージ 9: 収穫ロボと運搬ロボの連携",
+    "ステージ 10: Behavior Tree で農場を回す",
     "卒業: 自分のノードで MuJoCo の部のロボットを動かす",
   };
 
@@ -317,6 +399,25 @@ Progress::Progress()
     [](const World & w, const Graph &) {return w.stat("wall") >= 30;});
   ach("pumpkin", "大物", "カボチャを収穫した", 60, true,
     [](const World & w, const Graph &) {return w.stat("harvest_pumpkin") > 0;});
+}
+
+void Progress::set_workspace(const std::string & ws, const std::string & pkg)
+{
+  const std::string name = ws.substr(ws.find_last_of('/') + 1);
+  auto subst = [](std::string & text, const std::string & from, const std::string & to) {
+      for (size_t at = text.find(from); at != std::string::npos; at = text.find(from, at + to.size())) {
+        text.replace(at, from.size(), to);
+      }
+    };
+  for (auto & st : stages) {
+    for (auto & m : st.missions) {
+      for (auto * text : {&m.desc, &m.hint}) {
+        subst(*text, "~/src26_ws", ws);
+        subst(*text, "src26_ws", name);
+        subst(*text, "tutorial_nodes", pkg);
+      }
+    }
+  }
 }
 
 size_t Progress::stage_index() const

@@ -12,7 +12,7 @@ find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
-add_executable(farm_node src/farm_node.cpp src/world.cpp src/progress.cpp)
+add_executable(farm_node src/farm_node.cpp src/world.cpp src/progress.cpp src/doctor.cpp)
 target_compile_features(farm_node PUBLIC cxx_std_17)
 target_include_directories(farm_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
