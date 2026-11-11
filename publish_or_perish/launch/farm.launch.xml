@@ -29,6 +29,7 @@
 
   <include file="$(find-pkg-share rosbridge_server)/launch/rosbridge_websocket_launch.xml"/>
 
-  <executable cmd="python3 -m http.server $(var web_port) --directory $(find-pkg-share publish_or_perish)/web"
+  <!-- python3 -m http.server と同じだが, ブラウザが古い .js を使い続けないよう no-cache を付ける -->
+  <executable cmd="python3 $(find-pkg-share publish_or_perish)/scripts/web_server.py $(var web_port) $(find-pkg-share publish_or_perish)/web"
     output="log"/>
 </launch>
