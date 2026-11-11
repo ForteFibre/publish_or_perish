@@ -2,36 +2,9 @@
 
 ## やること
 
-同じ `farmer_node` を 2 つ起動し、1 つで bot1、もう 1 つで bot2 を動かす。コードは 1 つのまま、起動するときの namespace だけを変える。
+同じ `farmer_node` を 2 つ起動し、1 つで bot1、もう 1 つで bot2 を動かす。コードは 1 つのまま、起動するときの namespace だけを変える。2 台がそれぞれ動き出せばクリア。
 
-### 1. topic と service の名前から `/bot1` を外す
-
-`farmer_node.cpp` の中で `/bot1/...` と書いたところを、頭の `/` ごと外す。`/field/...` はそのまま。
-
-| 変える前 | 変えた後 |
-|---|---|
-| `"/bot1/pose"` | `"pose"` |
-| `"/bot1/tank"` | `"tank"` |
-| `"/bot1/cmd_vel"` | `"cmd_vel"` |
-| `"/bot1/plant"` `"/bot1/water"` `"/bot1/harvest"` | `"plant"` `"water"` `"harvest"` |
-| `"/field/moisture"` `"/field/crops"` | 変えない |
-
-ステージ 6 で `bot1.seed` を書き換える行を足した場合は、パラメータの名前を namespace から作るようにする。`const std::string name = "bot1.seed";` の行を次に変える。
-
-```cpp
-    const std::string name = std::string(get_namespace()).substr(1) + ".seed";   // "/bot2" -> "bot2.seed"
-```
-
-### 2. ビルドして、namespace を変えて 2 つ起動する
-
-```bash
-cd ~/src26_ws
-colcon build --symlink-install --merge-install --packages-select tutorial_nodes
-ros2 run tutorial_nodes farmer_node --ros-args -r __ns:=/bot1    # 1 つ目のターミナル
-ros2 run tutorial_nodes farmer_node --ros-args -r __ns:=/bot2    # 2 つ目のターミナル
-```
-
-2 台がそれぞれ動き出せばクリア。
+namespace は起動するときに `--ros-args -r __ns:=/bot2` のように付ける。
 
 ## 名前のつながり方
 
@@ -45,7 +18,31 @@ ros2 run tutorial_nodes farmer_node --ros-args -r __ns:=/bot2    # 2 つ目の�
 
 `/` で始まらない名前は namespace の下につながる。同じコードを namespace だけ変えて起動すれば、別のロボットにつながる。ノード名も `/bot1/farmer` と `/bot2/farmer` に分かれるので、同じ名前のノードが 2 つになることもない。
 
+ノードの中で `get_namespace()` を呼ぶと、起動したときの namespace (`"/bot2"` など) が返る。
+
 `ros2 node list` で `/bot1/farmer` と `/bot2/farmer` が出ることを確かめられる。
+
+## ヒント
+
+<details><summary>ヒント 1: コードのどこを変えるか</summary>
+
+`farmer_node.cpp` の中で `/bot1/...` と書いた topic と service の名前から、頭の `/bot1/` を外す (`"/bot1/pose"` → `"pose"`)。畑全体の `/field/...` は、どのロボットからも同じものを見るので `/` 付きのまま。
+
+ステージ 6 で `bot1.seed` を書き換えるようにした場合は、パラメータの名前も namespace から作る。
+
+```cpp
+const std::string name = std::string(get_namespace()).substr(1) + ".seed";   // "/bot2" -> "bot2.seed"
+```
+
+</details>
+
+<details><summary>ヒント 2: 起動のしかた</summary>
+
+ビルドし直してから、ターミナルを 2 つ使い、`ros2 run tutorial_nodes farmer_node` に `--ros-args -r __ns:=/bot1` と `--ros-args -r __ns:=/bot2` をそれぞれ付けて起動する。
+
+</details>
+
+ヒントを読んでも動かないときは、書いたコードを持って講師に聞く。
 
 ## うまくいかないとき
 

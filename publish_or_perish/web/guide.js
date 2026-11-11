@@ -1,5 +1,5 @@
 // 課題の説明 (guide/<課題の id>.md) を読んで HTML にする.
-// 使う Markdown は 見出し・段落・箇条書き・表・コードブロック・`code`・**太字** と,
+// 使う Markdown は 見出し・段落・箇条書き (- と 1.)・表・コードブロック・`code`・**太字** と,
 // 畳んでおくヒント (<details><summary>題</summary> の 1 行で始め, </details> の 1 行で閉じる) だけ.
 // 文中の ~/src26_ws と tutorial_nodes は, 農場の起動引数 (workspace:= / package:=) の値に置き換える.
 
@@ -47,6 +47,12 @@ export function render(md) {
       const head = cells(rows[0]), body = rows.slice(2).map(cells)
       out.push(`<table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${
         body.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</table>`)
+    } else if (/^\d+\. /.test(l)) {
+      // 番号付き. 間にコードブロックなどを挟んで続けるときのため, 最初の番号から始める
+      const items = []
+      const start = parseInt(l, 10)
+      for (; i < lines.length && /^\d+\. /.test(lines[i]); i++) items.push(lines[i].replace(/^\d+\. /, ''))
+      out.push(`<ol start="${start}">${items.map(t => `<li>${inline(t)}</li>`).join('')}</ol>`)
     } else if (/^- /.test(l)) {
       const items = []
       for (; i < lines.length && /^- /.test(lines[i]); i++) items.push(lines[i].slice(2))
@@ -55,7 +61,7 @@ export function render(md) {
       i++
     } else {
       const para = []
-      for (; i < lines.length && lines[i].trim() && !/^(#|```|\||- |<\/?details)/.test(lines[i]); i++) para.push(lines[i])
+      for (; i < lines.length && lines[i].trim() && !/^(#|```|\||- |\d+\. |<\/?details)/.test(lines[i]); i++) para.push(lines[i])
       out.push(`<p>${inline(para.join(''))}</p>`)
     }
   }
