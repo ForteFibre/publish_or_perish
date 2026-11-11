@@ -1,14 +1,15 @@
 // 課題の説明 (guide/<課題の id>.md) を読んで HTML にする.
-// 使う Markdown は 見出し・段落・箇条書き・表・コードブロック・`code`・**太字** だけ.
+// 使う Markdown は 見出し・段落・箇条書き・表・コードブロック・`code`・**太字** と,
+// 畳んでおくヒント (<details><summary>題</summary> の 1 行で始め, </details> の 1 行で閉じる) だけ.
 // 文中の ~/src26_ws と tutorial_nodes は, 農場の起動引数 (workspace:= / package:=) の値に置き換える.
 
 const esc = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
 
 function inline(s) {
-  const parts = s.split(/(`[^`]+`)/)
-  return parts.map(p => p.startsWith('`') && p.endsWith('`') && p.length > 1
-    ? `<code>${esc(p.slice(1, -1))}</code>`
-    : esc(p).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')).join('')
+  // `code` を先に取り出してから **太字** を探す (太字の中に `code` があっても崩れないように)
+  const codes = []
+  const t = esc(s.replace(/`([^`]+)`/g, (_, c) => `\u0000${codes.push(c) - 1}\u0000`))
+  return t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\u0000(\d+)\u0000/g, (_, k) => `<code>${esc(codes[+k])}</code>`)
 }
 
 export function substitute(text, ws, pkg) {
@@ -30,6 +31,12 @@ export function render(md) {
       for (i++; i < lines.length && !lines[i].startsWith('```'); i++) code.push(lines[i])
       i++
       out.push(`<div class="code"><button>コピー</button><pre data-lang="${esc(lang)}">${esc(code.join('\n'))}</pre></div>`)
+    } else if (/^<details><summary>.*<\/summary>$/.test(l)) {
+      out.push(`<details><summary>${inline(l.replace(/^<details><summary>|<\/summary>$/g, ''))}</summary>`)
+      i++
+    } else if (l.trim() === '</details>') {
+      out.push('</details>')
+      i++
     } else if (/^#{1,3} /.test(l)) {
       const n = l.match(/^#+/)[0].length
       out.push(`<h${n + 1}>${inline(l.slice(n + 1))}</h${n + 1}>`)
@@ -48,7 +55,7 @@ export function render(md) {
       i++
     } else {
       const para = []
-      for (; i < lines.length && lines[i].trim() && !/^(#|```|\||- )/.test(lines[i]); i++) para.push(lines[i])
+      for (; i < lines.length && lines[i].trim() && !/^(#|```|\||- |<\/?details)/.test(lines[i]); i++) para.push(lines[i])
       out.push(`<p>${inline(para.join(''))}</p>`)
     }
   }
