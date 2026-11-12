@@ -7,6 +7,7 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
+#include <random>
 #include <set>
 #include <sstream>
 
@@ -36,6 +37,18 @@ std::string q(const std::string & s)
     if (c == '"' || c == '\\') {o += '\\'; o += c;} else if (c == '\n') {o += "\\n";} else {o += c;}
   }
   return o + "\"";
+}
+
+// 看板に出す文字: 先頭の n 文字 (UTF-8 の文字単位) だけにし, 改行などの制御文字は空白にする
+std::string clip(const std::string & s, size_t n)
+{
+  std::string o;
+  size_t chars = 0;
+  for (unsigned char c : s) {
+    if ((c & 0xC0) != 0x80 && chars++ == n) {break;}
+    o += c < 0x20 ? ' ' : static_cast<char>(c);
+  }
+  return o;
 }
 
 std::string num(double v)
@@ -142,6 +155,7 @@ public:
     state_pub_ = create_publisher<std_msgs::msg::String>("/farm/state", 10);
     ui_sub_ = create_subscription<std_msgs::msg::String>(
       "/farm/ui", 10, [this](const std_msgs::msg::String & m) {on_ui(m.data);});
+    setup_board();
 
     last_ = std::chrono::steady_clock::now();
     step_timer_ = create_wall_timer(33ms, [this] {step();});
@@ -182,15 +196,100 @@ private:
   }
 
   // /<bot>/cmd_vel を publish しているノードから, 指令を出したのが CLI かプレイヤーかを決める
-  Source cmd_source(const std::string & bot)
+  Source cmd_source(const std::string & bot) {return topic_source("/" + bot + "/cmd_vel");}
+
+  // topic を publish しているノードが CLI かプレイヤーか (受け取ったときに呼ぶ)
+  Source topic_source(const std::string & topic)
   {
     bool cli = false, player = false;
-    for (const auto & e : get_publishers_info_by_topic("/" + bot + "/cmd_vel")) {
+    for (const auto & e : get_publishers_info_by_topic(topic)) {
       const auto & n = e.node_name();
       if (n.rfind("_ros2cli_", 0) == 0) {cli = true;} else if (!is_tool(n)) {player = true;}
     }
     if (cli && player) {return Source::Mixed;}
     return cli ? Source::Cli : player ? Source::Player : Source::None;
+  }
+
+  // service の client を持っているノードが CLI かプレイヤーか (呼ばれたときに呼ぶ).
+  // service の server は呼んだノードを知らないので, グラフから client を探す
+  Source service_client_source(const std::string & service)
+  {
+    bool cli = false, player = false;
+    auto graph = get_node_graph_interface();
+    for (const auto & [name, ns] : graph->get_node_names_and_namespaces()) {
+      if (name == "farm" || (is_tool(name) && name.rfind("_ros2cli_", 0) != 0)) {continue;}
+      try {
+        if (!graph->get_client_names_and_types_by_node(name, ns).count(service)) {continue;}
+      } catch (const std::exception &) {
+        continue;  // 調べている間にノードが終わった
+      }
+      if (name.rfind("_ros2cli_", 0) == 0) {cli = true;} else {player = true;}
+    }
+    if (cli && player) {return Source::Mixed;}
+    return cli ? Source::Cli : player ? Source::Player : Source::None;
+  }
+
+  // ---- 看板 (ステージ 4) ----
+  // 農場の決まり (マス, 水, 作物) を使わずに, 自分のノードで topic と service を試す相手.
+  // イベントの bot には送り手 ("player" / "cli" / "mixed" / "none") を入れる
+  void setup_board()
+  {
+    board_text_sub_ = create_subscription<std_msgs::msg::String>(
+      "/board/text", 10, [this](const std_msgs::msg::String & m) {
+        board_.text = clip(m.data, 40);
+        board_.text_src = publish_or_perish::to_string(topic_source("/board/text"));
+        world_.emit(publish_or_perish::Event{"board_text", board_.text_src});
+      });
+    board_number_pub_ = create_publisher<std_msgs::msg::Int32>("/board/number", 10);
+    board_answer_sub_ = create_subscription<std_msgs::msg::Int32>(
+      "/board/answer", 10, [this](const std_msgs::msg::Int32 & m) {on_board_answer(m.data);});
+    using Trigger = std_srvs::srv::Trigger;
+    board_bell_srv_ = create_service<Trigger>(
+      "/board/bell", [this](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+        const std::string src = publish_or_perish::to_string(service_client_source("/board/bell"));
+        board_.bells++;
+        res->success = true;
+        res->message = "カーン (" + std::to_string(board_.bells) + " 回目)";
+        world_.emit(publish_or_perish::Event{"board_bell", src});
+        log("service /board/bell → " + res->message, true);
+      });
+    board_timer_ = create_wall_timer(2s, [this] {next_board_number();});
+    next_board_number();
+  }
+
+  // 2 秒ごとに 1〜50 の数を出す. 前と同じ数は出さない (変わったことが見えるように)
+  void next_board_number()
+  {
+    std::uniform_int_distribution<int> pick(1, 50);
+    int v = pick(rng_);
+    while (v == board_.cur.value) {v = pick(rng_);}
+    board_.prev = board_.cur;
+    board_.cur = {v, false};
+    std_msgs::msg::Int32 m;
+    m.data = v;
+    board_number_pub_->publish(m);
+  }
+
+  // 今の数か 1 つ前の数 (答えを送った直後に数が変わったとき) の 2 倍なら正解.
+  // 1 つの数への正解は 1 回だけ数える. 同じ答えを送り続けても, 画面の表示は増やさない
+  void on_board_answer(int v)
+  {
+    const std::string src = publish_or_perish::to_string(topic_source("/board/answer"));
+    bool ok = false, first = false;
+    for (auto * n : {&board_.cur, &board_.prev}) {
+      if (n->value > 0 && v == 2 * n->value) {
+        ok = true;
+        if (!n->answered) {n->answered = true; first = true;}
+      }
+    }
+    const bool changed = v != board_.answer || ok != (board_.ok == 1);
+    board_.answer = v;
+    board_.ok = ok ? 1 : 0;
+    if (first || (!ok && changed)) {
+      publish_or_perish::Event e{"board_answer", src};
+      e.value = first ? 1.0 : 0.0;
+      world_.emit(e);
+    }
   }
 
   rcl_interfaces::msg::SetParametersResult on_param(const std::vector<rclcpp::Parameter> & ps)
@@ -227,7 +326,7 @@ private:
     graph_.now = world_.time;
     progress_.update(events, graph_, world_);
     for (const auto & e : events) {
-      if (e.kind == "move" || e.kind == "enter") {continue;}
+      if (e.kind == "move" || e.kind == "enter" || e.kind == "board_text") {continue;}
       fx_.push_back({++fx_id_, e});
       if (e.kind == "ripe") {log("(" + std::to_string(e.x) + ", " + std::to_string(e.y) + ") の作物が実った", true);}
       if (e.kind == "wither") {log("(" + std::to_string(e.x) + ", " + std::to_string(e.y) + ") の作物が枯れた", false);}
@@ -260,7 +359,7 @@ private:
         g.player_full.insert(full);
       }
     }
-    for (const char * t : {"/bot1/pose", "/field/moisture", "/field/crops"}) {
+    for (const char * t : {"/bot1/pose", "/field/moisture", "/field/crops", "/board/number"}) {
       for (const auto & e : get_subscriptions_info_by_topic(t)) {g.subs[t].push_back(e.node_name());}
     }
     for (const auto & [name, b] : world_.bots) {
@@ -286,13 +385,14 @@ private:
   // ---- 配線の見える化: topic ごとのつながり, 流量, 警告 ----
   bool farm_consumes(const std::string & t) const
   {
+    if (t == "/board/text" || t == "/board/answer") {return true;}
     for (const auto & [n, b] : world_.bots) {if (t == "/" + n + "/cmd_vel") {return true;}}
     return false;
   }
 
   std::vector<std::string> farm_publishes() const
   {
-    std::vector<std::string> v{"/field/moisture", "/field/crops", "/money"};
+    std::vector<std::string> v{"/field/moisture", "/field/crops", "/money", "/board/number"};
     for (const auto & [n, b] : world_.bots) {
       v.push_back("/" + n + "/pose");
       v.push_back("/" + n + "/tank");
@@ -323,7 +423,7 @@ private:
       w.count = w.bytes = 0;
       w.alive = false;
     }
-    std::vector<std::string> consumed;
+    std::vector<std::string> consumed{"/board/text", "/board/answer"};
     for (const auto & [n, b] : world_.bots) {consumed.push_back("/" + n + "/cmd_vel");}
     const auto published = farm_publishes();
     for (const auto & [topic, types] : get_topic_names_and_types()) {
@@ -334,7 +434,8 @@ private:
       }
       const auto pubs = get_publishers_info_by_topic(topic);
       const auto subs = get_subscriptions_info_by_topic(topic);
-      bool ours = topic.rfind("/bot", 0) == 0 || topic.rfind("/field/", 0) == 0 || topic == "/money";
+      bool ours = topic.rfind("/bot", 0) == 0 || topic.rfind("/field/", 0) == 0 || topic == "/money" ||
+        topic.rfind("/board/", 0) == 0;
       for (const auto & e : pubs) {ours |= kind_of(e.node_name()) == "player" || kind_of(e.node_name()) == "cli";}
       for (const auto & e : subs) {ours |= kind_of(e.node_name()) == "player" || kind_of(e.node_name()) == "cli";}
       if (!ours) {continue;}
@@ -563,7 +664,10 @@ private:
         << q(it.desc) << ",\"price\":" << it.price << "}";
       first = false;
     }
-    o << "],\"speed\":" << world_.farm_speed << ",\"wires\":[";
+    o << "],\"speed\":" << world_.farm_speed << ",\"board\":{\"text\":" << q(board_.text)
+      << ",\"text_src\":" << q(board_.text_src) << ",\"number\":" << board_.cur.value
+      << ",\"answer\":" << board_.answer << ",\"ok\":" << board_.ok << ",\"bells\":" << board_.bells
+      << "},\"wires\":[";
     first = true;
     for (const auto & [t, w] : wires_) {
       o << (first ? "" : ",") << "{\"topic\":" << q(t) << ",\"type\":" << q(w.types.empty() ? "" : w.types.front())
@@ -726,6 +830,18 @@ private:
   std::map<std::string, Wire> wires_;
   std::chrono::steady_clock::time_point wire_t_ = std::chrono::steady_clock::now();
 
+  struct BoardNumber { int value = 0; bool answered = false; };
+  struct Board
+  {
+    std::string text, text_src;   // 最後に /board/text に届いた文字と送り手
+    BoardNumber cur, prev;        // 今出している数と 1 つ前の数
+    int answer = 0;               // 最後に /board/answer に届いた数
+    int ok = -1;                  // その答えが正解か (-1: まだ届いていない)
+    long bells = 0;               // /board/bell が呼ばれた回数
+  };
+  Board board_;
+  std::mt19937 rng_{std::random_device{}()};
+
   struct Log { long id; std::string text; bool ok; };
   struct Fx { long id; publish_or_perish::Event e; };
   struct NoticeItem { long id; publish_or_perish::Notice n; };
@@ -752,8 +868,12 @@ private:
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr moisture_pub_, crops_pub_;
   rclcpp::Publisher<std_msgs::msg::Int64>::SharedPtr money_pub_;
   rclcpp::Publisher<std_msgs::msg::String>::SharedPtr state_pub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr ui_sub_;
-  rclcpp::TimerBase::SharedPtr step_timer_, pose_timer_, field_timer_, state_timer_, graph_timer_, save_timer_;
+  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr ui_sub_, board_text_sub_;
+  rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr board_number_pub_;
+  rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr board_answer_sub_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr board_bell_srv_;
+  rclcpp::TimerBase::SharedPtr step_timer_, pose_timer_, field_timer_, state_timer_, graph_timer_, save_timer_,
+    board_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_;
 };
 

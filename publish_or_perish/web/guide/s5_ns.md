@@ -28,7 +28,7 @@ namespace は起動するときに `--ros-args -r __ns:=/bot2` のように付�
 
 `farmer_node.cpp` の中で `/bot1/...` と書いた topic と service の名前から、頭の `/bot1/` を外す (`"/bot1/pose"` → `"pose"`)。畑全体の `/field/...` は、どのロボットからも同じものを見るので `/` 付きのまま。
 
-ステージ 6 で `bot1.seed` を書き換えるようにした場合は、パラメータの名前も namespace から作る。
+ステージ 7 で `bot1.seed` を書き換えるようにした場合は、パラメータの名前も namespace から作る。
 
 ```cpp
 const std::string name = std::string(get_namespace()).substr(1) + ".seed";   // "/bot2" -> "bot2.seed"

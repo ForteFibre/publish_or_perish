@@ -4,7 +4,7 @@
 
 1. 右下の「お店」で「トマトの種」(120 G) を買う。
 2. 農場 (`/farm` ノード) のパラメータ `bot1.seed` を `tomato` にする。
-3. トマトを 1 つ植える。ステージ 5 の `farmer_node` が動いていれば、次に植えるものからトマトになる。手で植えるなら `ros2 service call /bot1/plant std_srvs/srv/Trigger`。
+3. トマトを 1 つ植える。ステージ 6 の `farmer_node` が動いていれば、次に植えるものからトマトになる。手で植えるなら `ros2 service call /bot1/plant std_srvs/srv/Trigger`。
 
 トマトは 15 G で植えて 70 G で売れる。実るまで 50 秒 (小麦は 30 秒)。
 
@@ -35,5 +35,5 @@
 
 - **`Setting parameter failed: tomato はまだ解禁していない`:** お店でトマトの種を買っていない。
 - **`Node not found`:** ノード名は `/farm`。農場が動いているターミナルと `ROS_DOMAIN_ID` が同じか確かめる。
-- **お金が 120 G ない:** ステージ 5 の `farmer_node` で小麦を育てて稼ぐ。
+- **お金が 120 G ない:** ステージ 6 の `farmer_node` で小麦を育てて稼ぐ。
 - **トマトにならない:** すでに植えてある小麦はそのまま。次に植えるものからトマトになる。

@@ -207,6 +207,7 @@ function buildField(w, h) {
   // 井戸
   well.position.set(0.5, 0, -0.5)
   field.add(well)
+  placeBoard(h)
   retarget()
 }
 
@@ -259,6 +260,99 @@ const well = new THREE.Group()
   well.scale.setScalar(0.8)
   well.traverse(o => { o.castShadow = true })
 }
+
+// ---------------------------------------------------------------- 看板 (ステージ 4)
+// /board/text に届いた文字, /board/number に出している数, /board/answer に届いた答え, /board/bell の回数を出す.
+// 畑の左奥 (ノードの小屋の列の左) に立てる. 畑を広げると奥へ動かす (placeBoard)
+const BOARD_POS = new THREE.Vector3(-0.9, 0, -6.4)
+const board = new THREE.Group()
+const boardCv = document.createElement('canvas')
+boardCv.width = 512
+boardCv.height = 320
+const boardTex = new THREE.CanvasTexture(boardCv)
+boardTex.colorSpace = THREE.SRGBColorSpace
+const bellPivot = new THREE.Group()
+let boardKey = null, bellSwing = 0
+{
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.1, 0.08), M.fence)
+  frame.position.y = 1.1
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 1.0), new THREE.MeshBasicMaterial({ map: boardTex }))
+  face.position.set(0, 1.1, 0.041)
+  board.add(frame, face)
+  for (const sx of [-0.7, 0.7]) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.6, 0.08), M.trunk)
+    p.position.set(sx, 0.3, 0)
+    board.add(p)
+  }
+  // 鐘: 看板の右上の腕から下げる. 鳴ると揺れる
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.4), M.trunk)
+  arm.position.set(0.8, 1.72, 0.12)
+  const mast = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.2, 0.05), M.trunk)
+  mast.position.set(0.8, 1.68, -0.06)
+  bellPivot.position.set(0.8, 1.7, 0.3)
+  const bell = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 0.18, 10, 1, true), mat('#e9bf45', { metalness: 0.5, roughness: 0.35, side: THREE.DoubleSide }))
+  bell.position.y = -0.12
+  bellPivot.add(bell)
+  board.add(arm, mast, bellPivot)
+  board.traverse(o => { o.castShadow = true })
+  board.rotation.y = 0.2  // 正面をカメラ (右手前) へ向ける
+  board.scale.setScalar(1.5)
+  scene.add(board)
+}
+function placeBoard(h) {
+  BOARD_POS.set(-0.9, 0, -h - 1.4)
+  board.position.copy(BOARD_POS)
+}
+
+function drawBoard(b) {
+  const key = JSON.stringify(b)
+  if (key === boardKey) return
+  boardKey = key
+  const g = boardCv.getContext('2d')
+  g.fillStyle = '#2f4a3a'
+  g.fillRect(0, 0, 512, 320)
+  g.textBaseline = 'middle'
+  g.fillStyle = '#a9c4b0'
+  g.font = '600 26px sans-serif'
+  g.fillText('/board/text', 24, 34)
+  // 届いた文字は幅に収まるまで小さくする
+  const text = b.text || '(まだ何も届いていない)'
+  let fs = 56
+  g.font = `700 ${fs}px sans-serif`
+  while (fs > 22 && g.measureText(text).width > 464) { fs -= 2; g.font = `700 ${fs}px sans-serif` }
+  g.fillStyle = b.text ? '#ffffff' : '#7f9a86'
+  g.fillText(text, 24, 98)
+  if (b.text) {
+    g.font = '500 22px sans-serif'
+    g.fillStyle = '#a9c4b0'
+    g.fillText({ player: '自分のノードから', cli: 'CLI から', mixed: '自分のノードと CLI から' }[b.text_src] ?? '', 24, 146)
+  }
+  g.strokeStyle = 'rgba(255,255,255,0.25)'
+  g.lineWidth = 2
+  g.beginPath(); g.moveTo(16, 176); g.lineTo(496, 176); g.stroke()
+  g.font = '600 26px sans-serif'
+  g.fillStyle = '#a9c4b0'
+  g.fillText('/board/number', 24, 210)
+  g.fillText('/board/answer', 24, 260)
+  g.font = '700 40px sans-serif'
+  g.fillStyle = '#ffe9a0'
+  g.fillText(b.number > 0 ? String(b.number) : '-', 230, 210)
+  if (b.ok >= 0) {
+    g.fillStyle = '#ffffff'
+    g.fillText(String(b.answer), 230, 260)
+    g.font = '700 30px sans-serif'
+    g.fillStyle = b.ok ? '#7be07b' : '#ff8a7a'
+    g.fillText(b.ok ? '正解' : 'ちがう', 340, 260)
+  }
+  g.font = '500 22px sans-serif'
+  g.fillStyle = '#a9c4b0'
+  g.textAlign = 'right'
+  g.fillText(`鐘 ${b.bells} 回`, 492, 300)
+  g.textAlign = 'left'
+  boardTex.needsUpdate = true
+}
+// 農場の状態が届く前も, 空の看板を出しておく
+drawBoard({ text: '', text_src: '', number: 0, answer: 0, ok: -1, bells: 0 })
 
 // ---------------------------------------------------------------- 作物
 const G = {
@@ -540,6 +634,7 @@ function apply(s) {
     lastFx = f.id
     effect(f, s)
   }
+  if (s.board) drawBoard(s.board)
   syncHuts(s)
   for (const n of s.notices) {
     if (n.id <= lastNotice) continue
@@ -563,6 +658,11 @@ function effect(f, s) {
     if (b && Math.random() < 0.3) { floatText('ゴツン', b.x, 0.8, -b.y, '#ffe0a0'); sfx.wall() }
   }
   if (f.kind === 'buy') { burst('confetti', s.w / 2, -s.h / 2, 40); sfx.buy() }
+  if (f.kind === 'board_answer') {
+    if (f.value > 0) { floatText('正解', BOARD_POS.x, 2.8, BOARD_POS.z, '#b8ffb0'); burst('spark', BOARD_POS.x, BOARD_POS.z, 10); sfx.mission() }
+    else floatText('ちがう', BOARD_POS.x, 2.8, BOARD_POS.z, '#ffc0b8')
+  }
+  if (f.kind === 'board_bell') { bellSwing = 1; [0, 0.18].forEach(t0 => tone(1320, t0, 0.9, 'sine', 0.12)) }
 }
 
 function notify(n) {
@@ -803,7 +903,7 @@ renderer.domElement.addEventListener('pointermove', e => {
 const huts = {}            // ノード名 -> { g, x, pile: [] }
 const flows = []           // 飛んでいる粒
 const flowGeo = new THREE.SphereGeometry(0.07, 8, 6)
-const FLOW_COLOR = { cmd_vel: '#ffb43a', pose: '#5ab8ff', tank: '#5ab8ff', field: '#7be07b', money: '#f5c542' }
+const FLOW_COLOR = { cmd_vel: '#ffb43a', pose: '#5ab8ff', tank: '#5ab8ff', field: '#7be07b', money: '#f5c542', board: '#ff8fd0' }
 const flowMats = {}
 const flowMat = c => flowMats[c] ?? (flowMats[c] = new THREE.MeshBasicMaterial({ color: c, transparent: true }))
 const spawnAcc = {}        // 粒を出す時間の端数
@@ -861,6 +961,7 @@ function topicPoint(topic, s) {
   const m = topic.match(/^\/(bot\d+)\//)
   if (m && bots[m[1]]?.x != null) return new THREE.Vector3(bots[m[1]].x, 0.5, -bots[m[1]].y)
   if (topic.startsWith('/field/')) return new THREE.Vector3(s.w / 2, 0.3, -s.h / 2)
+  if (topic.startsWith('/board/')) return new THREE.Vector3(BOARD_POS.x, 1.7, BOARD_POS.z)
   return new THREE.Vector3(0.5, 0.6, -0.5)
 }
 
@@ -1025,6 +1126,8 @@ function loop() {
     }
   }
   well.children[1].position.y = 0.3 + Math.sin(t * 2) * 0.01
+  bellSwing = Math.max(0, bellSwing - dt * 0.8)
+  bellPivot.rotation.x = Math.sin(t * 16) * 0.5 * bellSwing
   stepParts(dt)
   if (state) spawnFlows(dt, state)
   stepFlows(dt)

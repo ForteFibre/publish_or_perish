@@ -4,7 +4,7 @@
 
 水分が 30 未満のマスに、自分のノードから 10 回水をやる。水やりは service `/bot1/water` で、ステージ 1 では `ros2 service call` で呼んだ。これをノードの中から呼ぶ。
 
-動かすのと水をやるのを 2 つのノードに分ける。動かすのはステージ 4 の `patrol_node` をそのまま使い、水をやる `water_node` (`~/src26_ws/src/tutorial_nodes/src/water_node.cpp`) を新しく作る。
+動かすのと水をやるのを 2 つのノードに分ける。動かすのはステージ 5 の `patrol_node` をそのまま使い、水をやる `water_node` (`~/src26_ws/src/tutorial_nodes/src/water_node.cpp`) を新しく作る。
 
 package.xml に `std_srvs` を足し、CMakeLists.txt に 1 行足す。
 

@@ -6,7 +6,7 @@
 
 `~/src26_ws/src/tutorial_nodes/src/watch_node.cpp` を作る。ロボットの位置 (`/bot1/pose`) と畑の水分 (`/field/moisture`) を受け取り、1 秒に 1 回、今いるマスの水分を `RCLCPP_INFO` で出すノード。起動すると、subscribe したことを農場が見つけてクリアになる。
 
-package.xml に `nav_msgs` を足し (`geometry_msgs` はステージ 4 で足してある)、CMakeLists.txt に 1 行足す。
+package.xml に `nav_msgs` を足し (`geometry_msgs` はステージ 5 で足してある)、CMakeLists.txt に 1 行足す。
 
 ```xml
   <depend>nav_msgs</depend>

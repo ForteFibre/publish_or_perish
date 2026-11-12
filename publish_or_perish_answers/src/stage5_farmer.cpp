@@ -1,4 +1,4 @@
-// ステージ 5・7 の解答例: 畑を見て, 収穫 → 水やり → 種まき を自動で回す.
+// ステージ 6・8 の解答例: 畑を見て, 収穫 → 水やり → 種まき を自動で回す.
 //   subscribe: pose (Pose2D), tank (Int32), /field/moisture, /field/crops (OccupancyGrid)
 //   publish  : cmd_vel
 //   service  : plant, water, harvest (std_srvs/Trigger)

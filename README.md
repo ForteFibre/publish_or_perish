@@ -53,16 +53,17 @@ ln -s ~/src26_ws/src/publish_or_perish/vscode ~/.vscode/extensions/fortefibre.pu
 | 1 手で動かしてみよう | `ros2 topic pub` / `ros2 topic echo` / `ros2 service call` | 入門 第8・9回 |
 | 2 ワークスペースを作ろう | `mkdir -p ~/src26_ws/src`、`ros2 pkg create`、`colcon build`、`~/.bashrc` | 実践 第1回 |
 | 3 最初のノードを動かそう | `hello_node` を書き、package.xml と CMakeLists.txt を ament_cmake_auto にし、ビルドして `ros2 run` | 実践 第2・3・4回 |
-| 4 自分のノードで動かそう | タイマーと Publisher | 実践 第2・5・6回 |
-| 5 畑を見て判断しよう | Subscriber と service の client で無人農場 | 実践 第7回 |
-| 6 パラメータで作物を選ぼう | `ros2 param set /farm bot1.seed tomato` | 入門 第10回・実践 第12回 |
-| 7 ロボットを 2 台にしよう | namespace と launch で同じノードを 2 つ動かす | 実践 第11回 |
+| 4 ノードで topic と service を使おう | 畑の横の看板を相手に、Publisher・Subscriber・受けて送る・service の client を 1 つずつ書く (畑とロボットは使わない) | 実践 第2・5・6・7回・入門 第9回 |
+| 5 自分のノードでロボットを動かそう | ステージ 4 と同じ書き方で `/bot1/cmd_vel` を送り、畑を巡回する | 実践 第6回 |
+| 6 畑を見て判断しよう | Subscriber と service の client で無人農場 | 実践 第7回 |
+| 7 パラメータで作物を選ぼう | `ros2 param set /farm bot1.seed tomato` | 入門 第10回・実践 第12回 |
+| 8 ロボットを 2 台にしよう | namespace と launch で同じノードを 2 つ動かす | 実践 第11回 |
 
 ステージ 2・3 は農場がファイルを見て判定する。調べるのは `~/src26_ws` の `tutorial_nodes` (変えるときは `workspace:=<path>` と `package:=<名前>`。課題文のパスとコマンドもその値になる)。
 
 ## 画面の機能
 
-- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4〜7 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/guide/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。今あるのはステージ 3〜7 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない)
+- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/guide/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。今あるのはステージ 3〜8 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない。ステージ 4 は「看板に文字を出す」だけ)
 - **点検** (課題パネルの上、VSCode では「問題」パネル): ターミナルにはエラーが出ないか、出ても原因が分かりにくい間違いを、ファイル・`~/.bashrc`・動いているプロセスを外から見て見つける。ファイルは読むだけで書き換えない
 
   | 見つける間違い | 調べ方 |
@@ -90,9 +91,9 @@ ln -s ~/src26_ws/src/publish_or_perish/vscode ~/.vscode/extensions/fortefibre.pu
 ## 解答例 (講師用)
 
 ```bash
-ros2 run publish_or_perish_answers stage4_patrol                          # ステージ 4
-ros2 run publish_or_perish_answers stage5_farmer --ros-args -r __ns:=/bot1  # ステージ 5・6
-ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ステージ 7
+ros2 run publish_or_perish_answers stage4_patrol                          # ステージ 5 (名前は番号を 1 つ足す前のまま)
+ros2 run publish_or_perish_answers stage5_farmer --ros-args -r __ns:=/bot1  # ステージ 6・7
+ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ステージ 8
 ```
 
 ## ロボットとのやりとり
@@ -107,6 +108,10 @@ ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ス
 | `/field/moisture` | `nav_msgs/msg/OccupancyGrid` | 受ける | マスの水分 0〜100。`data[y * width + x]` |
 | `/field/crops` | `nav_msgs/msg/OccupancyGrid` | 受ける | -1: なし, 0〜99: 生育中, 100: 実った, -2: 枯れた |
 | `/money` | `std_msgs/msg/Int64` | 受ける | 所持金 |
+| `/board/text` | `std_msgs/msg/String` | 送る | 看板に出す文字 (先頭の 40 文字) |
+| `/board/number` | `std_msgs/msg/Int32` | 受ける | 看板が 2 秒ごとに出す 1〜50 の数 |
+| `/board/answer` | `std_msgs/msg/Int32` | 送る | `/board/number` の 2 倍なら正解 (1 つの数に 1 回だけ数える) |
+| `/board/bell` | `std_srvs/srv/Trigger` | 呼ぶ | 看板の鐘を鳴らす。response の message に何回目か |
 | パラメータ `/farm` の `bot1.seed` | string | 設定 | 植える作物 (wheat / tomato / pumpkin, お店で解禁) |
 
 ## 課題の判定

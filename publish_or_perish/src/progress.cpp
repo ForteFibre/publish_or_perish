@@ -213,9 +213,57 @@ Progress::Progress()
   }
   stages.push_back(s_node);
 
-  // ---- ステージ 4: 自分のノードから publish する ----
-  Stage s2{"ステージ 4: 自分のノードで動かそう",
-    "実践 第2回 (ノード) ・第5回 (タイマー) ・第6回 (Publisher)", {}};
+  // ---- ステージ 4: 看板を相手に, 自分のノードで topic と service を使う ----
+  // 農場の決まり (マス, 水, 作物) を知らなくても進められるように, 畑の横の看板だけを相手にする.
+  // イベントの bot には送り手 ("player" / "cli") が入る (farm_node.cpp)
+  auto by_player = [](const Event & e, const Graph &, const World &) {return e.bot == "player";};
+  Stage s_board{"ステージ 4: ノードで topic と service を使おう",
+    "実践 第2回 (ノード) ・第5回 (タイマー) ・第6回 (Publisher) ・第7回 (Subscriber) ・入門 第9回 (service)", {}};
+  {
+    auto m = mission(
+      "board_pub", "看板に文字を出す",
+      "自分のノードから /board/text (std_msgs/msg/String) に文字を送り, 畑の横の看板に出す。5 回届けばクリア。\n"
+      "ros2 topic pub ではなく, C++ で書いたノードから送る。",
+      "create_publisher<std_msgs::msg::String>(\"/board/text\", 10) と create_wall_timer", 5, "回", 60, 60);
+    m.on_event = count("board_text", by_player);
+    s_board.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "board_sub", "看板の数を受け取る",
+      "看板は 2 秒ごとに /board/number (std_msgs/msg/Int32) に 1〜50 の数を送っている。\n"
+      "自分のノードでこれを subscribe し, 受け取った数をログに出す。",
+      "create_subscription<std_msgs::msg::Int32>(\"/board/number\", 10, ...)", 1, "", 60, 60);
+    m.on_tick = [](Mission & m, const Graph & g, const World &) {
+        if (subscribed_by(g, "/board/number", g.players)) {m.value = m.goal;}
+      };
+    s_board.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "board_reply", "受け取った数を 2 倍して返す",
+      "/board/number で受け取った数を 2 倍して, 自分のノードから /board/answer (std_msgs/msg/Int32) に送る。\n"
+      "正しければ看板に「正解」と出る。5 つの数に正解すればクリア。",
+      "subscription のコールバックの中で publish する", 5, "回", 100, 80);
+    m.on_event = count("board_answer", [](const Event & e, const Graph &, const World &) {
+          return e.bot == "player" && e.value > 0.5;
+        });
+    s_board.missions.push_back(m);
+  }
+  {
+    auto m = mission(
+      "board_bell", "鐘を鳴らす",
+      "看板の鐘は service /board/bell (std_srvs/srv/Trigger)。自分のノードから 3 回呼ぶ。\n"
+      "返事 (response) の message に, 何回目に鳴ったかが入っている。",
+      "create_client<std_srvs::srv::Trigger>(\"/board/bell\") と async_send_request", 3, "回", 100, 80);
+    m.on_event = count("board_bell", by_player);
+    s_board.missions.push_back(m);
+  }
+  stages.push_back(s_board);
+
+  // ---- ステージ 5: 自分のノードから publish してロボットを動かす ----
+  Stage s2{"ステージ 5: 自分のノードでロボットを動かそう",
+    "実践 第6回 (Publisher)", {}};
   {
     auto m = mission(
       "s2_node", "C++ のノードから動かす",
@@ -241,8 +289,8 @@ Progress::Progress()
   }
   stages.push_back(s2);
 
-  // ---- ステージ 5: subscribe して判断する ----
-  Stage s3{"ステージ 5: 畑を見て判断しよう", "実践 第7回 (Subscriber) ・入門 第9回 (service)", {}};
+  // ---- ステージ 6: subscribe して判断する ----
+  Stage s3{"ステージ 6: 畑を見て判断しよう", "実践 第7回 (Subscriber) ・入門 第9回 (service)", {}};
   {
     auto m = mission(
       "s3_sub", "畑の水分を読む",
@@ -288,8 +336,8 @@ Progress::Progress()
   }
   stages.push_back(s3);
 
-  // ---- ステージ 6: パラメータ ----
-  Stage s4{"ステージ 6: パラメータで作物を選ぼう", "入門 第10回 ・実践 第12回 (パラメータ)", {}};
+  // ---- ステージ 7: パラメータ ----
+  Stage s4{"ステージ 7: パラメータで作物を選ぼう", "入門 第10回 ・実践 第12回 (パラメータ)", {}};
   {
     auto m = mission(
       "s4_tomato", "トマトを植える",
@@ -309,8 +357,8 @@ Progress::Progress()
   }
   stages.push_back(s4);
 
-  // ---- ステージ 7: namespace と launch で 2 台 ----
-  Stage s5{"ステージ 7: ロボットを 2 台にしよう", "実践 第11回 (launch) ・namespace", {}};
+  // ---- ステージ 8: namespace と launch で 2 台 ----
+  Stage s5{"ステージ 8: ロボットを 2 台にしよう", "実践 第11回 (launch) ・namespace", {}};
   {
     auto m = mission(
       "s5_buy", "2 台目を買う",
@@ -365,9 +413,9 @@ Progress::Progress()
   stages.push_back(s5);
 
   upcoming = {
-    "ステージ 8: action で「ここへ行け」",
-    "ステージ 9: 収穫ロボと運搬ロボの連携",
-    "ステージ 10: Behavior Tree で農場を回す",
+    "ステージ 9: action で「ここへ行け」",
+    "ステージ 10: 収穫ロボと運搬ロボの連携",
+    "ステージ 11: Behavior Tree で農場を回す",
     "卒業: 自分のノードで MuJoCo の部のロボットを動かす",
   };
 
