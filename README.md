@@ -46,6 +46,41 @@ ln -s ~/src26_ws/src/publish_or_perish/vscode ~/.vscode/extensions/fortefibre.pu
 - **ステータスバー**: 今のステージ、課題、進み具合、配線の警告を出す。カーソルを乗せると課題の説明とヒントが出る
 - **今の課題の説明を開く** (Ctrl+Alt+G、ステータスバーのツールチップ、または畑の「説明を読む」): 課題の説明をエディタの横に Markdown のプレビューで開く
 
+## 大会モード (作成中)
+
+関西春ロボコン 2027 "SAKURA AVENUE" のフィールドで、大会のタスクができるロボット (赤コート) を自由に動かせる。物理は MuJoCo で計算する。得点の判定と試合の進行はまだない。
+
+```bash
+pip install --user --break-system-packages mujoco   # MuJoCo の Python 版 (Ubuntu 24.04 は --break-system-packages が要る)
+cd ~/src26_ws
+colcon build --symlink-install --merge-install --packages-select publish_or_perish
+ros2 launch publish_or_perish match.launch.xml
+```
+
+ブラウザで http://localhost:8765/match.html を開く。キーで動かせる (画面の左上に一覧)。
+
+ロボット: 450 x 450 mm の全方向に動ける台車, マストを上下するリフト (0〜0.35 m), 前へ伸びるアーム (0〜0.42 m), ボトルを横 3 x 奥 2 に並べてつかむハンド。
+アームを縮めると 0.57 x 0.45 x 0.66 m (初期制限 700 mm 角に入る), 伸ばしきると前後 0.99 m (展開制限 1000 mm 角に入る)。重さは 12 kg。
+
+| 名前 | 型 | 向き | 内容 |
+|---|---|---|---|
+| `/robot/cmd_vel` | `geometry_msgs/msg/Twist` | 送る | 台車の速度 (機体座標, x 前 / y 左)。0.5 秒途切れると止まる。最大 2 m/s, 3 rad/s |
+| `/robot/arm/extend` | `std_msgs/msg/Float64` | 送る | アームの伸びの目標 [m] (0〜0.42)。0.4 m/s で動く |
+| `/robot/arm/lift` | `std_msgs/msg/Float64` | 送る | リフトの高さの目標 [m] (0〜0.35)。0.3 m/s で動く |
+| `/robot/pose` | `geometry_msgs/msg/Pose2D` | 受ける | 台車の位置 [m] と向き [rad]。原点はフィールドの中心, x は赤コートから青コートへ, y はスタートゾーンから奥へ |
+| `/robot/status` | `std_msgs/msg/String` | 受ける | アーム・リフト・持っているボトル・サイコロの目・合図 (JSON) |
+| `/robot/grab` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの前に立っているボトル (自チームの桜ボトルと除草剤ボトル) をつかむ。リフトを 0.03 m 以下に下ろしておく。持てるのはサイコロの目の数まで (ルール 5.4) |
+| `/robot/place` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの真ん中のボトルを今の高さで離す (下ろしてから離す) |
+| `/robot/throw` | `std_srvs/srv/Trigger` | 呼ぶ | 持っている除草剤ボトルを 1 本, 前へ投げる (前 3.5 m/s, 上 2.5 m/s) |
+| `/robot/dice` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドから 0.2 m 以内のサイコロを前へ 1 面転がす |
+| `/robot/signal` | `std_srvs/srv/Trigger` | 呼ぶ | 合図 (満開宣言) の灯りを付ける / 消す |
+| `/match/reset` | `std_srvs/srv/Trigger` | 呼ぶ | ロボットとオブジェクトを最初の位置に戻す |
+
+- service の結果は response の `message` に日本語で返る (できなかった理由も)
+- 台車は木枠 (高さ 89 mm) を越えられない。スタートゾーンは外周と木枠に囲まれていて, 右 (+x) から出る。アームとハンドは何にも当たらない
+- 持っているボトルの底は, リフトの高さ + 5 mm。底が 89 mm より低いまま木枠に重なると, そのボトルはその場に落ちる。共通ゾーンへ運ぶときはリフトを上げて木枠を越え, ゾーンの上で下ろしてから置く
+- フィールドは `tools/harurobo2027_field.py` が `publish_or_perish/models/harurobo2027/harurobo2027.xml` に書き出す。寸法は運営委員会のフィールド CAD から取った (取り方はスクリプトの先頭)。直したら書き出し直し, `python3 tools/mjcf_export.py publish_or_perish/models/harurobo2027/harurobo2027.xml publish_or_perish/web/scenes/harurobo2027` で画面用の形も作り直す
+
 ## ステージ
 
 | ステージ | 内容 | 講習 |

@@ -1,0 +1,640 @@
+<!--
+  関西春ロボコン 2027 "SAKURA AVENUE" のフィールド・オブジェクト・ロボット.
+  tools/harurobo2027_field.py が書き出したもの. 直すときはスクリプトを直して書き出し直す.
+  寸法は運営委員会のフィールド CAD から. 座標・読み方はスクリプトの先頭を参照.
+-->
+<mujoco model="harurobo2027">
+  <compiler angle="radian" autolimits="true"/>
+  <option timestep="0.002" gravity="0 0 -9.81" integrator="implicitfast" cone="elliptic"/>
+
+  <default>
+    <geom friction="0.8 0.005 0.0001" solref="0.008 1"/>
+    <!-- group 0 = 見た目兼衝突, 2 = 衝突専用 (描かない), 3 = 見た目専用. ゾーンの site は group 4 (描かない) -->
+    <default class="floor">
+      <geom type="box" group="0" material="field_linoleum"/>
+    </default>
+    <default class="timber">
+      <geom type="box" group="0" material="field_timber"/>
+    </default>
+    <default class="mark">
+      <geom type="box" group="3" contype="0" conaffinity="0" material="field_line_white"/>
+    </default>
+    <default class="zone">
+      <site type="box" group="4" rgba="1 0.6 0.1 0.3"/>
+    </default>
+    <default class="bottle">
+      <geom group="0" material="bottle_pet" friction="0.5 0.005 0.0001"/>
+    </default>
+    <default class="bottle_cap">
+      <geom group="0"/>
+    </default>
+    <default class="dice">
+      <geom group="0" material="dice_sponge" friction="1.0 0.01 0.001" solref="0.02 1"/>
+    </default>
+    <default class="pip">
+      <geom group="3" contype="0" conaffinity="0"/>
+    </default>
+    <default class="robot_visual">
+      <geom group="3" contype="0" conaffinity="0" density="0"/>
+    </default>
+  </default>
+
+  <asset>
+    <material name="field_linoleum" rgba="0.03 0.64 0 1" specular="0.1"/>
+    <material name="field_timber" rgba="0.89 0.67 0.5 1" specular="0.1"/>
+    <material name="field_line_white" rgba="0.96 0.96 0.94 1"/>
+    <material name="field_tape_red" rgba="1 0 0 1"/>
+    <material name="field_tape_blue" rgba="0 0 1 1"/>
+    <material name="bottle_pet" rgba="0.85 0.93 0.98 0.45" specular="0.6" shininess="0.8"/>
+    <material name="cap_red" rgba="0.88 0.12 0.12 1"/>
+    <material name="cap_blue" rgba="0.12 0.25 0.88 1"/>
+    <material name="cap_yellow" rgba="0.98 0.82 0.10 1"/>
+    <material name="cap_white" rgba="0.95 0.95 0.95 1"/>
+    <material name="dice_sponge" rgba="0.97 0.96 0.92 1"/>
+    <material name="dice_pip" rgba="0.08 0.08 0.08 1"/>
+    <material name="dice_pip_red" rgba="0.85 0.10 0.10 1"/>
+    <material name="robot_aluminium" rgba="0.79 0.81 0.84 1"/>
+    <material name="robot_red" rgba="0.91 0.38 0.25 1"/>
+    <material name="robot_white" rgba="0.96 0.95 0.92 1"/>
+    <material name="robot_rubber" rgba="0.18 0.2 0.22 1"/>
+    <material name="robot_yellow" rgba="0.98 0.82 0.1 1"/>
+    <material name="robot_estop" rgba="0.85 0.1 0.1 1"/>
+    <material name="robot_black" rgba="0.2 0.22 0.24 1"/>
+    <material name="robot_beacon_off" rgba="0.55 0.55 0.5 1"/>
+  </asset>
+
+  <visual>
+    <headlight diffuse="0.3 0.3 0.3" ambient="0.45 0.45 0.45" specular="0.05 0.05 0.05"/>
+    <quality shadowsize="4096"/>
+    <global azimuth="90" elevation="-35" offwidth="1920" offheight="1080"/>
+  </visual>
+
+  <worldbody>
+    <light name="top" diffuse="0.9 0.9 0.9" pos="0 0 8" dir="0 0 -1" castshadow="true"/>
+    <body name="field">
+      <geom name="floor_1" class="floor" pos="0 0 -0.005" size="3.5 3.5 0.005"/>
+      <geom name="timber_1" class="timber" pos="0 -3.481 0.0445" size="3.5 0.019 0.0445"/>
+      <geom name="timber_2" class="timber" pos="3.481 0 0.0445" size="0.019 3.462 0.0445"/>
+      <geom name="timber_3" class="timber" pos="0 -3.019 0.0445" size="0.019 0.443 0.0445"/>
+      <geom name="timber_4" class="timber" pos="-3.481 0 0.0445" size="0.019 3.462 0.0445"/>
+      <geom name="timber_5" class="timber" pos="0 -2.557 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_6" class="timber" pos="0 3.481 0.0445" size="3.5 0.019 0.0445"/>
+      <geom name="timber_7" class="timber" pos="-1.881 -0.738 0.0445" size="0.019 0.886 0.0445"/>
+      <geom name="timber_8" class="timber" pos="-2.131 0.167 0.0445" size="0.269 0.019 0.0445"/>
+      <geom name="timber_9" class="timber" pos="-1.881 1.255 0.0445" size="0.019 1.069 0.0445"/>
+      <geom name="timber_10" class="timber" pos="-2.662 2.343 0.0445" size="0.8 0.019 0.0445"/>
+      <geom name="timber_11" class="timber" pos="-3.212 -0.871 0.0445" size="0.25 0.019 0.0445"/>
+      <geom name="timber_12" class="timber" pos="-0.169 -1.557 0.0445" size="0.019 1.019 0.0445"/>
+      <geom name="timber_13" class="timber" pos="-0.319 -0.519 0.0445" size="0.169 0.019 0.0445"/>
+      <geom name="timber_14" class="timber" pos="-0.169 0.481 0.0445" size="0.019 0.981 0.0445"/>
+      <geom name="timber_15" class="timber" pos="-0.319 1.481 0.0445" size="0.169 0.019 0.0445"/>
+      <geom name="timber_16" class="timber" pos="-0.169 2.481 0.0445" size="0.019 0.981 0.0445"/>
+      <geom name="timber_17" class="timber" pos="-3.212 1.205 0.0445" size="0.25 0.019 0.0445"/>
+      <geom name="timber_18" class="timber" pos="-2.662 -2.743 0.0445" size="0.8 0.019 0.0445"/>
+      <geom name="timber_19" class="timber" pos="1.881 -0.738 0.0445" size="0.019 0.886 0.0445"/>
+      <geom name="timber_20" class="timber" pos="2.131 0.167 0.0445" size="0.269 0.019 0.0445"/>
+      <geom name="timber_21" class="timber" pos="1.881 1.255 0.0445" size="0.019 1.069 0.0445"/>
+      <geom name="timber_22" class="timber" pos="2.662 2.343 0.0445" size="0.8 0.019 0.0445"/>
+      <geom name="timber_23" class="timber" pos="3.212 -0.871 0.0445" size="0.25 0.019 0.0445"/>
+      <geom name="timber_24" class="timber" pos="0.169 -1.557 0.0445" size="0.019 1.019 0.0445"/>
+      <geom name="timber_25" class="timber" pos="0.319 -0.519 0.0445" size="0.169 0.019 0.0445"/>
+      <geom name="timber_26" class="timber" pos="0.169 0.481 0.0445" size="0.019 0.981 0.0445"/>
+      <geom name="timber_27" class="timber" pos="0.319 1.481 0.0445" size="0.169 0.019 0.0445"/>
+      <geom name="timber_28" class="timber" pos="0.169 2.481 0.0445" size="0.019 0.981 0.0445"/>
+      <geom name="timber_29" class="timber" pos="3.212 1.205 0.0445" size="0.25 0.019 0.0445"/>
+      <geom name="timber_30" class="timber" pos="2.662 -2.743 0.0445" size="0.8 0.019 0.0445"/>
+      <geom name="timber_31" class="timber" pos="0 -2.019 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_32" class="timber" pos="0 -1.519 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_33" class="timber" pos="0 -1.019 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_34" class="timber" pos="0 -0.519 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_35" class="timber" pos="0 -0.019 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_36" class="timber" pos="0 0.481 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_37" class="timber" pos="0 0.981 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_38" class="timber" pos="0 1.481 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_39" class="timber" pos="0 1.981 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_40" class="timber" pos="0 2.481 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="timber_41" class="timber" pos="0 2.981 0.0445" size="0.15 0.019 0.0445"/>
+      <geom name="line_1" class="mark" pos="-0.369 -3.168 0.0003" size="0.075 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_2" class="mark" pos="-0.319 -3.118 0.0003" size="0.025 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_3" class="mark" pos="-0.419 -3.118 0.0003" size="0.025 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_4" class="mark" pos="-0.369 -3.068 0.0003" size="0.075 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_5" class="mark" pos="-2.987 2.912 0.0003" size="0.025 0.55 0.0003" material="field_line_white"/>
+      <geom name="line_6" class="mark" pos="-0.694 -3.118 0.0003" size="0.025 0.344 0.0003" material="field_line_white"/>
+      <geom name="line_7" class="mark" pos="-0.9405 -2.749 0.0003" size="0.9215 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_8" class="mark" pos="-0.463 0.369 0.0003" size="0.025 3.093 0.0003" material="field_line_white"/>
+      <geom name="line_9" class="mark" pos="-2.987 1.774 0.0003" size="0.025 0.55 0.0003" material="field_line_white"/>
+      <geom name="line_10" class="mark" pos="0.369 -3.168 0.0003" size="0.075 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_11" class="mark" pos="0.419 -3.118 0.0003" size="0.025 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_12" class="mark" pos="0.319 -3.118 0.0003" size="0.025 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_13" class="mark" pos="0.369 -3.068 0.0003" size="0.075 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_14" class="mark" pos="2.987 2.912 0.0003" size="0.025 0.55 0.0003" material="field_line_white"/>
+      <geom name="line_15" class="mark" pos="0.694 -3.118 0.0003" size="0.025 0.344 0.0003" material="field_line_white"/>
+      <geom name="line_16" class="mark" pos="0.9405 -2.749 0.0003" size="0.9215 0.025 0.0003" material="field_line_white"/>
+      <geom name="line_17" class="mark" pos="0.463 0.369 0.0003" size="0.025 3.093 0.0003" material="field_line_white"/>
+      <geom name="line_18" class="mark" pos="2.987 1.774 0.0003" size="0.025 0.55 0.0003" material="field_line_white"/>
+      <geom name="tape_red_1" class="mark" pos="-2.7715 -3.112 0.0003" size="0.0095 0.35 0.0003" material="field_tape_red"/>
+      <geom name="tape_blue_1" class="mark" pos="2.7715 -3.112 0.0003" size="0.0095 0.35 0.0003" material="field_tape_blue"/>
+      <site name="red_start" class="zone" pos="-3.112 -3.112 0.001" size="0.35 0.35 0.001"/>
+      <site name="red_dice" class="zone" pos="-0.344 -3.118 0.001" size="0.325 0.344 0.001"/>
+      <site name="red_dice_mark" class="zone" pos="-0.369 -3.118 0.001" size="0.075 0.075 0.001"/>
+      <site name="red_herbicide" class="zone" pos="-3.237 2.912 0.001" size="0.225 0.55 0.001"/>
+      <site name="red_sakura" class="zone" pos="-3.237 1.774 0.001" size="0.225 0.55 0.001"/>
+      <site name="red_weed" class="zone" pos="-0.313 0.462 0.001" size="0.125 3 0.001"/>
+      <site name="red_area1" class="zone" pos="-1.7405 -3.118 0.001" size="1.7215 0.344 0.001"/>
+      <site name="red_area2" class="zone" pos="-1.975 0.369 0.001" size="1.487 3.093 0.001"/>
+      <site name="blue_start" class="zone" pos="3.112 -3.112 0.001" size="0.35 0.35 0.001"/>
+      <site name="blue_dice" class="zone" pos="0.344 -3.118 0.001" size="0.325 0.344 0.001"/>
+      <site name="blue_dice_mark" class="zone" pos="0.369 -3.118 0.001" size="0.075 0.075 0.001"/>
+      <site name="blue_herbicide" class="zone" pos="3.237 2.912 0.001" size="0.225 0.55 0.001"/>
+      <site name="blue_sakura" class="zone" pos="3.237 1.774 0.001" size="0.225 0.55 0.001"/>
+      <site name="blue_weed" class="zone" pos="0.313 0.462 0.001" size="0.125 3 0.001"/>
+      <site name="blue_area1" class="zone" pos="1.7405 -3.118 0.001" size="1.7215 0.344 0.001"/>
+      <site name="blue_area2" class="zone" pos="1.975 0.369 0.001" size="1.487 3.093 0.001"/>
+      <site name="common_1" class="zone" pos="0 -2.288 0.001" size="0.15 0.25 0.001"/>
+      <site name="common_2" class="zone" pos="0 -1.769 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_3" class="zone" pos="0 -1.269 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_4" class="zone" pos="0 -0.769 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_5" class="zone" pos="0 -0.269 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_6" class="zone" pos="0 0.231 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_7" class="zone" pos="0 0.731 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_8" class="zone" pos="0 1.231 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_9" class="zone" pos="0 1.731 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_10" class="zone" pos="0 2.231 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_11" class="zone" pos="0 2.731 0.001" size="0.15 0.231 0.001"/>
+      <site name="common_12" class="zone" pos="0 3.231 0.001" size="0.15 0.231 0.001"/>
+    </body>
+
+    <body name="red_sakura_1" pos="-3.387 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_2" pos="-3.237 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_3" pos="-3.087 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_4" pos="-3.387 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_5" pos="-3.237 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_6" pos="-3.087 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_7" pos="-3.387 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_8" pos="-3.237 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_9" pos="-3.087 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_10" pos="-3.387 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_11" pos="-3.237 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_12" pos="-3.087 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_13" pos="-3.387 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_14" pos="-3.237 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_sakura_15" pos="-3.087 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
+    </body>
+    <body name="red_herbicide_1" pos="-3.237 2.762 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="red_herbicide_2" pos="-3.237 2.837 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="red_herbicide_3" pos="-3.237 2.912 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="red_herbicide_4" pos="-3.237 2.987 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="red_herbicide_5" pos="-3.237 3.062 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="red_weed_1" pos="-0.313 2.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="red_weed_2" pos="-0.313 0.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="red_weed_3" pos="-0.313 -1.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="red_dice" pos="-0.369 -3.118 0.0755">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.08" diaginertia="0.0003 0.0003 0.0003"/>
+      <geom class="dice" type="box" size="0.075 0.075 0.075"/>
+      <geom class="pip" type="cylinder" size="0.016 0.0006" pos="0 0 0.075" quat="1 0 0 0" material="dice_pip_red"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.075 -0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.075 0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 -0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 -0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0 0" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0 0.075 0" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+    </body>
+    <body name="blue_sakura_1" pos="3.387 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_2" pos="3.237 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_3" pos="3.087 1.624 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_4" pos="3.387 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_5" pos="3.237 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_6" pos="3.087 1.699 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_7" pos="3.387 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_8" pos="3.237 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_9" pos="3.087 1.774 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_10" pos="3.387 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_11" pos="3.237 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_12" pos="3.087 1.849 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_13" pos="3.387 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_14" pos="3.237 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_sakura_15" pos="3.087 1.924 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
+    </body>
+    <body name="blue_herbicide_1" pos="3.237 2.762 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="blue_herbicide_2" pos="3.237 2.837 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="blue_herbicide_3" pos="3.237 2.912 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="blue_herbicide_4" pos="3.237 2.987 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="blue_herbicide_5" pos="3.237 3.062 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
+      <geom class="bottle" type="cylinder" size="0.0245 0.0128" pos="0 0 0.1704"/>
+      <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_yellow"/>
+    </body>
+    <body name="blue_weed_1" pos="0.313 2.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="blue_weed_2" pos="0.313 0.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="blue_weed_3" pos="0.313 -1.5 0.0005">
+      <freejoint/>
+      <inertial pos="0 0 0.11" mass="0.15" diaginertia="0.001 0.001 0.0001"/>
+      <geom class="bottle" type="cylinder" size="0.041 0.1018" pos="0 0 0.1018"/>
+      <geom class="bottle" type="cylinder" size="0.0295 0.0165" pos="0 0 0.22"/>
+      <geom class="bottle" type="cylinder" size="0.0172 0.0096" pos="0 0 0.2461"/>
+      <geom class="bottle_cap" type="cylinder" size="0.0155 0.011" pos="0 0 0.264" material="cap_white"/>
+    </body>
+    <body name="blue_dice" pos="0.369 -3.118 0.0755">
+      <freejoint/>
+      <inertial pos="0 0 0" mass="0.08" diaginertia="0.0003 0.0003 0.0003"/>
+      <geom class="dice" type="box" size="0.075 0.075 0.075"/>
+      <geom class="pip" type="cylinder" size="0.016 0.0006" pos="0 0 0.075" quat="1 0 0 0" material="dice_pip_red"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0.0375 -0.075" quat="1 0 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.075 -0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.075 0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 -0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 -0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0 0" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0.0375 -0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.075 0.0375 0.0375" quat="0.7071 0 0.7071 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0 0.075 0" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="-0.0375 -0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+      <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
+    </body>
+
+    <body name="robot" pos="-3.112 -3.112 0">
+      <joint name="robot_x" type="slide" axis="1 0 0"/>
+      <joint name="robot_y" type="slide" axis="0 1 0"/>
+      <joint name="robot_yaw" type="hinge" axis="0 0 1"/>
+      <inertial pos="0 0 0.12" mass="12.0" diaginertia="0.405 0.405 0.405"/>
+      <!-- 当たり判定は台車だけ: 床から 10 mm 浮かせた箱 (高さは固定なので床とは当たらない). アームとハンドは当たらない -->
+      <geom name="robot_body" type="box" size="0.225 0.225 0.1" pos="0 0 0.11" group="2" rgba="1 0.5 0 0.3"/>
+      <geom name="robot_deck" class="robot_visual" type="box" size="0.225 0.225 0.015" pos="0 0 0.075" material="robot_aluminium"/>
+      <geom name="robot_cover" class="robot_visual" type="box" size="0.155 0.175 0.06" pos="-0.04 0 0.15" material="robot_red"/>
+      <geom name="robot_mast_l" class="robot_visual" type="box" size="0.015 0.015 0.3" pos="0.195 0.13 0.36" material="robot_aluminium"/>
+      <geom name="robot_mast_r" class="robot_visual" type="box" size="0.015 0.015 0.3" pos="0.195 -0.13 0.36" material="robot_aluminium"/>
+      <geom name="robot_mast_top" class="robot_visual" type="box" size="0.015 0.145 0.015" pos="0.195 0 0.645" material="robot_aluminium"/>
+      <geom name="robot_estop_base" class="robot_visual" type="box" size="0.035 0.035 0.02" pos="-0.145 0.1 0.23" material="robot_yellow"/>
+      <geom name="robot_estop" class="robot_visual" type="cylinder" size="0.022 0.012" pos="-0.145 0.1 0.26" material="robot_estop"/>
+      <site name="robot_beacon" pos="-0.145 -0.1 0.25" size="0.03"/>
+      <geom name="robot_beacon" class="robot_visual" type="cylinder" size="0.03 0.04" pos="-0.145 -0.1 0.25" material="robot_beacon_off"/>
+      <geom name="robot_wheel_0" class="robot_visual" type="cylinder" size="0.04 0.018" pos="0.165 0.205 0.04" quat="0.7071 0.7071 0 0" material="robot_rubber"/>
+      <geom name="robot_wheel_1" class="robot_visual" type="cylinder" size="0.04 0.018" pos="-0.165 0.205 0.04" quat="0.7071 0.7071 0 0" material="robot_rubber"/>
+      <geom name="robot_wheel_2" class="robot_visual" type="cylinder" size="0.04 0.018" pos="-0.165 -0.205 0.04" quat="0.7071 0.7071 0 0" material="robot_rubber"/>
+      <geom name="robot_wheel_3" class="robot_visual" type="cylinder" size="0.04 0.018" pos="0.165 -0.205 0.04" quat="0.7071 0.7071 0 0" material="robot_rubber"/>
+      <body name="robot_lift" pos="0.195 0 0.2">
+        <joint name="robot_lift" type="slide" axis="0 0 1" range="0 0.35"/>
+        <inertial pos="0 0 0" mass="0.8" diaginertia="0.01 0.01 0.01"/>
+        <geom class="robot_visual" type="box" size="0.025 0.15 0.04" pos="0.025 0 0" material="robot_black"/>
+        <body name="robot_arm" pos="0 0 0">
+          <joint name="robot_extend" type="slide" axis="1 0 0" range="0 0.42"/>
+          <inertial pos="0 0 0" mass="0.6" diaginertia="0.01 0.01 0.01"/>
+          <!-- 腕: 長さ 0.5 m の角パイプ. 縮めると機体の上に収まり, 伸ばすと前に出る -->
+          <geom class="robot_visual" type="box" size="0.25 0.02 0.02" pos="-0.17 0 0.03" material="robot_aluminium"/>
+          <body name="robot_hand" pos="0.08 0 0">
+            <geom class="robot_visual" type="box" size="0.075 0.13 0.012" pos="0 0 0.03" material="robot_white"/>
+            <geom class="robot_visual" type="box" size="0.07 0.006 0.03" pos="0 -0.1125 -0.01" material="robot_black"/>
+            <geom class="robot_visual" type="box" size="0.07 0.006 0.03" pos="0 -0.0375 -0.01" material="robot_black"/>
+            <geom class="robot_visual" type="box" size="0.07 0.006 0.03" pos="0 0.0375 -0.01" material="robot_black"/>
+            <geom class="robot_visual" type="box" size="0.07 0.006 0.03" pos="0 0.1125 -0.01" material="robot_black"/>
+            <site name="hand_center" pos="0.035 0 0" size="0.01"/>
+          </body>
+        </body>
+      </body>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <!-- 台車の速度. 指令はワールドの向きの速度 (シミュレーターのノードが機体の向きから変換する).
+         力の上限で加速度が決まる: 120 N / 13.4 kg = 9 m/s^2 -->
+    <velocity name="robot_vx" joint="robot_x" kv="600" forcerange="-120 120"/>
+    <velocity name="robot_vy" joint="robot_y" kv="600" forcerange="-120 120"/>
+    <velocity name="robot_wz" joint="robot_yaw" kv="30" forcerange="-15 15"/>
+    <!-- リフトとアームは位置で動かす. 速さはシミュレーターのノードが目標を少しずつ動かして決める -->
+    <position name="robot_lift" joint="robot_lift" kp="3000" dampratio="1" ctrlrange="0 0.35"/>
+    <position name="robot_extend" joint="robot_extend" kp="2000" dampratio="1" ctrlrange="0 0.42"/>
+  </actuator>
+</mujoco>

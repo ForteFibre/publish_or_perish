@@ -1,3 +1,4 @@
-publish_or_perish/web/scenes/
+publish_or_perish/web/scenes/*
+!publish_or_perish/web/scenes/harurobo2027/
 __pycache__/
 *.vsix

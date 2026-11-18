@@ -30,6 +30,18 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd8f5;
 #checks .ng i { background: var(--red); }
 #checks .wait i { background: #d8caa3; }
 #note { position: fixed; left: 16px; bottom: 16px; padding: 8px 12px; font-size: 12px; color: var(--sub); }
+#drive { position: fixed; left: 16px; top: 16px; padding: 12px 16px; font-size: 13px; width: 330px; }
+#drive h3 { margin: 0 0 6px; font-size: 15px; }
+#drive table { border-collapse: collapse; width: 100%; }
+#drive td { padding: 2px 0; border-top: 1px dashed var(--line); }
+#drive td:first-child { white-space: nowrap; padding-right: 8px; }
+#drive kbd { display: inline-block; min-width: 20px; padding: 0 5px; border: 1px solid var(--line); border-radius: 5px; background: #fff; text-align: center; font-family: inherit; font-size: 12px; }
+#drive .st { margin-top: 8px; font-size: 12px; color: var(--sub); }
+#drive #pose, #drive #arm { font-variant-numeric: tabular-nums; color: var(--ink); }
+#drive #action { margin: 4px 0; padding: 4px 6px; border-radius: 6px; }
+#drive #action:empty { display: none; }
+#drive #action.ok { background: #e3f4dc; color: #2d6a1f; }
+#drive #action.ng { background: #fbe3df; color: #9a2a1d; }
 </style>
 </head>
 <body>
@@ -42,6 +54,20 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd8f5;
   <div class="ok"><i>✓</i>/md0/motor0〜2/target が出ている</div>
   <div class="ok"><i>✓</i>/imu/raw_data を受けている</div>
   <div class="wait"><i></i>非常停止で 0.5 秒以内に止まる</div>
+</div>
+<div id="drive" class="card" style="display:none">
+  <h3>自由走行</h3>
+  <table>
+    <tr><td><kbd>W</kbd> <kbd>S</kbd> <kbd>A</kbd> <kbd>D</kbd></td><td>前・後・左・右 (横に動く)</td></tr>
+    <tr><td><kbd>Q</kbd> <kbd>E</kbd></td><td>左回り・右回り (<kbd>Shift</kbd> で速く)</td></tr>
+    <tr><td><kbd>I</kbd> <kbd>K</kbd></td><td>アームを伸ばす・縮める</td></tr>
+    <tr><td><kbd>U</kbd> <kbd>J</kbd></td><td>リフトを上げる・下げる</td></tr>
+    <tr><td><kbd>G</kbd> <kbd>P</kbd></td><td>ボトルをつかむ・置く</td></tr>
+    <tr><td><kbd>X</kbd> <kbd>T</kbd></td><td>サイコロを転がす・除草剤を投げる</td></tr>
+    <tr><td><kbd>Z</kbd></td><td>合図 (満開宣言)</td></tr>
+    <tr><td><kbd>F</kbd> <kbd>R</kbd></td><td>カメラがついていく・最初の位置に戻す</td></tr>
+  </table>
+  <div class="st"><div id="pose">-</div><div id="arm">-</div><div id="action"></div><div id="conn">シミュレーターにつないでいる</div></div>
 </div>
 <div id="note" class="card">見た目の試作: SRC2026 のフィールドとロボットを MJCF から読み込んで描いている (動きはまだない)</div>
 <script type="module" src="./match.js"></script>

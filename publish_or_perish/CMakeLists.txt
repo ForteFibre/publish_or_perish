@@ -19,6 +19,7 @@ target_include_directories(farm_node PUBLIC
 ament_target_dependencies(farm_node rclcpp geometry_msgs nav_msgs std_msgs std_srvs)
 
 install(TARGETS farm_node DESTINATION lib/${PROJECT_NAME})
-install(DIRECTORY launch web scripts DESTINATION share/${PROJECT_NAME})
+install(DIRECTORY launch web scripts models DESTINATION share/${PROJECT_NAME})
+install(PROGRAMS scripts/match_sim.py DESTINATION lib/${PROJECT_NAME})
 
 ament_package()
