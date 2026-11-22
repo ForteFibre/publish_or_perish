@@ -2,6 +2,7 @@
 // Blender で作った glb に差し替えるときも, 画面が動かす部分は同じ名前にする (docs/design/web-architecture.md).
 import * as THREE from 'three'
 import { tr } from '@pop/i18n'
+import { HUT } from './colors'
 
 /** 決まった並びの乱数 (毎回同じ景色にする) */
 export function seeded(seed: number): () => number {
@@ -431,16 +432,17 @@ export function makeBot(): BotParts {
 // ---------------------------------------------------------------- ノードの小屋
 export function makeHut(name: string, kind: string): THREE.Group {
   const cli = kind === 'cli'
+  const c = cli ? HUT.cli : HUT.player
   const g = new THREE.Group()
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.6), mat(cli ? '#f3d9a6' : '#e8efe0'))
+  const wall = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.45, 0.6), mat(c.wall))
   wall.position.y = 0.22
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.58, 0.35, 4), mat(cli ? '#f0a020' : '#4caf50'))
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.58, 0.35, 4), mat(c.roof))
   roof.position.y = 0.62
   roof.rotation.y = Math.PI / 4
   const door = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.26, 0.02), M.trunk)
   door.position.set(0, 0.13, 0.31)
   g.add(wall, roof, door)
   castShadow(g)
-  g.add(label(cli ? 'CLI' : name, 0, 1.05, 0, 0.2, '#ffffff', cli ? 'rgba(160,100,0,0.8)' : 'rgba(40,110,50,0.8)'))
+  g.add(label(cli ? 'CLI' : name, 0, 1.05, 0, 0.2, '#ffffff', c.tag))
   return g
 }

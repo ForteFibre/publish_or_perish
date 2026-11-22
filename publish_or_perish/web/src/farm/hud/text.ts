@@ -9,7 +9,8 @@ export type Mode = { cls: 'auto' | 'cli' | 'off'; text: string; short: string }
 export function mode(s: FarmState): Mode {
   if (s.graph.auto) return { cls: 'auto', text: tr('ui.mode.auto'), short: tr('ui.mode.auto_short') }
   if (s.graph.cli > 0) return { cls: 'cli', text: tr('ui.mode.cli', { n: String(s.graph.cli) }), short: tr('ui.mode.cli_short') }
-  if (s.bots.some(b => b.moving)) return { cls: 'cli', text: tr('ui.mode.moving'), short: tr('ui.mode.moving_short') }
+  // 動いているが, 送り手が分からない (CLI でも自分のノードでもない) ので, どちらの色も使わない
+  if (s.bots.some(b => b.moving)) return { cls: 'off', text: tr('ui.mode.moving'), short: tr('ui.mode.moving_short') }
   return { cls: 'off', text: tr('ui.mode.off'), short: tr('ui.mode.off_short') }
 }
 

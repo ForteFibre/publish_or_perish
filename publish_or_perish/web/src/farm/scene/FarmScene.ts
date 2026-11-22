@@ -11,6 +11,7 @@ import {
   drawBoard, label, M, makeBoard, makeBot, makeCrop, makeFence, makeHut, makeScenery, makeWell,
   seeded, soilGeo, soilTex, type BoardView, type BotParts,
 } from './models'
+import { SRC_GLOW, srcOf } from './colors'
 
 type TileView = {
   soil: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>
@@ -39,10 +40,6 @@ type Flow = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t: numbe
 type Hut = { g: THREE.Group; pile: THREE.Mesh[]; x: number; z: number }
 
 const DRY = new THREE.Color('#d2a873'), WET = new THREE.Color('#6b4428')
-const LED: Record<string, string> = { player: '#5bf06a', cli: '#ffb43a', mixed: '#ff5a4a' }
-const FLOW_COLOR: Record<string, string> = {
-  cmd_vel: '#ffb43a', pose: '#5ab8ff', tank: '#5ab8ff', field: '#7be07b', money: '#f5c542', board: '#ff8fd0',
-}
 
 /** 幅 560 px 未満か高さ 420 px 未満を小窓として扱う (VSCode の浮動ウィンドウ, ブラウザの小窓など) */
 export const isMini = () => innerWidth < 560 || innerHeight < 420
@@ -197,7 +194,8 @@ export class FarmScene {
       const lvl = Math.max(0.02, b.tank / b.tank_max)
       r.water.scale.y = 0.22 * lvl
       r.water.position.y = 0.29 + 0.11 * lvl
-      r.led.material.color.set(LED[b.src] ?? '#999999')
+      // まだ誰も cmd_vel を送っていない (src が空) ときは, 誰もいない色
+      r.led.material.color.set(b.src ? SRC_GLOW[srcOf(b.src)] : SRC_GLOW.tool)
     }
     for (const f of s.fx) {
       if (f.id <= this.lastFx) continue
@@ -355,7 +353,7 @@ export class FarmScene {
     for (const w of s.wires) {
       const rate = Math.min(w.hz, 12)
       if (rate <= 0) continue
-      const color = Object.entries(FLOW_COLOR).find(([k]) => w.topic.includes(k))?.[1] ?? '#ffffff'
+      // 粒は送り手の色で塗る (topic の種類は, 粒の行き先で分かる)
       const delivered = w.subs.length > 0
       // プレイヤーが出す topic: 小屋 → 相手 (受け手がいなければ小屋の前に落ちる)
       for (const [n, k] of w.pubs) {
@@ -369,10 +367,11 @@ export class FarmScene {
           const from = new THREE.Vector3(h.x, 0.6, h.z)
           const to = delivered ? this.#topicPoint(w.topic, s)
             : new THREE.Vector3(h.x + (Math.random() - 0.5) * 1.2, 0.03, h.z + 0.7 + Math.random() * 0.3)
-          this.#launch(from, to, color, !delivered, h)
+          this.#launch(from, to, SRC_GLOW[srcOf(k)], !delivered, h)
         }
       }
-      // プレイヤーが受ける topic: 相手 → 小屋
+      // プレイヤーが受ける topic: 相手 → 小屋. 送り手が何人かいるときは, 最初の送り手の色にする
+      const fromColor = SRC_GLOW[srcOf(w.pubs[0]?.[1] ?? 'tool')]
       for (const [n, k] of w.subs) {
         if (k !== 'player' && k !== 'cli') continue
         const h = this.#hutOf(n, k)
@@ -381,7 +380,7 @@ export class FarmScene {
         this.spawnAcc[key] = (this.spawnAcc[key] ?? Math.random()) + Math.min(rate, 6) * dt
         while ((this.spawnAcc[key] as number) >= 1) {
           this.spawnAcc[key] -= 1
-          this.#launch(this.#topicPoint(w.topic, s), new THREE.Vector3(h.x, 0.6, h.z), color, false, h)
+          this.#launch(this.#topicPoint(w.topic, s), new THREE.Vector3(h.x, 0.6, h.z), fromColor, false, h)
         }
       }
     }
