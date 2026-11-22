@@ -7,8 +7,9 @@ describe('defaultUrl', () => {
     expect(defaultUrl('', http)).toBe('ws://localhost:8765/rosbridge')
   })
   it('HTTPS で開いた画面は wss でつなぐ', () => {
-    expect(defaultUrl('', { host: 'farm.example.com', hostname: 'farm.example.com', protocol: 'https:' }))
-      .toBe('wss://farm.example.com/rosbridge')
+    expect(defaultUrl('', { host: 'farm.example.com', hostname: 'farm.example.com', protocol: 'https:' })).toBe(
+      'wss://farm.example.com/rosbridge',
+    )
   })
   it('?rosbridge=<ポート> で同じホストのそのポートに直接つなぐ', () => {
     expect(defaultUrl('?rosbridge=9191', http)).toBe('ws://localhost:9191')

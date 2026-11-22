@@ -1,6 +1,7 @@
 // 画面の中だけの状態 (農場には送らない). 開いている窓, 通知, マスの情報, 浮かぶ文字.
-import { create } from 'zustand'
+
 import type { Msg, Notice } from '@pop/ros'
+import { create } from 'zustand'
 
 export type Modal = 'shop' | 'wires' | 'achs' | 'guide' | null
 

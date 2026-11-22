@@ -1,9 +1,10 @@
 // お店, 配線図, 実績, 課題の説明の窓. 背景か × を押すと閉じる.
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+
 import { expandMessages, render, substitute } from '@pop/guide'
 import { tr as trNow, useTr } from '@pop/i18n'
 import { useFarm, type Wire, type WireEnd } from '@pop/ros'
-import { useUi, type Modal } from '../ui'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
+import { type Modal, useUi } from '../ui'
 import { loadGuide } from './guide'
 import { fmtBytes } from './text'
 
@@ -15,9 +16,20 @@ function Frame({ id, title, wide, children }: { id: Exclude<Modal, null>; title:
   const close = useUi(u => u.close)
   if (!open) return null
   return (
-    <div className="modal open" id={id} onClick={e => { if (e.target === e.currentTarget) close() }}>
+    <div
+      className="modal open"
+      id={id}
+      onClick={e => {
+        if (e.target === e.currentTarget) close()
+      }}
+    >
       <div className={`card${wide ? ' wide' : ''}`}>
-        <h2>{title} <button onClick={close} aria-label={trNow('ui.close')}>×</button></h2>
+        <h2>
+          {title}{' '}
+          <button onClick={close} aria-label={trNow('ui.close')}>
+            ×
+          </button>
+        </h2>
         {children}
       </div>
     </div>
@@ -26,15 +38,23 @@ function Frame({ id, title, wide, children }: { id: Exclude<Modal, null>; title:
 
 export function Modals() {
   const { tr } = useTr()
-  return <>
-    <Frame id="shop" title={tr('ui.modal.shop')}><Shop /></Frame>
-    <Frame id="wires" title={tr('ui.modal.wires')} wide>
-      <div className="legend">{tr('ui.modal.wires_legend')}</div>
-      <Wires />
-    </Frame>
-    <Frame id="guide" title={tr('ui.modal.guide')} wide><Guide /></Frame>
-    <Frame id="achs" title={tr('ui.modal.achievements')}><Achievements /></Frame>
-  </>
+  return (
+    <>
+      <Frame id="shop" title={tr('ui.modal.shop')}>
+        <Shop />
+      </Frame>
+      <Frame id="wires" title={tr('ui.modal.wires')} wide>
+        <div className="legend">{tr('ui.modal.wires_legend')}</div>
+        <Wires />
+      </Frame>
+      <Frame id="guide" title={tr('ui.modal.guide')} wide>
+        <Guide />
+      </Frame>
+      <Frame id="achs" title={tr('ui.modal.achievements')}>
+        <Achievements />
+      </Frame>
+    </>
+  )
 }
 
 function Shop() {
@@ -43,19 +63,36 @@ function Shop() {
   const money = useFarm(s => s.state?.money ?? 0)
   const send = useFarm(s => s.send)
   if (!shop.length) return <div className="item">{tr('ui.modal.sold_out')}</div>
-  return <>{shop.map(it => (
-    <div className="item" key={it.id}>
-      <div><div className="name">{tr(`shop.${it.id}.name`)}</div><div className="d">{tr(`shop.${it.id}.desc`)}</div></div>
-      <button className="btn" disabled={money < it.price} onClick={() => send({ kind: 'buy', id: it.id })}>{it.price} G</button>
-    </div>
-  ))}</>
+  return (
+    <>
+      {shop.map(it => (
+        <div className="item" key={it.id}>
+          <div>
+            <div className="name">{tr(`shop.${it.id}.name`)}</div>
+            <div className="d">{tr(`shop.${it.id}.desc`)}</div>
+          </div>
+          <button className="btn" disabled={money < it.price} onClick={() => send({ kind: 'buy', id: it.id })}>
+            {it.price} G
+          </button>
+        </div>
+      ))}
+    </>
+  )
 }
 
 function Achievements() {
   const { tr } = useTr()
   const achs = useFarm(s => s.state?.achievements ?? NONE)
-  return <div className="ach">{achs.map((a, i) =>
-    <div key={i} className={a.done ? 'got' : ''}><b>{tr(`achievement.${a.id}.name`)}</b><span>{tr(`achievement.${a.id}.desc`)}</span></div>)}</div>
+  return (
+    <div className="ach">
+      {achs.map((a, i) => (
+        <div key={i} className={a.done ? 'got' : ''}>
+          <b>{tr(`achievement.${a.id}.name`)}</b>
+          <span>{tr(`achievement.${a.id}.desc`)}</span>
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function Node({ end: [n, k] }: { end: WireEnd }) {
@@ -75,14 +112,36 @@ function WireRow({ w }: { w: Wire }) {
         {w.pubs.length ? w.pubs.map(e => <Node key={e.join()} end={e} />) : <span className="node none">{tr('ui.wires.no_pub')}</span>}
       </div>
       <div className={`mid${dead ? ' dead' : ''}`}>
-        <svg><line x1="0" y1="2" x2="100%" y2="2" style={{ animationDuration: `${dur}s` }} /></svg>
-        <span className="pill2">{w.topic}<small>{w.type.split('/').pop()} ・ {rate}</small></span>
+        <svg>
+          <line x1="0" y1="2" x2="100%" y2="2" style={{ animationDuration: `${dur}s` }} />
+        </svg>
+        <span className="pill2">
+          {w.topic}
+          <small>
+            {w.type.split('/').pop()} ・ {rate}
+          </small>
+        </span>
       </div>
       <div className="ends r">
-        {w.subs.length ? w.subs.map(e => <Node key={e.join()} end={e} />)
-          : idle ? <span className="node tool">{tr('ui.wires.idle')}</span> : <span className="node none">{tr('ui.wires.no_sub')}</span>}
+        {w.subs.length ? (
+          w.subs.map(e => <Node key={e.join()} end={e} />)
+        ) : idle ? (
+          <span className="node tool">{tr('ui.wires.idle')}</span>
+        ) : (
+          <span className="node none">{tr('ui.wires.no_sub')}</span>
+        )}
       </div>
-      {w.warn && <div className="warnline">{tm(w.warn)}{w.hint && <> → <b>{tr('wire.hint', { topic: w.hint })}</b></>}</div>}
+      {w.warn && (
+        <div className="warnline">
+          {tm(w.warn)}
+          {w.hint && (
+            <>
+              {' '}
+              → <b>{tr('wire.hint', { topic: w.hint })}</b>
+            </>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -91,7 +150,13 @@ function Wires() {
   const { tr } = useTr()
   const wires = useFarm(s => s.state?.wires ?? NONE)
   if (!wires.length) return <div className="legend">{tr('ui.wires.none')}</div>
-  return <div>{wires.map(w => <WireRow key={w.topic} w={w} />)}</div>
+  return (
+    <div>
+      {wires.map(w => (
+        <WireRow key={w.topic} w={w} />
+      ))}
+    </div>
+  )
 }
 
 function Guide() {
@@ -104,23 +169,40 @@ function Guide() {
   useEffect(() => {
     let live = true
     setText(null)
-    if (id) void loadGuide(id).then(t => { if (live) setText(t) })
-    return () => { live = false }
+    if (id)
+      void loadGuide(id).then(t => {
+        if (live) setText(t)
+      })
+    return () => {
+      live = false
+    }
   }, [id])
-  useEffect(() => { if (box.current) box.current.scrollTop = 0 }, [text])
+  useEffect(() => {
+    if (box.current) box.current.scrollTop = 0
+  }, [text])
   // ターミナルに出る文 ({{msg:...}}) を英語の原文と訳にしてから描く. render() は文字を逃がしてから HTML を組むので, そのまま差し込んでよい
-  const html = text ? render(expandMessages(substitute(text, ws, pkg), {
-    original: (key, args) => trNow(key, args, 'en'),
-    translated: lang === 'en' ? null : (key, args) => trNow(key, args, lang),
-    label: tr('guide.translation'),
-  }), { copy: tr('ui.copy') }) : ''
+  const html = text
+    ? render(
+        expandMessages(substitute(text, ws, pkg), {
+          original: (key, args) => trNow(key, args, 'en'),
+          translated: lang === 'en' ? null : (key, args) => trNow(key, args, lang),
+          label: tr('guide.translation'),
+        }),
+        { copy: tr('ui.copy') },
+      )
+    : ''
   return (
-    <div id="guidebody" ref={box} dangerouslySetInnerHTML={{ __html: html }} onClick={e => {
-      // コードブロックの「コピー」
-      const b = e.target as HTMLElement
-      if (b.tagName !== 'BUTTON' || !b.parentElement?.classList.contains('code')) return
-      void navigator.clipboard?.writeText(b.nextElementSibling?.textContent ?? '')
-      b.textContent = tr('ui.copied')
-    }} />
+    <div
+      id="guidebody"
+      ref={box}
+      dangerouslySetInnerHTML={{ __html: html }}
+      onClick={e => {
+        // コードブロックの「コピー」
+        const b = e.target as HTMLElement
+        if (b.tagName !== 'BUTTON' || !b.parentElement?.classList.contains('code')) return
+        void navigator.clipboard?.writeText(b.nextElementSibling?.textContent ?? '')
+        b.textContent = tr('ui.copied')
+      }}
+    />
   )
 }

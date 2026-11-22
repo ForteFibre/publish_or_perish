@@ -21,5 +21,4 @@ export const HUT = {
 } as const
 
 /** 配線図の端の種類 (farm / player / cli / tool など) を, 送り手の種類にする */
-export const srcOf = (kind: string): Src =>
-  kind === 'player' || kind === 'cli' || kind === 'farm' || kind === 'mixed' ? kind : 'tool'
+export const srcOf = (kind: string): Src => (kind === 'player' || kind === 'cli' || kind === 'farm' || kind === 'mixed' ? kind : 'tool')

@@ -2,9 +2,9 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeAll, describe, expect, it } from 'vitest'
-import { flatten, placeholders, setupI18n, tm, tr, type Catalog } from './index'
+import { type Catalog, flatten, placeholders, setupI18n, tm, tr } from './index'
 
-const pkg = join(import.meta.dirname, '../../../..')          // publish_or_perish/
+const pkg = join(import.meta.dirname, '../../../..') // publish_or_perish/
 const read = (p: string) => readFileSync(join(pkg, p), 'utf8')
 const ja = flatten(JSON.parse(read('web/public/i18n/ja.json')) as Catalog)
 const en = flatten(JSON.parse(read('web/public/i18n/en.json')) as Catalog)
@@ -44,11 +44,14 @@ describe('C++ と match_sim.py が使うキー', () => {
     // {"キー", {{"名前", 値}, ...}} の形を探し, 括弧の対応を数えて一番外の名前だけを取る
     const found: { key: string; names: string }[] = []
     for (const m of cpp.matchAll(/\{"([a-z_]+\.[\w.]+)", \{/g)) {
-      let depth = 1, i = (m.index as number) + m[0].length
+      let depth = 1,
+        i = (m.index as number) + m[0].length
       const start = i
       while (depth > 0 && i < cpp.length) {
         const c = cpp[i]
-        if (c === '"') { i = cpp.indexOf('"', i + 1) } else if (c === '{') depth++
+        if (c === '"') {
+          i = cpp.indexOf('"', i + 1)
+        } else if (c === '{') depth++
         else if (c === '}') depth--
         i++
       }
@@ -57,8 +60,11 @@ describe('C++ と match_sim.py が使うキー', () => {
       let d = 0
       for (let k = 0; k < body.length; k++) {
         const c = body[k]
-        if (c === '"') { const e = body.indexOf('"', k + 1); if (d === 1 && body[k - 1] === '{') names.push(body.slice(k + 1, e)); k = e }
-        else if (c === '{') d++
+        if (c === '"') {
+          const e = body.indexOf('"', k + 1)
+          if (d === 1 && body[k - 1] === '{') names.push(body.slice(k + 1, e))
+          k = e
+        } else if (c === '{') d++
         else if (c === '}') d--
       }
       found.push({ key: m[1] as string, names: names.sort().join() })
@@ -72,17 +78,31 @@ describe('C++ と match_sim.py が使うキー', () => {
     // msg('キー', 名前=値, ...) の括弧の対応を数え, 一番外のカンマで分けて 名前= を取る
     const found: { key: string; names: string }[] = []
     for (const m of py.matchAll(/msg\('([\w.]+)'/g)) {
-      let depth = 1, i = (m.index as number) + m[0].length, cur = ''
+      let depth = 1,
+        i = (m.index as number) + m[0].length,
+        cur = ''
       const parts: string[] = []
       for (; depth > 0 && i < py.length; i++) {
         const c = py[i] as string
-        if (c === "'" || c === '"') { const e = py.indexOf(c, i + 1); cur += py.slice(i, e + 1); i = e; continue }
+        if (c === "'" || c === '"') {
+          const e = py.indexOf(c, i + 1)
+          cur += py.slice(i, e + 1)
+          i = e
+          continue
+        }
         if ('([{'.includes(c)) depth++
         if (')]}'.includes(c)) depth--
-        if (depth === 1 && c === ',') { parts.push(cur); cur = '' } else if (depth > 0) cur += c
+        if (depth === 1 && c === ',') {
+          parts.push(cur)
+          cur = ''
+        } else if (depth > 0) cur += c
       }
       parts.push(cur)
-      const names = parts.map(p => /^\s*(\w+)=/.exec(p)?.[1]).filter(Boolean).sort().join()
+      const names = parts
+        .map(p => /^\s*(\w+)=/.exec(p)?.[1])
+        .filter(Boolean)
+        .sort()
+        .join()
       found.push({ key: m[1] as string, names })
     }
     expect(found.length).toBeGreaterThan(15)
@@ -90,7 +110,8 @@ describe('C++ と match_sim.py が使うキー', () => {
   })
 
   it('課題・ステージ・実績・お店・準備中のステージの id に, 表の文がある', () => {
-    const progress = read('src/progress.cpp'), farm = read('src/farm_node.cpp')
+    const progress = read('src/progress.cpp'),
+      farm = read('src/farm_node.cpp')
     const want = [
       ...all(/mission\("(\w+)"/g, progress).flatMap(id => ['title', 'desc', 'hint'].map(f => `mission.${id}.${f}`)),
       ...all(/Stage \w+\{"(\w+)"/g, progress).flatMap(id => [`stage.${id}.title`, `stage.${id}.lesson`]),
@@ -98,7 +119,8 @@ describe('C++ と match_sim.py が使うキー', () => {
       ...all(/s\.push_back\(\{"(\w+)", /g, farm).flatMap(id => [`shop.${id}.name`, `shop.${id}.desc`]),
       ...all(/"(\w+)"/g, (progress.match(/upcoming = \{(.*?)\};/s) as RegExpMatchArray)[1] as string).map(id => `upcoming.${id}`),
       ...all(/mission\("\w+", [\d.]+, "(\w+)"/g, progress).map(u => `unit.${u}`),
-      'achievement.hidden.name', 'achievement.hidden.desc',
+      'achievement.hidden.name',
+      'achievement.hidden.desc',
     ]
     expect(want.length).toBeGreaterThan(100)
     expect(want.filter(k => !(k in ja))).toEqual([])
@@ -137,8 +159,18 @@ describe('画面が使うキー', () => {
 describe('ガイドが使うキー', () => {
   it('{{msg:キー|値}} のキーが英語と日本語の表にあり, 埋め込みの値が揃っている', () => {
     const dir = join(pkg, 'web/public/guide/ja')
-    const refs = readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{msg:([\w.]+)(?:\|([^}]*))?\}\}/g)]
-      .map(m => ({ f, key: m[1] as string, args: (m[2] ?? '').split(',').filter(Boolean).map(kv => kv.split('=')[0]?.trim()).sort().join() })))
+    const refs = readdirSync(dir).flatMap(f =>
+      [...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{msg:([\w.]+)(?:\|([^}]*))?\}\}/g)].map(m => ({
+        f,
+        key: m[1] as string,
+        args: (m[2] ?? '')
+          .split(',')
+          .filter(Boolean)
+          .map(kv => kv.split('=')[0]?.trim())
+          .sort()
+          .join(),
+      })),
+    )
     expect(refs.length).toBeGreaterThan(0)
     const bad = refs.filter(r => !(r.key in en) || !(r.key in ja) || placeholders(en[r.key] as string).join() !== r.args)
     expect(bad).toEqual([])
@@ -146,8 +178,9 @@ describe('ガイドが使うキー', () => {
 
   it('{{msg:...|名前=$キー}} の $キー が英語と日本語の表にある', () => {
     const dir = join(pkg, 'web/public/guide/ja')
-    const keys = readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{msg:[\w.]+\|([^}]*)\}\}/g)]
-      .flatMap(m => all(/=\$([\w.]+)/g, m[1] as string)))
+    const keys = readdirSync(dir).flatMap(f =>
+      [...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{msg:[\w.]+\|([^}]*)\}\}/g)].flatMap(m => all(/=\$([\w.]+)/g, m[1] as string)),
+    )
     expect(keys.filter(k => !(k in en) || !(k in ja))).toEqual([])
   })
 })

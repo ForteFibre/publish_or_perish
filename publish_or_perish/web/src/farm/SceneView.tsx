@@ -1,6 +1,7 @@
 // 3D (FarmScene) を置き, 状態が届くたびに渡す. 通知 (レベルアップ, 課題クリア, 実績) もここで出す.
+
+import { type FarmState, useFarm } from '@pop/ros'
 import { useEffect, useRef } from 'react'
-import { useFarm, type FarmState } from '@pop/ros'
 import { FarmScene } from './scene/FarmScene'
 import { sfx } from './sfx'
 import { pushToast, showBanner } from './ui'
@@ -29,7 +30,9 @@ export function SceneView() {
       }
     }
     onState(useFarm.getState().state)
-    const unsub = useFarm.subscribe((st, prev) => { if (st.state !== prev.state) onState(st.state) })
+    const unsub = useFarm.subscribe((st, prev) => {
+      if (st.state !== prev.state) onState(st.state)
+    })
     return () => {
       unsub()
       scene.dispose()

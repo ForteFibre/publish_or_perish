@@ -11,14 +11,19 @@ export const esc = (s: string): string =>
 function inline(s: string): string {
   // `code` を先に取り出してから **太字** を探す (太字の中に `code` があっても崩れないように)
   const codes: string[] = []
+  // 取り出した場所の目印に, 文には出てこない \u0000 を使う
   const t = esc(s.replace(/`([^`]+)`/g, (_, c: string) => `\u0000${codes.push(c) - 1}\u0000`))
+  // biome-ignore lint/suspicious/noControlCharactersInRegex: 上の目印を戻す
   return t.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>').replace(/\u0000(\d+)\u0000/g, (_, k: string) => `<code>${esc(codes[+k] ?? '')}</code>`)
 }
 
 export function substitute(text: string, ws?: string, pkg?: string): string {
   if (!ws) return text
   const name = ws.split('/').pop() ?? ws
-  return text.replaceAll('~/src26_ws', ws).replaceAll('src26_ws', name).replaceAll('tutorial_nodes', pkg || 'tutorial_nodes')
+  return text
+    .replaceAll('~/src26_ws', ws)
+    .replaceAll('src26_ws', name)
+    .replaceAll('tutorial_nodes', pkg || 'tutorial_nodes')
 }
 
 /**
@@ -60,11 +65,13 @@ export function expandMessages(md: string, look: MessageLookup): string {
       const notes: string[] = []
       out.push('```text')
       for (i++; i < lines.length && !(lines[i] ?? '').startsWith('```'); i++) {
-        out.push((lines[i] ?? '').replace(MSG_RE, (_, key: string, a?: string) => {
-          const args = parseArgs(a)
-          if (translated) notes.push(translated(key, args))
-          return original(key, args)
-        }))
+        out.push(
+          (lines[i] ?? '').replace(MSG_RE, (_, key: string, a?: string) => {
+            const args = parseArgs(a)
+            if (translated) notes.push(translated(key, args))
+            return original(key, args)
+          }),
+        )
       }
       out.push('```')
       for (const n of notes) out.push(`> ${look.label}: ${n}`)
@@ -74,11 +81,13 @@ export function expandMessages(md: string, look: MessageLookup): string {
       for (i++; i < lines.length && !(lines[i] ?? '').startsWith('```'); i++) out.push(lines[i] ?? '')
       if (i < lines.length) out.push(lines[i] ?? '')
     } else {
-      out.push(l.replace(MSG_RE, (_, key: string, a?: string) => {
-        const args = parseArgs(a)
-        const tr = translated ? ` (${look.label}: ${translated(key, args)})` : ''
-        return `\`${original(key, args)}\`${tr}`
-      }))
+      out.push(
+        l.replace(MSG_RE, (_, key: string, a?: string) => {
+          const args = parseArgs(a)
+          const tr = translated ? ` (${look.label}: ${translated(key, args)})` : ''
+          return `\`${original(key, args)}\`${tr}`
+        }),
+      )
     }
   }
   return out.join('\n')
@@ -89,7 +98,12 @@ export function render(md: string, opts: { copy?: string } = {}): string {
   const lines = md.replace(/\r/g, '').split('\n')
   const out: string[] = []
   let i = 0
-  const cells = (l: string) => l.trim().replace(/^\||\|$/g, '').split('|').map(c => c.trim())
+  const cells = (l: string) =>
+    l
+      .trim()
+      .replace(/^\||\|$/g, '')
+      .split('|')
+      .map(c => c.trim())
   const at = (k: number) => lines[k] ?? ''
   while (i < lines.length) {
     const l = at(i)
@@ -112,9 +126,13 @@ export function render(md: string, opts: { copy?: string } = {}): string {
     } else if (l.startsWith('|')) {
       const rows: string[] = []
       for (; i < lines.length && at(i).startsWith('|'); i++) rows.push(at(i))
-      const head = cells(rows[0] ?? ''), body = rows.slice(2).map(cells)
-      out.push(`<table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${
-        body.map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`).join('')}</table>`)
+      const head = cells(rows[0] ?? ''),
+        body = rows.slice(2).map(cells)
+      out.push(
+        `<table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${body
+          .map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`)
+          .join('')}</table>`,
+      )
     } else if (/^\d+\. /.test(l)) {
       // 番号付き. 間にコードブロックなどを挟んで続けるときのため, 最初の番号から始める
       const items: string[] = []

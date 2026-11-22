@@ -1,17 +1,31 @@
 // 農場の 3D. 状態 (FarmState) を受けて畑, 作物, ロボット, 小屋を置き, 毎フレーム補間とエフェクトを動かす.
 // 座標: 農場の (x, y) [m] を three.js の (x, 0, -y) に置く. 1 マス = 1 m.
 // HUD は React (../hud) が描く. ここから HUD へは ui.ts のストア (マスの情報, 浮かぶ文字) を通して渡す.
-import * as THREE from 'three'
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+
 import { tr } from '@pop/i18n'
 import type { FarmState, Fx } from '@pop/ros'
-import { pushFloat, useUi } from '../ui'
+import * as THREE from 'three'
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { sfx } from '../sfx'
-import {
-  drawBoard, label, M, makeBoard, makeBot, makeCrop, makeFence, makeHut, makeScenery, makeWell,
-  seeded, soilGeo, soilTex, type BoardView, type BotParts,
-} from './models'
+import { pushFloat, useUi } from '../ui'
 import { SRC_GLOW, srcOf } from './colors'
+import {
+  type BoardView,
+  type BotParts,
+  drawBoard,
+  label,
+  M,
+  makeBoard,
+  makeBot,
+  makeCrop,
+  makeFence,
+  makeHut,
+  makeScenery,
+  makeWell,
+  seeded,
+  soilGeo,
+  soilTex,
+} from './models'
 
 type TileView = {
   soil: THREE.Mesh<THREE.BoxGeometry, THREE.MeshStandardMaterial>
@@ -39,7 +53,8 @@ type Part = { mesh: THREE.Mesh; v: [number, number, number]; life: number; max: 
 type Flow = { mesh: THREE.Mesh; from: THREE.Vector3; to: THREE.Vector3; t: number; dur: number; drop: boolean; hut: Hut }
 type Hut = { g: THREE.Group; pile: THREE.Mesh[]; x: number; z: number }
 
-const DRY = new THREE.Color('#d2a873'), WET = new THREE.Color('#6b4428')
+const DRY = new THREE.Color('#d2a873'),
+  WET = new THREE.Color('#6b4428')
 
 /** 幅 560 px 未満か高さ 420 px 未満を小窓として扱う (VSCode の浮動ウィンドウ, ブラウザの小窓など) */
 export const isMini = () => innerWidth < 560 || innerHeight < 420
@@ -78,7 +93,10 @@ export class FarmScene {
   readonly #ray = new THREE.Raycaster()
   readonly #mouse = new THREE.Vector2()
 
-  constructor(readonly container: HTMLElement, readonly onDiag: (text: string) => void) {
+  constructor(
+    readonly container: HTMLElement,
+    readonly onDiag: (text: string) => void,
+  ) {
     const r = this.renderer
     r.setPixelRatio(Math.min(devicePixelRatio, 2))
     r.shadowMap.enabled = true
@@ -113,10 +131,12 @@ export class FarmScene {
     this.#loop()
     // 開いて 5 秒後に, 描画の方式・フレームレート・音が使えるかを農場に送る (ログに残る).
     // WSL などで GPU を使えず CPU で描いている (llvmpipe, SwiftShader) と遅くなるので, その確認に使う.
-    this.#timers.push(setTimeout(() => {
-      this.frames = 0
-      this.#timers.push(setTimeout(() => this.#diagnose(), 5000))
-    }, 2000))
+    this.#timers.push(
+      setTimeout(() => {
+        this.frames = 0
+        this.#timers.push(setTimeout(() => this.#diagnose(), 5000))
+      }, 2000),
+    )
   }
 
   dispose() {
@@ -189,7 +209,11 @@ export class FarmScene {
     }
     for (const b of s.bots) {
       const r = this.bots[b.name] ?? (this.bots[b.name] = this.#makeBotView(b.name))
-      if (r.x === null) { r.x = b.x; r.y = b.y; r.th = b.th }
+      if (r.x === null) {
+        r.x = b.x
+        r.y = b.y
+        r.th = b.th
+      }
       Object.assign(r, { tx: b.x, ty: b.y, tth: b.th, moving: !!b.moving })
       const lvl = Math.max(0.02, b.tank / b.tank_max)
       r.water.scale.y = 0.22 * lvl
@@ -223,27 +247,63 @@ export class FarmScene {
   }
 
   #effect(f: Fx, s: FarmState) {
-    const x = f.x + 0.5, z = -(f.y + 0.5)
+    const x = f.x + 0.5,
+      z = -(f.y + 0.5)
     const bp = this.boardPos
     switch (f.kind) {
-      case 'water': this.#burst('water', x, z, 18); sfx.water(); break
-      case 'plant': this.#burst('dirt', x, z, 10); sfx.plant(); this.#float(`-${f.value} G`, x, 0.6, z, '#ffd0c8'); break
-      case 'harvest': this.#burst('coin', x, z, 8); this.#burst('spark', x, z, 12); sfx.harvest(); this.#float(`+${f.value} G`, x, 0.8, z); break
-      case 'clear': this.#burst('dirt', x, z, 8); sfx.plant(); break
-      case 'wither': this.#burst('smoke', x, z, 6); sfx.wither(); break
-      case 'ripe': this.#burst('spark', x, z, 6); break
-      case 'refill': this.#burst('water', 0.5, -0.5, 12); this.#float(tr('ui.scene.refill'), 0.5, 1.1, -0.5, '#bfe8ff'); break
+      case 'water':
+        this.#burst('water', x, z, 18)
+        sfx.water()
+        break
+      case 'plant':
+        this.#burst('dirt', x, z, 10)
+        sfx.plant()
+        this.#float(`-${f.value} G`, x, 0.6, z, '#ffd0c8')
+        break
+      case 'harvest':
+        this.#burst('coin', x, z, 8)
+        this.#burst('spark', x, z, 12)
+        sfx.harvest()
+        this.#float(`+${f.value} G`, x, 0.8, z)
+        break
+      case 'clear':
+        this.#burst('dirt', x, z, 8)
+        sfx.plant()
+        break
+      case 'wither':
+        this.#burst('smoke', x, z, 6)
+        sfx.wither()
+        break
+      case 'ripe':
+        this.#burst('spark', x, z, 6)
+        break
+      case 'refill':
+        this.#burst('water', 0.5, -0.5, 12)
+        this.#float(tr('ui.scene.refill'), 0.5, 1.1, -0.5, '#bfe8ff')
+        break
       case 'wall': {
         const b = this.bots[f.bot]
-        if (b?.x != null && Math.random() < 0.3) { this.#float(tr('ui.scene.bump'), b.x, 0.8, -b.y, '#ffe0a0'); sfx.wall() }
+        if (b?.x != null && Math.random() < 0.3) {
+          this.#float(tr('ui.scene.bump'), b.x, 0.8, -b.y, '#ffe0a0')
+          sfx.wall()
+        }
         break
       }
-      case 'buy': this.#burst('confetti', s.w / 2, -s.h / 2, 40); sfx.buy(); break
-      case 'board_answer':
-        if (f.value > 0) { this.#float(tr('ui.scene.correct'), bp.x, 2.8, bp.z, '#b8ffb0'); this.#burst('spark', bp.x, bp.z, 10); sfx.mission() }
-        else this.#float(tr('ui.scene.wrong'), bp.x, 2.8, bp.z, '#ffc0b8')
+      case 'buy':
+        this.#burst('confetti', s.w / 2, -s.h / 2, 40)
+        sfx.buy()
         break
-      case 'board_bell': this.bellSwing = 1; sfx.bell(); break
+      case 'board_answer':
+        if (f.value > 0) {
+          this.#float(tr('ui.scene.correct'), bp.x, 2.8, bp.z, '#b8ffb0')
+          this.#burst('spark', bp.x, bp.z, 10)
+          sfx.mission()
+        } else this.#float(tr('ui.scene.wrong'), bp.x, 2.8, bp.z, '#ffc0b8')
+        break
+      case 'board_bell':
+        this.bellSwing = 1
+        sfx.bell()
+        break
     }
   }
 
@@ -255,21 +315,52 @@ export class FarmScene {
     dirt: new THREE.MeshBasicMaterial({ color: '#8a5a30', transparent: true }),
     smoke: new THREE.MeshBasicMaterial({ color: '#9a9a9a', transparent: true }),
     spark: new THREE.MeshBasicMaterial({ color: '#fff3a0', transparent: true }),
-    confetti: ['#e05244', '#f0a020', '#4caf50', '#3b82c4', '#9b6bd6'].map(c => new THREE.MeshBasicMaterial({ color: c, transparent: true })),
+    confetti: ['#e05244', '#f0a020', '#4caf50', '#3b82c4', '#9b6bd6'].map(
+      c => new THREE.MeshBasicMaterial({ color: c, transparent: true }),
+    ),
   }
 
   #burst(kind: string, x: number, z: number, n: number) {
-    const rand = this.rand, fm = FarmScene.#fxMats
+    const rand = this.rand,
+      fm = FarmScene.#fxMats
     for (let i = 0; i < n; i++) {
-      let m: THREE.Material = fm.spark, v: [number, number, number] = [0, 0, 0], geo: THREE.BufferGeometry = FarmScene.#pGeo
-      let y = 0.3, life = 1
-      const a = rand() * Math.PI * 2, s = rand()
-      if (kind === 'water') { m = fm.water; v = [Math.cos(a) * s * 0.6, 1 + rand(), Math.sin(a) * s * 0.6]; y = 0.7 }
-      if (kind === 'dirt') { m = fm.dirt; v = [Math.cos(a) * s, 1.4 + rand(), Math.sin(a) * s] }
-      if (kind === 'smoke') { m = fm.smoke; v = [Math.cos(a) * 0.2, 0.6 + rand() * 0.4, Math.sin(a) * 0.2]; life = 1.6 }
-      if (kind === 'spark') { m = fm.spark; v = [Math.cos(a) * s * 1.2, 1.5 + rand() * 1.5, Math.sin(a) * s * 1.2] }
-      if (kind === 'coin') { m = M.coin; geo = FarmScene.#coinGeo; v = [Math.cos(a) * s * 1.2, 2.5 + rand() * 1.5, Math.sin(a) * s * 1.2]; life = 1.3 }
-      if (kind === 'confetti') { m = fm.confetti[i % 5] as THREE.Material; v = [Math.cos(a) * s * 3, 3 + rand() * 3, Math.sin(a) * s * 3]; y = 1; life = 2 }
+      let m: THREE.Material = fm.spark,
+        v: [number, number, number] = [0, 0, 0],
+        geo: THREE.BufferGeometry = FarmScene.#pGeo
+      let y = 0.3,
+        life = 1
+      const a = rand() * Math.PI * 2,
+        s = rand()
+      if (kind === 'water') {
+        m = fm.water
+        v = [Math.cos(a) * s * 0.6, 1 + rand(), Math.sin(a) * s * 0.6]
+        y = 0.7
+      }
+      if (kind === 'dirt') {
+        m = fm.dirt
+        v = [Math.cos(a) * s, 1.4 + rand(), Math.sin(a) * s]
+      }
+      if (kind === 'smoke') {
+        m = fm.smoke
+        v = [Math.cos(a) * 0.2, 0.6 + rand() * 0.4, Math.sin(a) * 0.2]
+        life = 1.6
+      }
+      if (kind === 'spark') {
+        m = fm.spark
+        v = [Math.cos(a) * s * 1.2, 1.5 + rand() * 1.5, Math.sin(a) * s * 1.2]
+      }
+      if (kind === 'coin') {
+        m = M.coin
+        geo = FarmScene.#coinGeo
+        v = [Math.cos(a) * s * 1.2, 2.5 + rand() * 1.5, Math.sin(a) * s * 1.2]
+        life = 1.3
+      }
+      if (kind === 'confetti') {
+        m = fm.confetti[i % 5] as THREE.Material
+        v = [Math.cos(a) * s * 3, 3 + rand() * 3, Math.sin(a) * s * 3]
+        y = 1
+        life = 2
+      }
       // 薄くしていく材質は粒ごとに複製する. 硬貨は消さずに落とすだけなので共有でよい
       const mesh = new THREE.Mesh(geo, m.transparent ? m.clone() : m)
       mesh.position.set(x, y, z)
@@ -302,7 +393,7 @@ export class FarmScene {
   /** 3D の位置に文字を浮かべる (HUD の Floats が描く) */
   #float(text: string, x: number, y: number, z: number, color?: string) {
     const v = new THREE.Vector3(x, y, z).project(this.camera)
-    pushFloat(text, (v.x + 1) / 2 * innerWidth - 30, (1 - v.y) / 2 * innerHeight - 20, color)
+    pushFloat(text, ((v.x + 1) / 2) * innerWidth - 30, ((1 - v.y) / 2) * innerHeight - 20, color)
   }
 
   // ---------------------------------------------------------------- ノードの小屋と, メッセージの粒
@@ -331,7 +422,9 @@ export class FarmScene {
     }
   }
 
-  #hutOf(name: string, kind: string) { return this.huts[kind === 'cli' ? 'CLI' : name] }
+  #hutOf(name: string, kind: string) {
+    return this.huts[kind === 'cli' ? 'CLI' : name]
+  }
 
   /** topic の向こう側の 3D の位置 (ロボット, 畑の中央, 看板, 井戸) */
   #topicPoint(topic: string, s: FarmState): THREE.Vector3 {
@@ -365,7 +458,8 @@ export class FarmScene {
         while ((this.spawnAcc[key] as number) >= 1) {
           this.spawnAcc[key] -= 1
           const from = new THREE.Vector3(h.x, 0.6, h.z)
-          const to = delivered ? this.#topicPoint(w.topic, s)
+          const to = delivered
+            ? this.#topicPoint(w.topic, s)
             : new THREE.Vector3(h.x + (Math.random() - 0.5) * 1.2, 0.03, h.z + 0.7 + Math.random() * 0.3)
           this.#launch(from, to, SRC_GLOW[srcOf(k)], !delivered, h)
         }
@@ -414,10 +508,13 @@ export class FarmScene {
 
   // ---------------------------------------------------------------- マスの情報 (マウス)
   #onPointer = (e: PointerEvent) => {
-    this.#mouse.set(e.clientX / innerWidth * 2 - 1, -e.clientY / innerHeight * 2 + 1)
+    this.#mouse.set((e.clientX / innerWidth) * 2 - 1, (-e.clientY / innerHeight) * 2 + 1)
     this.#ray.setFromCamera(this.#mouse, this.camera)
     const hit = this.#ray.intersectObjects(this.tiles.flat().map(t => t.soil))[0]
-    if (!hit || !this.state) { this.#onLeave(); return }
+    if (!hit || !this.state) {
+      this.#onLeave()
+      return
+    }
     const { x, y } = hit.object.userData as { x: number; y: number }
     useUi.setState({ tip: { px: e.clientX, py: e.clientY, x, y } })
   }
@@ -428,7 +525,8 @@ export class FarmScene {
 
   // ---------------------------------------------------------------- カメラと描画
   retarget() {
-    const cx = this.fieldW / 2, cz = -this.fieldH / 2
+    const cx = this.fieldW / 2,
+      cz = -this.fieldH / 2
     const mini = isMini()
     const camera = this.camera
     // 右の課題パネルの分だけ畑を左に寄せて見せる (狭い画面ほどパネルが占める割合が大きい). 小窓にはパネルがない
@@ -438,8 +536,9 @@ export class FarmScene {
     if (!this.camSet || mini) {
       if (mini) {
         // 畑の幅と奥行きが両方収まる距離まで引く. 上の 1 行の分だけ少し余分に引く
-        const vfov = camera.fov * Math.PI / 180, hfov = 2 * Math.atan(Math.tan(vfov / 2) * innerWidth / innerHeight)
-        const dist = Math.max((this.fieldW + 2.4) / 2 / Math.tan(hfov / 2), (this.fieldH + 1.5) / 2 / Math.tan(vfov / 2) * 1.35) * 0.98
+        const vfov = (camera.fov * Math.PI) / 180,
+          hfov = 2 * Math.atan((Math.tan(vfov / 2) * innerWidth) / innerHeight)
+        const dist = Math.max((this.fieldW + 2.4) / 2 / Math.tan(hfov / 2), ((this.fieldH + 1.5) / 2 / Math.tan(vfov / 2)) * 1.35) * 0.98
         camera.position.copy(target).add(new THREE.Vector3(0, 0.78, 0.62).normalize().multiplyScalar(dist))
       } else {
         // 縦長に近い画面では横に映る範囲が狭いので, その分カメラを引く
@@ -459,12 +558,16 @@ export class FarmScene {
     // 小窓と大きい画面を行き来したら, その画面に合う位置にカメラを置き直す
     const mini = isMini()
     document.body.classList.toggle('mini', mini)
-    if (mini !== this.wasMini) { this.wasMini = mini; this.camSet = false }
+    if (mini !== this.wasMini) {
+      this.wasMini = mini
+      this.camSet = false
+    }
     if (this.fieldW) this.retarget()
   }
 
   #loop = () => {
-    const dt = Math.min(0.05, this.#clock.getDelta()), t = this.#clock.elapsedTime
+    const dt = Math.min(0.05, this.#clock.getDelta()),
+      t = this.#clock.elapsedTime
     for (const r of Object.values(this.bots)) {
       if (r.x === null) continue
       const k = 1 - Math.exp(-dt * 14)
@@ -476,11 +579,15 @@ export class FarmScene {
       r.g.position.set(r.x, 0, -r.y)
       r.g.rotation.y = r.th
       r.body.position.y = r.moving ? Math.abs(Math.sin(t * 14)) * 0.02 : Math.sin(t * 2) * 0.008
-      r.wheels.forEach(w => { (w.children[0] as THREE.Object3D).rotation.y += r.moving ? dt * 12 : 0 })
+      r.wheels.forEach(w => {
+        ;(w.children[0] as THREE.Object3D).rotation.y += r.moving ? dt * 12 : 0
+      })
       r.tag.position.set(r.x, 1.15, -r.y)
       r.blink -= dt
       const closed = r.blink < 0.12
-      r.eyes.forEach(e => { e.scale.y = closed ? 0.15 : 1 })
+      r.eyes.forEach(e => {
+        e.scale.y = closed ? 0.15 : 1
+      })
       if (r.blink < 0) r.blink = 2 + Math.random() * 3
     }
     for (const row of this.tiles) {

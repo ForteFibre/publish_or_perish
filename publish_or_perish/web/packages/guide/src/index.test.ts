@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { expandMessages, render, substitute, type MessageLookup } from './index'
+import { expandMessages, type MessageLookup, render, substitute } from './index'
 
 describe('render', () => {
   it('見出しを 1 段下げる', () => {
@@ -23,12 +23,14 @@ describe('render', () => {
 
   it('表の 2 行目 (区切り) を飛ばす', () => {
     expect(render('| a | b |\n|---|---|\n| `x` | y |')).toBe(
-      '<table><tr><th>a</th><th>b</th></tr><tr><td><code>x</code></td><td>y</td></tr></table>')
+      '<table><tr><th>a</th><th>b</th></tr><tr><td><code>x</code></td><td>y</td></tr></table>',
+    )
   })
 
   it('畳んだヒントを details にする', () => {
     expect(render('<details><summary>**ヒント**</summary>\n本文\n</details>')).toBe(
-      '<details><summary><b>ヒント</b></summary>\n<p>本文</p>\n</details>')
+      '<details><summary><b>ヒント</b></summary>\n<p>本文</p>\n</details>',
+    )
   })
 
   it('段落の行をつなぐ', () => {
@@ -50,8 +52,9 @@ describe('render', () => {
 
 describe('substitute', () => {
   it('ワークスペースとパッケージの名前を置き換える', () => {
-    expect(substitute('cd ~/src26_ws && ls src26_ws/src/tutorial_nodes', '/home/a/my_ws', 'try_nodes'))
-      .toBe('cd /home/a/my_ws && ls my_ws/src/try_nodes')
+    expect(substitute('cd ~/src26_ws && ls src26_ws/src/tutorial_nodes', '/home/a/my_ws', 'try_nodes')).toBe(
+      'cd /home/a/my_ws && ls my_ws/src/try_nodes',
+    )
   })
 
   it('ワークスペースが分からないときは置き換えない', () => {
@@ -72,12 +75,14 @@ describe('expandMessages', () => {
   it('output のブロックは英語の原文にし, 訳を引用で添える', () => {
     const md = '```output\n$ ros2 service call /board/bell std_srvs/srv/Trigger\n{{msg:srv.bell|n=3}}\n```'
     expect(expandMessages(md, look)).toBe(
-      '```text\n$ ros2 service call /board/bell std_srvs/srv/Trigger\nDing! (ring 3)\n```\n> 訳: カーン (3 回目)')
+      '```text\n$ ros2 service call /board/bell std_srvs/srv/Trigger\nDing! (ring 3)\n```\n> 訳: カーン (3 回目)',
+    )
   })
 
   it('文の中では `原文` (訳: ...) にする', () => {
-    expect(expandMessages('- **{{msg:srv.water.tank_empty}} と出る:** 井戸へ', look))
-      .toBe('- **`Tank is empty.` (訳: タンクが空) と出る:** 井戸へ')
+    expect(expandMessages('- **{{msg:srv.water.tank_empty}} と出る:** 井戸へ', look)).toBe(
+      '- **`Tank is empty.` (訳: タンクが空) と出る:** 井戸へ',
+    )
   })
 
   it('画面が英語なら訳を添えない', () => {
@@ -100,6 +105,8 @@ describe('expandMessages', () => {
 
   it('展開したものを描くと, 原文はコード, 訳は引用になる', () => {
     const html = render(expandMessages('```output\n{{msg:srv.bell|n=1}}\n```', look), { copy: 'Copy' })
-    expect(html).toBe('<div class="code"><button>Copy</button><pre data-lang="text">Ding! (ring 1)</pre></div>\n<blockquote>訳: カーン (1 回目)</blockquote>')
+    expect(html).toBe(
+      '<div class="code"><button>Copy</button><pre data-lang="text">Ding! (ring 1)</pre></div>\n<blockquote>訳: カーン (1 回目)</blockquote>',
+    )
   })
 })

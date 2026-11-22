@@ -14,9 +14,9 @@ export function mode(s: FarmState): Mode {
   return { cls: 'off', text: tr('ui.mode.off'), short: tr('ui.mode.off_short') }
 }
 
-export const fmtBytes = (b: number) => b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : b >= 1e3 ? `${(b / 1e3).toFixed(1)} kB` : `${b} B`
+export const fmtBytes = (b: number) => (b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : b >= 1e3 ? `${(b / 1e3).toFixed(1)} kB` : `${b} B`)
 
-export const pct = (value: number, goal: number) => `${Math.min(100, value / goal * 100)}%`
+export const pct = (value: number, goal: number) => `${Math.min(100, (value / goal) * 100)}%`
 
 export const cropName = (id: string) => tr(`crop.${id}`)
 

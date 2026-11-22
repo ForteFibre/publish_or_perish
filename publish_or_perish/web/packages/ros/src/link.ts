@@ -19,7 +19,10 @@ export class RosLink {
   #closed = false
   #timer: ReturnType<typeof setTimeout> | undefined
 
-  constructor(readonly url: string, onConnected: (ok: boolean) => void) {
+  constructor(
+    readonly url: string,
+    onConnected: (ok: boolean) => void,
+  ) {
     this.ros.on('connection', () => onConnected(true))
     this.ros.on('close', () => {
       onConnected(false)
@@ -58,8 +61,7 @@ export class RosLink {
 
   /** service を呼ぶ. 失敗 (service がない, つながっていない) は reject する */
   call<TReq, TRes>(name: string, serviceType: string, req: TReq): Promise<TRes> {
-    return new Promise((resolve, reject) =>
-      new Service<TReq, TRes>({ ros: this.ros, name, serviceType }).callService(req, resolve, reject))
+    return new Promise((resolve, reject) => new Service<TReq, TRes>({ ros: this.ros, name, serviceType }).callService(req, resolve, reject))
   }
 
   close() {

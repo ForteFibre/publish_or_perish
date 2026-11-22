@@ -2,7 +2,9 @@
   "name": "@pop/ros",
   "private": true,
   "type": "module",
-  "exports": { ".": "./src/index.ts" },
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "@pop/i18n": "workspace:*",
     "roslib": "^2.1.0",

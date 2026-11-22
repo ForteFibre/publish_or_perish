@@ -1,29 +1,49 @@
 // コードで作るローポリの形 (材質, 作物, ロボット, 井戸, 看板, 小屋, 文字の札).
 // Blender で作った glb に差し替えるときも, 画面が動かす部分は同じ名前にする (docs/design/web-architecture.md).
-import * as THREE from 'three'
+
 import { tr } from '@pop/i18n'
+import * as THREE from 'three'
 import { HUT } from './colors'
 
 /** 決まった並びの乱数 (毎回同じ景色にする) */
 export function seeded(seed: number): () => number {
   let s = seed
-  return () => ((s = (s * 16807) % 2147483647) / 2147483647)
+  return () => (s = (s * 16807) % 2147483647) / 2147483647
 }
 
 export const mat = (color: THREE.ColorRepresentation, o: THREE.MeshStandardMaterialParameters = {}) =>
   new THREE.MeshStandardMaterial({ color, roughness: 0.9, flatShading: true, ...o })
 
 export const M = {
-  grass: mat('#6cbf45'), trunk: mat('#8a5a34'), leaf: mat('#4f9e3d'), leaf2: mat('#6dbb4a'), rock: mat('#a7a39a'),
-  fence: mat('#c99a5b'), stone: mat('#9c9a92'), roof: mat('#c2533a'), water: mat('#4aa8e8', { roughness: 0.2, metalness: 0.1 }),
-  stalk: mat('#79b84a'), gold: mat('#e9bf45'), dead: mat('#8b7355'), tomato: mat('#e0402f', { roughness: 0.5 }),
-  green: mat('#3f8f3a'), pumpkin: mat('#ee8a2a', { roughness: 0.6 }), white: mat('#f5f2ea'), orange: mat('#f08a24'),
-  dark: mat('#2b3236'), wheel: mat('#3a3f44'), hub: mat('#c9ced3'),
-  eye: new THREE.MeshBasicMaterial({ color: '#6ff3ff' }), coin: mat('#f5c542', { metalness: 0.4, roughness: 0.4 }),
+  grass: mat('#6cbf45'),
+  trunk: mat('#8a5a34'),
+  leaf: mat('#4f9e3d'),
+  leaf2: mat('#6dbb4a'),
+  rock: mat('#a7a39a'),
+  fence: mat('#c99a5b'),
+  stone: mat('#9c9a92'),
+  roof: mat('#c2533a'),
+  water: mat('#4aa8e8', { roughness: 0.2, metalness: 0.1 }),
+  stalk: mat('#79b84a'),
+  gold: mat('#e9bf45'),
+  dead: mat('#8b7355'),
+  tomato: mat('#e0402f', { roughness: 0.5 }),
+  green: mat('#3f8f3a'),
+  pumpkin: mat('#ee8a2a', { roughness: 0.6 }),
+  white: mat('#f5f2ea'),
+  orange: mat('#f08a24'),
+  dark: mat('#2b3236'),
+  wheel: mat('#3a3f44'),
+  hub: mat('#c9ced3'),
+  eye: new THREE.MeshBasicMaterial({ color: '#6ff3ff' }),
+  coin: mat('#f5c542', { metalness: 0.4, roughness: 0.4 }),
   glass: new THREE.MeshStandardMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, roughness: 0.1 }),
 }
 
-const castShadow = (o: THREE.Object3D) => o.traverse(c => { c.castShadow = true })
+const castShadow = (o: THREE.Object3D) =>
+  o.traverse(c => {
+    c.castShadow = true
+  })
 
 /** 文字の札 (canvas に描いて Sprite にする. OS のフォントで描くので, オフラインでも日本語が出る) */
 export function label(text: string, x: number, y: number, z: number, h: number, color = '#ffffff', bg: string | null = null) {
@@ -48,7 +68,7 @@ export function label(text: string, x: number, y: number, z: number, h: number, 
   const t = new THREE.CanvasTexture(cv)
   t.colorSpace = THREE.SRGBColorSpace
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, depthWrite: false }))
-  s.scale.set(h * w / cv.height, h, 1)
+  s.scale.set((h * w) / cv.height, h, 1)
   s.position.set(x, y, z)
   return s
 }
@@ -93,7 +113,8 @@ export function makeScenery(rand: () => number): THREE.Group {
     root.add(g)
   }
   for (let i = 0; i < 70; i++) {
-    const x = -10 + rand() * 34, z = -20 + rand() * 30
+    const x = -10 + rand() * 34,
+      z = -20 + rand() * 30
     if (x > -3 && x < 17 && z > -12.5 && z < 3.5) continue
     if (rand() < 0.75) tree(x, z, 0.8 + rand() * 0.7)
     else {
@@ -107,7 +128,8 @@ export function makeScenery(rand: () => number): THREE.Group {
   const flower = new THREE.SphereGeometry(0.06, 5, 4)
   const fm = ['#ffffff', '#ffd84a', '#ff8fb1', '#b58cff'].map(c => mat(c))
   for (let i = 0; i < 160; i++) {
-    const x = -6 + rand() * 26, z = -16 + rand() * 22
+    const x = -6 + rand() * 26,
+      z = -16 + rand() * 22
     if (x > -1.2 && x < 15.2 && z > -10.2 && z < 1.2) continue
     const f = new THREE.Mesh(flower, fm[i % 4])
     f.position.set(x, 0.05, z)
@@ -160,10 +182,22 @@ export function makeFence(w: number, h: number): THREE.Group {
       g.add(r)
     }
   }
-  const x0 = -m, x1 = w + m, z0 = m, z1 = -h - m
-  for (let x = x0; x <= x1 + 1e-6; x += (x1 - x0) / Math.ceil(x1 - x0)) { addPost(x, z0); addPost(x, z1) }
-  for (let z = z1; z <= z0 + 1e-6; z += (z0 - z1) / Math.ceil(z0 - z1)) { addPost(x0, z); addPost(x1, z) }
-  rail(x0, z0, x1, z0); rail(x0, z1, x1, z1); rail(x0, z0, x0, z1); rail(x1, z0, x1, z1)
+  const x0 = -m,
+    x1 = w + m,
+    z0 = m,
+    z1 = -h - m
+  for (let x = x0; x <= x1 + 1e-6; x += (x1 - x0) / Math.ceil(x1 - x0)) {
+    addPost(x, z0)
+    addPost(x, z1)
+  }
+  for (let z = z1; z <= z0 + 1e-6; z += (z0 - z1) / Math.ceil(z0 - z1)) {
+    addPost(x0, z)
+    addPost(x1, z)
+  }
+  rail(x0, z0, x1, z0)
+  rail(x0, z1, x1, z1)
+  rail(x0, z0, x0, z1)
+  rail(x1, z0, x1, z1)
   // 座標の目盛り (data[y * width + x] の x, y)
   for (let x = 0; x < w; x++) g.add(label(`x=${x}`, x + 0.5, 0.05, 0.75, 0.32, '#4d5a3c'))
   for (let y = 0; y < h; y++) g.add(label(`y=${y}`, -0.85, 0.05, -(y + 0.5), 0.32, '#4d5a3c'))
@@ -225,13 +259,15 @@ export function makeBoard(): BoardView {
   mast.position.set(0.8, 1.68, -0.06)
   const bell = new THREE.Group()
   bell.position.set(0.8, 1.7, 0.3)
-  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.12, 0.18, 10, 1, true),
-    mat('#e9bf45', { metalness: 0.5, roughness: 0.35, side: THREE.DoubleSide }))
+  const cup = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.12, 0.18, 10, 1, true),
+    mat('#e9bf45', { metalness: 0.5, roughness: 0.35, side: THREE.DoubleSide }),
+  )
   cup.position.y = -0.12
   bell.add(cup)
   g.add(arm, mast, bell)
   castShadow(g)
-  g.rotation.y = 0.2  // 正面をカメラ (右手前) へ向ける
+  g.rotation.y = 0.2 // 正面をカメラ (右手前) へ向ける
   g.scale.setScalar(1.5)
   return { g, cv, tex, bell }
 }
@@ -250,7 +286,10 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   const text = b.text || tr('ui.scene.board_empty')
   let fs = 56
   g.font = `700 ${fs}px sans-serif`
-  while (fs > 22 && g.measureText(text).width > 464) { fs -= 2; g.font = `700 ${fs}px sans-serif` }
+  while (fs > 22 && g.measureText(text).width > 464) {
+    fs -= 2
+    g.font = `700 ${fs}px sans-serif`
+  }
   g.fillStyle = b.text ? '#ffffff' : '#7f9a86'
   g.fillText(text, 24, 98)
   if (b.text) {
@@ -261,7 +300,10 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   }
   g.strokeStyle = 'rgba(255,255,255,0.25)'
   g.lineWidth = 2
-  g.beginPath(); g.moveTo(16, 176); g.lineTo(496, 176); g.stroke()
+  g.beginPath()
+  g.moveTo(16, 176)
+  g.lineTo(496, 176)
+  g.stroke()
   g.font = '600 26px sans-serif'
   g.fillStyle = '#a9c4b0'
   g.fillText('/board/number', 24, 210)
@@ -315,7 +357,8 @@ export function makeCrop(kind: string, stage: number, dead: boolean): THREE.Grou
   if (kind === 'wheat') {
     const n = 7
     for (let i = 0; i < n; i++) {
-      const a = (i / n) * Math.PI * 2 + r(), d = 0.08 + r() * 0.16
+      const a = (i / n) * Math.PI * 2 + r(),
+        d = 0.08 + r() * 0.16
       const h = 0.18 + stage * 0.11
       const st = new THREE.Mesh(G.stalk, dead ? M.dead : stage >= 4 ? M.gold : M.stalk)
       st.scale.y = h
@@ -411,7 +454,7 @@ export function makeBot(): BotParts {
   body.add(base, stripe, head, face, tank, water, ant, led)
   const wheels: THREE.Group[] = []
   for (let i = 0; i < 3; i++) {
-    const a = i * (Math.PI * 2 / 3) + Math.PI / 3
+    const a = i * ((Math.PI * 2) / 3) + Math.PI / 3
     const w = new THREE.Group()
     const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.06, 10), M.wheel)
     tire.rotation.x = Math.PI / 2

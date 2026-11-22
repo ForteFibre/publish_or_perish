@@ -1,15 +1,18 @@
 // 農場の状態 (/farm/state の JSON) の形. farm_node.cpp の publish_state() と合わせる.
 // 0 / 1 で送ってくる真偽値は, そのまま数で受ける (画面の側で真偽に読む).
-import { z } from 'zod'
+
 import type { Msg as MsgT } from '@pop/i18n'
+import { z } from 'zod'
 
 const flag = z.union([z.literal(0), z.literal(1)])
 
 /** 文言 (キーと値). 文は訳の表にあり, 画面が訳す. 値は文字列か, それ自体を訳す文 */
-export const Msg: z.ZodType<MsgT> = z.lazy(() => z.object({
-  key: z.string(),
-  args: z.record(z.string(), z.union([z.string(), Msg])),
-}))
+export const Msg: z.ZodType<MsgT> = z.lazy(() =>
+  z.object({
+    key: z.string(),
+    args: z.record(z.string(), z.union([z.string(), Msg])),
+  }),
+)
 
 /** [水分 0〜100, 作物の種類 (なければ null), 生育 0〜1, 枯れた, 井戸] */
 export const Tile = z.tuple([z.number(), z.string().nullable(), z.number(), flag, flag])
@@ -176,15 +179,15 @@ export function parseFarmState(json: string, check: boolean): FarmState {
 }
 
 /** /farm/ui に送る操作 */
-export type UiCommand =
-  | { kind: 'buy'; id: string }
-  | { kind: 'speed'; value: number }
-  | { kind: 'diag'; text: string }
+export type UiCommand = { kind: 'buy'; id: string } | { kind: 'speed'; value: number } | { kind: 'diag'; text: string }
 
 export function encodeUi(c: UiCommand): string {
   switch (c.kind) {
-    case 'buy': return `buy ${c.id}`
-    case 'speed': return `speed ${c.value}`
-    case 'diag': return `diag ${c.text}`
+    case 'buy':
+      return `buy ${c.id}`
+    case 'speed':
+      return `speed ${c.value}`
+    case 'diag':
+      return `diag ${c.text}`
   }
 }
