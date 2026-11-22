@@ -60,6 +60,11 @@ export function tm(m: Msg, lng?: string): string {
   return tr(m.key, m.args, lng)
 }
 
+/** 言語を替える (Storybook の言語の切り替え用. 画面は ?lang= で開き直す) */
+export async function changeLang(lang: Lang): Promise<void> {
+  if (i18next.language !== lang) await i18next.changeLanguage(lang)
+}
+
 /** 今の言語 */
 export const currentLang = (): Lang => (i18next.language as Lang) ?? 'ja'
 

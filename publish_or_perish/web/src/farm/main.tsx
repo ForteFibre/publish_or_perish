@@ -5,31 +5,8 @@ import { initI18n } from '@pop/i18n'
 import { connectFarm, loadFixture, pickFixture } from '@pop/ros'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Modals } from './hud/Modals'
-import { Banner, Buttons, Connect, Floats, Log, Mini, RosCard, Status, TipBox, Toasts } from './hud/Panels'
-import { Quest } from './hud/Quest'
-import { SceneView } from './SceneView'
+import { App } from './App'
 import './farm.css'
-
-function App() {
-  return (
-    <>
-      <SceneView />
-      <Status />
-      <RosCard />
-      <Quest />
-      <Log />
-      <Mini />
-      <Buttons />
-      <Modals />
-      <Toasts />
-      <Banner />
-      <TipBox />
-      <Floats />
-      <Connect />
-    </>
-  )
-}
 
 // 訳の表を読んでから描く (表は小さいので待っても目立たない)
 void initI18n().then(lng => {
