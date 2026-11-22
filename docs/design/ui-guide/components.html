@@ -1,0 +1,349 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Publish or Perish 部品の見本</title>
+<!--
+  docs/design/ui-guide.md の見本. 外からは何も読まない.
+  値は docs/design/ui-tokens.md と同じ. 書体は同梱していないので, 丸い書体と JetBrains Mono が
+  入っていない環境では OS の書体で出る.
+-->
+<style>
+:root {
+  --sky: #9fd8f5; --grass: #6cbf45;
+  --surface: #fffcf3; --surface-hud: rgb(255 252 243 / 0.94); --surface-sunken: #f3ecd9; --track: #eadfc4; --neutral-soft: #ece6d6;
+  --ink: #1f2a1f; --ink-sub: #5d6b5a; --ink-faint: #6f6850;
+  --line: #e3d9bf; --edge: #c9bc98; --lip: #b9a876; --control: #8a7848;
+  --gold: #e8a923; --gold-bright: #ffd45a; --gold-soft: #fff6d8; --gold-ink: #8a5600; --on-gold: #4a2c00;
+  --success: #4caf50; --success-bright: #7bc96f; --success-deep: #3fa34d; --success-soft: #d9f5d3; --success-ink: #237a2a;
+  --warning: #f0a020; --warning-soft: #fff3d6; --warning-ink: #8a5600; --cli-soft: #ffe9c2;
+  --danger: #e05244; --danger-strong: #c43a2c; --danger-soft: #ffe9e6; --danger-ink: #a3271a;
+  --info: #3b82c4; --info-soft: #e6f1fb; --info-ink: #1d4f80;
+  --special: #9b6bd6;
+  --term: #263238; --term-hud: rgb(38 50 56 / 0.92); --term-raised: #445a63; --term-text: #d7f5c9; --term-sub: #9fc49a;
+  --term-danger: #ffb4a8; --term-danger-sub: #e0a49a; --term-focus: #ffd45a;
+  --font-sans: "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
+  --font-display: "M PLUS Rounded 1c", var(--font-sans);
+  --font-mono: "JetBrains Mono", "Cascadia Code", "DejaVu Sans Mono", "Noto Sans Mono CJK JP", "Noto Sans Mono", Consolas, monospace;
+  --ease-out: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --focus-color: var(--info-ink);
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 24px; font: 13px/20px var(--font-sans); color: var(--ink);
+  background: linear-gradient(var(--sky) 0 220px, var(--grass) 220px); min-height: 100vh; }
+code, pre, .mono { font-family: var(--font-mono); font-variant-ligatures: none; }
+:focus-visible { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+.on-term { --focus-color: var(--term-focus); }
+h1 { font: 700 22px/30px var(--font-display); margin: 0 0 4px; }
+.note { margin: 0 0 20px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(380px, 1fr)); gap: 24px; align-items: start; }
+.label { font: 700 12px/18px var(--font-display); color: var(--ink); background: var(--surface); display: inline-block;
+  padding: 0 8px; border-radius: 4px; margin-bottom: 8px; }
+
+/* 札 */
+.card { background: var(--surface-hud); border: 2px solid var(--edge); border-radius: 16px; padding: 16px;
+  box-shadow: 0 3px 0 var(--lip), 0 8px 18px rgb(40 50 30 / 0.18); }
+.card.solid { background: var(--surface); }
+.card h2 { font: 700 18px/26px var(--font-display); margin: 0 0 4px; }
+.row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sub { color: var(--ink-sub); font-size: 12px; line-height: 18px; }
+
+/* ボタン */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 36px; padding: 0 16px;
+  border: 2px solid var(--edge); border-radius: 12px; background: var(--surface); color: var(--ink);
+  font: 700 14px/1 var(--font-display); white-space: nowrap; cursor: pointer; --lip-c: var(--lip);
+  box-shadow: 0 4px 0 var(--lip-c); margin-bottom: 4px;
+  transition: transform 80ms var(--ease-out), box-shadow 80ms var(--ease-out), background-color 160ms var(--ease-out); }
+.btn:hover { background: #fff; }
+.btn:active, .btn.pressing, .btn[aria-pressed="true"] { transform: translateY(2px); box-shadow: 0 2px 0 var(--lip-c); }
+.btn[aria-pressed="true"] { background: var(--gold-soft); border-color: var(--gold-ink); }
+.btn.primary { background: var(--gold); color: var(--on-gold); border-color: var(--gold-ink); --lip-c: var(--gold-ink); }
+.btn.primary:hover { background: var(--gold-bright); }
+.btn[aria-disabled="true"] { background: var(--surface-sunken); color: var(--ink-faint); border-color: var(--line);
+  box-shadow: none; transform: translateY(2px); cursor: not-allowed; }
+.btn.sm { height: 28px; padding: 0 12px; border-radius: 8px; font-size: 12px; box-shadow: 0 2px 0 var(--lip-c); margin-bottom: 2px; }
+.btn.sm:active { box-shadow: none; }
+.btn.on-term { height: 24px; padding: 0 8px; border: 0; border-radius: 8px; background: var(--term-raised); color: #fff;
+  font-size: 12px; box-shadow: none; margin: 0; }
+.btn.on-term:active { transform: none; }
+.btn.link { height: auto; padding: 0; border: 0; background: none; box-shadow: none; margin: 0; color: var(--info-ink);
+  text-decoration: underline; font: inherit; }
+.btn.focus { outline: 3px solid var(--focus-color); outline-offset: 2px; }
+.group { display: inline-flex; }
+.group .btn { border-radius: 0; margin-left: -2px; }
+.group .btn:first-child { border-radius: 12px 0 0 12px; margin-left: 0; }
+.group .btn:last-child { border-radius: 0 12px 12px 0; }
+.badge { display: inline-block; min-width: 20px; padding: 0 6px; border-radius: 9999px; font: 700 11px/16px var(--font-display);
+  background: var(--gold); color: var(--on-gold); text-align: center; }
+.badge.alert { background: var(--danger-strong); color: #fff; }
+
+/* Pill */
+.pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 10px; border-radius: 9999px;
+  font: 700 12px/1 var(--font-display); white-space: nowrap; }
+.pill.player { background: var(--success-soft); color: var(--success-ink); }
+.pill.cli { background: var(--cli-soft); color: var(--warning-ink); }
+.pill.farm { background: var(--info-soft); color: var(--info-ink); }
+.pill.danger { background: var(--danger-soft); color: var(--danger-ink); }
+.pill.neutral { background: var(--neutral-soft); color: var(--ink-sub); }
+.pill.live { animation: live 1600ms ease-in-out infinite; }
+.pill i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+@keyframes live { 50% { box-shadow: 0 0 0 4px rgb(76 175 80 / 0.25); } }
+
+/* メーター */
+.meter { height: 10px; border: 1px solid var(--control); border-radius: 4px; background: var(--track); overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--gold); transition: width 400ms var(--ease-out); }
+.meter.xp { height: 14px; border-width: 2px; }
+.meter.xp i { background: linear-gradient(90deg, var(--success-bright), var(--success-deep)); }
+.meter.full i { background: var(--success); }
+.stagebar { display: flex; gap: 4px; align-items: center; }
+.stagebar span { flex: 1; height: 8px; border: 1px solid var(--control); border-radius: 4px; background: var(--track); }
+.stagebar .done { background: var(--success); } .stagebar .now { background: var(--gold); }
+.stagebar b { font: 700 11px/16px var(--font-display); color: var(--ink-sub); margin-left: 4px; }
+
+/* 左上の札 */
+.medal { width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(160deg, var(--gold-bright), var(--gold));
+  border: 2px solid var(--gold-ink); box-shadow: inset 0 -3px 0 rgb(0 0 0 / 0.15); display: grid; place-items: center;
+  color: var(--on-gold); font: 700 11px/1 var(--font-display); text-align: center; }
+.medal b { display: block; font-size: 24px; }
+.coin { width: 24px; height: 24px; border-radius: 50%; background: #f5c542; border: 2px solid #c48a10; display: inline-grid;
+  place-items: center; font: 700 12px/1 var(--font-display); color: var(--gold-ink); }
+.money { font: 700 28px/32px var(--font-display); font-variant-numeric: tabular-nums; }
+
+/* 課題の行 */
+.mission { border-top: 1px dashed var(--line); padding: 12px 0; }
+.mission .head { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.check { width: 20px; height: 20px; flex: none; border: 2px solid var(--control); border-radius: 8px; display: grid; place-items: center;
+  font-size: 13px; line-height: 1; color: var(--ink); }
+.done .check { background: var(--success); border-color: var(--success-ink); }
+.done .head { color: var(--ink-sub); }
+.reward { margin-left: auto; font: 700 12px/18px var(--font-display); color: var(--gold-ink); }
+.mission .body { margin-left: 28px; }
+
+/* コードブロックとターミナルの出力 */
+.code { position: relative; background: var(--term); color: var(--term-text); border-radius: 8px; padding: 8px 12px; margin: 8px 0;
+  font: 12px/18px var(--font-mono); overflow-wrap: anywhere; }
+.code.copy { padding-right: 64px; }
+.code .btn { position: absolute; right: 6px; top: 5px; }
+.output { margin: 8px 0; }
+.output pre { margin: 0; background: var(--term); color: var(--term-text); border-radius: 8px 8px 0 0; padding: 8px 12px;
+  font: 13px/20px var(--font-mono); overflow-x: auto; }
+.output .tr { display: flex; gap: 8px; align-items: baseline; background: var(--surface-sunken); border: 2px solid var(--line);
+  border-top: 0; border-radius: 0 0 8px 8px; padding: 4px 12px; font-size: 12px; line-height: 18px; color: var(--ink-sub); }
+code.inline { background: var(--surface-sunken); border-radius: 4px; padding: 0 4px; font-size: 12px; }
+
+/* 点検の札 */
+.doctor-head { display: flex; align-items: center; gap: 8px; font: 700 13px/20px var(--font-display); margin: 8px 0; }
+.dr { border-left: 4px solid; border-radius: 12px; padding: 8px 12px; margin-bottom: 8px; }
+.dr.error { background: var(--danger-soft); border-color: var(--danger); }
+.dr.warn { background: var(--warning-soft); border-color: var(--warning); }
+.dr .t { display: flex; gap: 8px; align-items: center; font-weight: 700; }
+.dr .ic { width: 16px; height: 16px; flex: none; border-radius: 50%; display: grid; place-items: center; font: 700 11px/1 var(--font-mono); color: #fff; }
+.dr.error .ic { background: var(--danger-strong); } .dr.warn .ic { background: var(--warning-ink); }
+.dr .where { font: 12px/18px var(--font-mono); color: var(--ink-sub); display: flex; gap: 8px; }
+.dr .chev { margin-left: auto; color: var(--ink-sub); }
+
+/* ログ */
+.log { background: var(--term-hud); color: var(--term-text); border-radius: 12px; padding: 8px 12px; font-size: 13px; line-height: 20px; }
+.log .e { margin-bottom: 4px; } .log .e:last-child { margin-bottom: 0; }
+.log .o { font: 12px/18px var(--font-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.log .o .tag, .log .n { color: var(--term-sub); }
+.log .t { font-size: 12px; line-height: 18px; color: var(--term-sub); padding-left: 16px; }
+.log .ng .o { color: var(--term-danger); white-space: normal; overflow-wrap: break-word; }
+.log .ng .t { color: var(--term-danger-sub); }
+
+/* 配線図 */
+.node { font: 12px/18px var(--font-mono); padding: 2px 8px; border: 2px solid; border-radius: 8px; background: var(--surface); }
+.node.player { border-color: var(--success); } .node.cli { border-color: var(--warning); } .node.farm { border-color: var(--info); }
+.node.none { border-style: dashed; border-color: var(--danger); color: var(--danger-ink); }
+.node.tool { border-color: var(--edge); color: var(--ink-faint); }
+.topic { background: var(--term); color: var(--term-text); border-radius: 9999px; padding: 4px 12px; font: 12px/18px var(--font-mono); text-align: center; }
+.topic small { display: block; font-size: 11px; line-height: 16px; color: var(--term-sub); }
+
+/* 通知と帯 */
+.toast { display: inline-flex; gap: 12px; align-items: center; background: var(--surface); border: 2px solid var(--gold); border-radius: 16px;
+  padding: 12px 24px; box-shadow: 0 3px 0 var(--lip), 0 8px 22px rgb(0 0 0 / 0.2); }
+.toast b { display: block; font: 700 16px/24px var(--font-display); }
+.toast.ach { border-color: var(--special); }
+.banner { display: inline-block; text-align: center; background: linear-gradient(160deg, var(--gold-bright), var(--gold)); color: var(--on-gold);
+  border: 2px solid var(--gold-ink); border-radius: 24px; padding: 24px 64px; box-shadow: 0 4px 0 var(--gold-ink), 0 16px 40px rgb(0 0 0 / 0.25); }
+.banner span { font: 700 16px/24px var(--font-display); } .banner b { display: block; font: 700 40px/48px var(--font-display); }
+
+/* 実績, キーの札, タブ */
+.ach { border: 2px solid var(--line); border-radius: 12px; padding: 8px 12px; background: var(--surface-sunken); color: var(--ink-faint); font-size: 12px; line-height: 18px; }
+.ach b { display: block; font: 700 14px/24px var(--font-display); }
+.ach.got { background: var(--gold-soft); border-color: var(--gold); color: var(--ink); } .ach.got b { color: var(--gold-ink); }
+kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; padding: 0 4px; background: #fff; border: 2px solid var(--edge);
+  border-radius: 4px; box-shadow: 0 2px 0 var(--lip); font: 700 12px/1 var(--font-mono); }
+.tabs { display: flex; gap: 4px; padding: 0 12px; }
+.tab { height: 36px; padding: 0 16px; border: 2px solid transparent; border-bottom: 0; border-radius: 12px 12px 0 0; background: var(--track);
+  color: var(--ink); font: 700 14px/1 var(--font-display); cursor: pointer; }
+.tab[aria-selected="true"] { background: var(--term); color: #e8eee4; }
+.editor { background: var(--term); color: #e8eee4; border-radius: 12px 12px 0 0; padding: 12px 0; font: 14px/22px var(--font-mono); overflow-x: auto; }
+.editor div { padding: 0 12px; white-space: pre; } .editor .cur { background: #2c3a41; }
+.editor .ln { color: #8fa69a; display: inline-block; width: 28px; }
+.c { color: #8fa69a; } .k { color: #ffb86b; } .s { color: #a5e075; } .n { color: #f5c542; } .ty { color: #7cc7ff; } .f { color: #d7b8ff; } .p { color: #ff9fc6; }
+.err { text-decoration: underline wavy #ff8a7a; }
+.statusline { display: flex; gap: 12px; align-items: center; height: 24px; padding: 0 12px; background: var(--term-raised); color: #fff;
+  border-radius: 0 0 12px 12px; font-size: 12px; }
+.led { width: 8px; height: 8px; border-radius: 50%; background: #5bf06a; display: inline-block; }
+
+@media (prefers-reduced-motion: reduce) { .pill.live { animation: none; } .btn, .meter i { transition: none; } }
+</style>
+</head>
+<body>
+<h1>部品の見本</h1>
+<p class="note"><span class="label">docs/design/ui-guide.md の見本。背景の上は空の色、下は草の色。</span></p>
+
+<div class="grid">
+
+<section>
+  <span class="label">札 (左上): メダル、XP のメーター、お金</span>
+  <div class="card row" style="gap:16px">
+    <div class="medal"><span>Lv<b>2</b></span></div>
+    <div style="flex:1; min-width:160px">
+      <div style="font:700 16px/24px var(--font-display)">新米オペレーター</div>
+      <div class="meter xp"><i style="width:55%"></i></div>
+      <div class="sub" style="font-size:11px; line-height:16px">180 / 250 XP</div>
+    </div>
+    <div class="row" style="border-left:2px solid var(--line); padding-left:12px"><span class="coin">G</span><span class="money">290</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="label">Pill</span>
+  <div class="card row">
+    <span class="pill player">接続中</span>
+    <span class="pill player live"><i></i>無人運転中</span>
+    <span class="pill cli">CLI で操作中 (1)</span>
+    <span class="pill farm">farm</span>
+    <span class="pill danger">切断</span>
+    <span class="pill neutral">停止中</span>
+    <span class="badge">2/12</span>
+    <span class="badge alert">!</span>
+  </div>
+</section>
+
+<section>
+  <span class="label">ボタン: 副、主、押し込み中、押し込んだまま、押せない、フォーカス、小</span>
+  <div class="card">
+    <div class="row">
+      <button class="btn">配線 <span class="badge alert">!</span></button>
+      <button class="btn primary">買う 100 G</button>
+      <button class="btn pressing">押し込み中</button>
+      <button class="btn" aria-pressed="true">音</button>
+      <button class="btn" aria-disabled="true">150 G</button>
+      <button class="btn focus">フォーカス</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <span class="group" role="group" aria-label="早送り">
+        <button class="btn" aria-pressed="true">×1</button><button class="btn">×2</button><button class="btn">×4</button>
+      </span>
+      <button class="btn sm">説明を読む</button>
+      <button class="btn link">開く</button>
+      <span class="sub">あと 50 G</span>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="label">課題の札: ステージの帯、点検 (1 件だけ開く)、課題の行</span>
+  <div class="card" style="max-width:368px">
+    <div class="stagebar"><span class="done"></span><span class="now"></span><span></span><span></span><span></span><span></span><b>2 / 6</b></div>
+    <h2>ステージ 2: 自分のノードで動かす</h2>
+    <div class="sub">対応する講習: 入門 第10回</div>
+    <div class="doctor-head">点検 <span class="pill danger">エラー 2</span><span class="pill cli">注意 1</span></div>
+    <div class="dr error">
+      <div class="t"><span class="ic">×</span>エラー: ビルドに失敗した: セミコロンがない</div>
+      <div class="where"><span title="~/src26_ws/src/tutorial_nodes/src/patrol.cpp:3">…/tutorial_nodes/src/patrol.cpp:3</span><button class="btn link">開く</button></div>
+      <div lang="en" class="mono" style="font-size:12px; line-height:18px">expected ';' before '}' token</div>
+      <div>エラーの行か、その 1 つ前の行の末尾に ; を足す。</div>
+      <div class="code copy on-term">colcon build --packages-select tutorial_nodes<button class="btn on-term">コピー</button></div>
+    </div>
+    <div class="dr error"><div class="t"><span class="ic">×</span>エラー: CMakeLists.txt に書いたファイルがない<span class="chev">▸</span></div></div>
+    <div class="dr warn"><div class="t"><span class="ic">!</span>注意: src/patrol.cpp がビルドされない<span class="chev">▸</span></div></div>
+    <div class="mission done">
+      <div class="head"><span class="check">✓</span>ロボットを動かす<span class="reward">+50 G</span></div>
+    </div>
+    <div class="mission">
+      <div class="head"><span class="check"></span>水をやる<span class="reward">+50 G</span></div>
+      <div class="body">
+        <div class="meter" style="margin-top:8px"><i style="width:30%"></i></div>
+        <div class="sub">3 / 10 マス</div>
+        <div>乾いたマスに <code class="inline">/bot1/water</code> で水をやる。</div>
+        <div class="code copy on-term">ros2 service call /bot1/water std_srvs/srv/Trigger<button class="btn on-term">コピー</button></div>
+        <button class="btn sm">説明を読む</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="label">ログ: 原文 (等幅) と訳 (ゴシック、字下げ)。失敗は折り返す。くり返しは 1 行</span>
+  <div class="log" role="log">
+    <div class="e"><div class="o" lang="en"><span class="tag">service /bot1/water →</span> Watered (5, 0): moisture 0 -&gt; 60, tank 8/10.</div><div class="t">(5, 0) に水をやった (水分 0 -&gt; 60, タンク 8/10)</div></div>
+    <div class="e ng"><div class="o" lang="en"><span class="tag">× service /bot1/harvest →</span> (3, 0) is not ripe yet (9%). Wait until it reaches 100%, then call harvest again.</div><div class="t">(3, 0) はまだ実っていない (9%)。100% になってから、もう一度 harvest を呼ぶ。</div></div>
+    <div class="e">作物の時間を 2 倍速にした <span class="n mono">×6</span></div>
+    <div class="e"><span class="pill danger">点検</span> <span style="color:var(--term-danger)">src/patrol.cpp がビルドされない</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="label">ターミナルの出力 (説明の中): 原文の箱に訳をつなげる</span>
+  <div class="card solid">
+    <div>返事の <code class="inline">message</code> は英語で返る。ターミナルには次のように出る。</div>
+    <div class="output">
+      <pre lang="en">[INFO] [1730000000.123456789] [dry_waterer]: Watered (3, 1): moisture 12 -&gt; 72, tank 7/10.</pre>
+      <div class="tr"><span class="pill neutral">訳</span><span>(3, 1) に水をやった (水分 12 -&gt; 72, タンク 7/10)</span></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <span class="label">配線図の部品: 意味の色</span>
+  <div class="card solid row">
+    <span class="node player">/my_patrol</span>
+    <span class="node cli">CLI (/_ros2cli_123)</span>
+    <span class="topic">/bot1/cmd_vel<small>Twist 10 Hz 480 B/s</small></span>
+    <span class="node farm">farm</span>
+    <span class="node none">送り手なし</span>
+    <span class="node tool">まだ誰も見ていない</span>
+  </div>
+</section>
+
+<section>
+  <span class="label">通知と帯</span>
+  <div class="row" style="gap:16px">
+    <div class="toast"><span class="coin">G</span><div><b>課題クリア: 水をやる</b><span class="sub">+50 G</span></div></div>
+    <div class="banner"><span>レベルアップ</span><b>Lv 3</b></div>
+  </div>
+</section>
+
+<section>
+  <span class="label">実績とキーの札</span>
+  <div class="card solid">
+    <div class="row" style="align-items:stretch">
+      <div class="ach got" style="flex:1"><b>はじめの一歩</b>ロボットを初めて動かした</div>
+      <div class="ach" style="flex:1"><b>実りの秋</b>初めて収穫した</div>
+    </div>
+    <div class="row" style="margin-top:12px"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><span>前、左、後、右に動く</span></div>
+  </div>
+</section>
+
+<section>
+  <span class="label">将来のエディタの面: 紙のタブ、暗い面、状態の行</span>
+  <div>
+    <div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="true">patrol.cpp</button><button class="tab" role="tab" aria-selected="false">CMakeLists.txt</button></div>
+    <div class="editor on-term">
+<div><span class="ln">1</span><span class="p">#include</span> <span class="s">&lt;rclcpp/rclcpp.hpp&gt;</span></div>
+<div><span class="ln">2</span><span class="c">// 0.1 秒ごとに速度を送る</span></div>
+<div class="cur"><span class="ln">3</span><span class="k">auto</span> pub = <span class="f">create_publisher</span>&lt;<span class="ty">Twist</span>&gt;(<span class="s">"/bot1/cmd_vel"</span>, <span class="n">10</span>)<span class="err"> </span></div>
+<div><span class="ln">4</span><span class="k">return</span> <span class="n">0</span>;</div>
+    </div>
+    <div class="statusline"><span class="pill danger">ビルド失敗</span><span><span class="led"></span> /my_patrol</span><span class="mono" style="margin-left:auto">3:58</span></div>
+  </div>
+</section>
+
+</div>
+</body>
+</html>
