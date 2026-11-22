@@ -252,49 +252,59 @@ HUD は React のコンポーネントにする。
 
 ### サーバーが返す形
 
-C++ の `Result` を、文ではなくキーと値で返す形に変える。
+C++ では、文言を `Msg` (キーと値) で表す (`include/publish_or_perish/messages.hpp`)。
+値は文字列か、それ自体を訳す `Msg` である。
+作物の名前のように、文の中に入る名前も `Msg{"crop.tomato"}` として渡す。
 
 ```cpp
 struct Result
 {
   bool ok;
-  std::string key;                         // 例: "water.tank_empty"
-  std::map<std::string, Arg> args;         // 例: {"x": 3, "y": 2}
+  Msg msg;  // 例: {"srv.water.done", {{"x", 3}, {"y", 1}, {"before", "12"}, ...}}
 };
 ```
 
-service の response の `message` には、このキーと値から組み立てた英語の文を入れる。
-`/farm/state` のログの項目には、キーと値と組み立てた英語の文の三つを入れる。
+service の response の `message` には、`render_en()` で組み立てた英語の文を入れる。
+`/farm/state` のログの項目には、キーと値 (`msg`) に加えて、ターミナルにも出た結果なら、何への返事か (`tag`) と英語の文 (`text`) を入れる。
 
 ```json
-{ "ok": false, "key": "water.tank_empty", "args": {}, "text": "Tank is empty. Refill at the well (bottom-left tile)." }
+{ "id": 9, "ok": 0, "tag": "service /bot1/harvest", "text": "(3, 0) is not ripe yet (9%).",
+  "msg": { "key": "srv.harvest.not_ripe", "args": { "x": "3", "y": "0", "pct": "9" } } }
 ```
 
-`text` はターミナルに出た文そのものなので、画面は英語の原文として `text` をそのまま出し、訳は `key` と `args` から作る。
-課題や点検のように画面にだけ出る項目は `key` と `args` だけを送り、`text` を付けない。
+`text` はターミナルに出た文そのものなので、画面は英語の原文として `text` をそのまま出し、訳は `msg` から作る。
+画面にだけ出るログ (作物が実った、点検で見つけた、など) は `tag` と `text` を空にする。
 
-作物の名前のように、文の中に入る名前もキーで送る (`crop.tomato`)。
-`CropInfo` が持つ日本語の名前は、訳の表へ移す。
+課題、ステージ、実績、お店の品、準備中のステージは id だけを送り、題や説明は画面が訳の表の `mission.<id>.title` などから引く。
+称号はレベルから `title.<レベル>` を引く。
+点検の結果の `title` と `detail`、通知の `title` と `body`、配線の警告 `warn` は `Msg` で送る。
+点検の `fix` はコピーして使うコマンドなので、訳さずに文字列のまま送る。
+
+大会モードの `match_sim.py` も同じ形で、`msg('キー', 名前=値)` と書き、`render_en()` で英語にする。
+`/robot/status` と `/match/state` には、英語の文 (`last_action`) に加えて、キーと値 (`action`) と成否 (`action_ok`) を入れる。
+大会モードの画面は `action` を訳して出すので、CLI やほかのノードが呼んだ結果も画面に出る。
 
 ### 訳の表
 
-訳の表は `packages/i18n` に置く。
-英語の `en.json` を元にし、日本語の `ja.json` を訳とする。
-形式は i18next の JSON に合わせ、埋め込みは `{{x}}`、複数形は `_one` と `_other` の接尾辞で書く。
+訳の表は `web/public/i18n/<言語>.json` に置く。
+画面は `public/` から配られた写しを読み、C++ と `match_sim.py` もこの場所の表を使う。
+形式は i18next の JSON に合わせ、埋め込みは `{{x}}` で書く。
+複数形 (`_one` と `_other`) は、今の文では使っていない。
 
-```json
-{
-  "water": {
-    "tank_empty": "Tank is empty. Refill at the well (bottom-left tile).",
-    "done": "Watered ({{x}}, {{y}}): moisture {{before}} -> {{after}}, tank {{tank}}/{{max}}"
-  }
-}
-```
+二つの表の役割は次のとおりである。
+
+| 表 | 中身 |
+|---|---|
+| `en.json` | ターミナルに出る文の元 (`srv`、`param`、`console`、`crop`、`match`) |
+| `ja.json` | すべての文の日本語。画面にだけ出る文は、ここが元 |
+
+画面にだけ出る文の元を日本語にしたのは、英語の画面を出すかがまだ決まっていないからである。
+英語の画面を作るときは、画面にだけ出る文の英訳を `en.json` に足していく。
+それまでは、英語の表にない文は日本語で出す (i18next の `fallbackLng`)。
 
 C++ は JSON を読む仕組みを持っていない。
-そこで、ビルドのときに `en.json` から C++ のヘッダーを作る (CMake からスクリプトを呼ぶ)。
-`match_sim.py` は `en.json` を起動時に読む。
-こうすると英語の文の元は `en.json` だけになり、C++、Python、画面が同じ表を使う。
+そこで、ビルドのときに `en.json` から C++ のヘッダー (`messages_en.hpp`) を作る (`cmake/gen_messages.py` を CMake から呼ぶ)。
+`match_sim.py` は、share に入れた `en.json` を起動時に読む。
 
 英語の文は、次の規則で書く。
 
@@ -307,36 +317,38 @@ C++ は JSON を読む仕組みを持っていない。
 ログの欄では、英語の原文を等幅のフォントでターミナルと同じ見た目に出し、その下に訳を小さく添える。
 画面の言語が英語のときは、訳を出さない。
 
-画面の言語は、ブラウザの言語から決め、画面の設定で切り替えられるようにする。
-VSCode の中では、拡張が VSCode の表示言語を URL の引数で渡す。
+画面の言語は日本語を既定とし、`?lang=en` で変えられる。
+ブラウザの言語に合わせないのは、英語の画面がまだ一部しか訳されていないからである。
+VSCode の中では、拡張が VSCode の表示言語を `?lang=` で渡す。
 
 ### ガイド
 
 ガイドは言語ごとに `public/guide/<言語>/<id>.md` に置く。
-その言語の訳がなければ日本語を出す。
+その言語の版がなければ日本語の版を出す。
 
 ターミナルに出る文を例として示すときは、文を直接書かず、メッセージのキーで参照する。
-出力を示すブロックの記法を一つ足す。
+値は `|` のあとに `名前=値` をカンマで並べる。
 
 ````md
 ```output
-$ ros2 service call /bot1/water std_srvs/srv/Trigger
-{{msg:water.tank_empty}}
+[INFO] [...] [dry_waterer]: {{msg:srv.water.done|x=3,y=1,before=12,after=72,tank=7,max=10}}
 ```
 ````
 
-画面はこのブロックを、英語の原文と、その下に添えた訳に展開する。
-文を `en.json` から引くので、プログラムの出力とガイドの例が食い違わない。
+`expandMessages()` (`packages/guide`) が、このブロックを英語の原文のコードブロックと、その下の訳の引用 (`> 訳: ...`) に展開する。
+`output` のブロックの外に書いた `{{msg:...}}` は、`` `英語の原文` (訳: ...) `` に展開する。
+文を表から引くので、プログラムの出力とガイドの例が食い違わない。
 
-今は文中の `~/src26_ws` と `tutorial_nodes` を置き換える規則が、画面 (`guide.js`) と VSCode 拡張 (`extension.js`) の二か所に書かれている。
-この規則と `{{msg:...}}` の展開を `packages/guide` の一つのモジュールにまとめ、拡張もこれを使う。
-拡張は今と同じく、置き換えたあとの Markdown をファイルに書いて VSCode の Markdown プレビューで開く。
+VSCode 拡張は、置き換えと展開をしたあとの Markdown をファイルに書いて、VSCode の Markdown プレビューで開く。
 展開したあとはただの Markdown なので、プレビューでもそのまま読める。
+拡張はビルドせずに配る JavaScript なので、置き換えの規則と `expandMessages()` を写しで持っている。
+規則を変えるときは、`packages/guide` と `vscode/extension.js` の両方を直す。
 
 ### VSCode 拡張
 
 拡張の文言 (コマンドの名前、ステータスバー、ツールチップ) は、VSCode の標準の仕組みで訳す。
-`package.json` の文言は `package.nls.json` と `package.nls.ja.json` に、コードの文言は `vscode.l10n` に移す。
+`package.json` の文言は `package.nls.json` (英語) と `package.nls.ja.json` に、コードの文言は `vscode.l10n` (元は英語、日本語は `l10n/bundle.l10n.ja.json`) に置く。
+農場から届く文言は、画面と同じ訳の表を `<url>/i18n/<言語>.json` から読んで訳す。
 
 ## ビルドと開発
 
@@ -345,23 +357,15 @@ $ ros2 service call /bot1/water std_srvs/srv/Trigger
 `web/dist` は Docker の中の Node で作る。
 ROS の環境に Node を入れる必要はない。
 
-```dockerfile
-FROM node:24 AS build
-WORKDIR /web
-RUN corepack enable
-COPY . .
-RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile && pnpm build
-
-FROM scratch
-COPY --from=build /web/dist /
-```
-
 ```bash
-docker build --output type=local,dest=web/dist web
+cd publish_or_perish   # パッケージのディレクトリ
+docker build -f web/Dockerfile --output type=local,dest=web/dist .
 ```
 
+コンテナの中でテスト (`pnpm test`) とビルド (`pnpm build`) を行う (`web/Dockerfile`)。
+ビルドのコンテキストを `web/` ではなくパッケージのディレクトリにしているのは、訳の表のテストが C++ と `match_sim.py` のソースも読むからである。
 `--output` でファイルとして取り出すので、出力の持ち主は手元の利用者になる。
-`web/.dockerignore` に `node_modules` と `dist` を書き、手元のものをコンテナへ持ち込まないようにする。
+`.dockerignore` に `node_modules` と `web/dist` を書き、手元のものをコンテナへ持ち込まないようにする。
 `colcon build` は、できた `web/dist` をこれまでどおり share へ入れる。
 
 ### 開発
@@ -376,8 +380,8 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 |---|---|
 | 状態のスキーマ | 動いている農場から `/farm/state` を MCAP に記録し、そこから取り出した JSON を固定のデータにしてスキーマで検証する |
 | ガイドの描画と置き換え | Vitest で、Markdown から HTML への変換と `{{msg:...}}` の展開を確かめる |
-| 訳の表 | `en.json` のキーがすべて `ja.json` にあるか、埋め込みの名前が一致するかを Vitest で確かめる |
-| C++ のメッセージ | GTest で、`World` が返すキーが `en.json` にあり、引数の名前が合っているかを確かめる |
+| 訳の表 | `en.json` のキーがすべて `ja.json` にあるか、埋め込みの名前が一致するか。C++、`match_sim.py`、画面、ガイドが使うキーが表にあり、渡す値の名前が埋め込みと同じか (Vitest) |
+| C++ のメッセージ | GTest (`test/test_messages.cpp`) で、`World` の操作が返す文と、ターミナルに出すそのほかの文が英語の表から作れるかを確かめる |
 | HUD | 当面は書かない (E2E は見送る)。書くときは、固定の状態を流し込み、Playwright でスクリーンショットを比べる (通常の大きさと小窓の両方) |
 
 ## 移行の順序
@@ -389,15 +393,15 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 5. 農場の 3D を R3F に移す。`<primitive>` で包むところから始め、作物、ロボット、小屋の順にコンポーネントにする
 6. Blender で作った物から glb に差し替える
 
-1 と 2 は済んだ (2026-11-22)。3D は、3 の前に `src/farm/scene/` の TypeScript のクラスへ移してある (形を作る関数は `models.ts`)。
+1 から 3 は済んだ (2026-11-22)。3D は、3 の前に `src/farm/scene/` の TypeScript のクラスへ移してある (形を作る関数は `models.ts`)。
 大会モードは、4 の前に TypeScript へ移してある (書き方は変えていない)。
 
-3 は 2 と並行して進められる。
-3 を終えるまでは、画面の言語は日本語だけにする。
+3 では、画面にだけ出る文の英訳は作っていない。英語の画面を出すと決めたら、`en.json` に英訳を足す。
 
 ## 決まっていないこと
 
 - 英語のメッセージを誰が書き、誰が見直すか
+- 英語の画面を出すか。出すなら、画面にだけ出る文 (課題、点検など) を誰が訳すか
 - ガイドの英語版を作るか。作るなら誰が訳すか
 - 受講生への配り方
 - React Three Fiber の v10 に上げる時期

@@ -69,7 +69,7 @@ ros2 launch publish_or_perish match.launch.xml
 | `/robot/arm/extend` | `std_msgs/msg/Float64` | 送る | アームの伸びの目標 [m] (0〜0.42)。0.4 m/s で動く |
 | `/robot/arm/lift` | `std_msgs/msg/Float64` | 送る | リフトの高さの目標 [m] (0〜0.35)。0.3 m/s で動く |
 | `/robot/pose` | `geometry_msgs/msg/Pose2D` | 受ける | 台車の位置 [m] と向き [rad]。原点はフィールドの中心, x は赤コートから青コートへ, y はスタートゾーンから奥へ |
-| `/robot/status` | `std_msgs/msg/String` | 受ける | アーム・リフト・持っているボトル・サイコロの目・合図 (JSON) |
+| `/robot/status` | `std_msgs/msg/String` | 受ける | アーム・リフト・持っているボトル・サイコロの目・合図・最後の操作の結果 (JSON。`last_action` は英語の文, `action` はキーと値) |
 | `/robot/grab` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの前に立っているボトル (自チームの桜ボトルと除草剤ボトル) をつかむ。リフトを 0.03 m 以下に下ろしておく。持てるのはサイコロの目の数まで (ルール 5.4) |
 | `/robot/place` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの真ん中のボトルを今の高さで離す (下ろしてから離す) |
 | `/robot/throw` | `std_srvs/srv/Trigger` | 呼ぶ | 持っている除草剤ボトルを 1 本, 前へ投げる (前 3.5 m/s, 上 2.5 m/s) |
@@ -77,7 +77,7 @@ ros2 launch publish_or_perish match.launch.xml
 | `/robot/signal` | `std_srvs/srv/Trigger` | 呼ぶ | 合図 (満開宣言) の灯りを付ける / 消す |
 | `/match/reset` | `std_srvs/srv/Trigger` | 呼ぶ | ロボットとオブジェクトを最初の位置に戻す |
 
-- service の結果は response の `message` に日本語で返る (できなかった理由も)
+- service の結果は response の `message` に英語で返る (できなかった理由も)。画面には日本語の訳が出る
 - 台車は木枠 (高さ 89 mm) を越えられない。スタートゾーンは外周と木枠に囲まれていて, 右 (+x) から出る。アームとハンドは何にも当たらない
 - 持っているボトルの底は, リフトの高さ + 5 mm。底が 89 mm より低いまま木枠に重なると, そのボトルはその場に落ちる。共通ゾーンへ運ぶときはリフトを上げて木枠を越え, ゾーンの上で下ろしてから置く
 - フィールドは `tools/harurobo2027_field.py` が `publish_or_perish/models/harurobo2027/harurobo2027.xml` に書き出す。寸法は運営委員会のフィールド CAD から取った (取り方はスクリプトの先頭)。直したら書き出し直し, `python3 tools/mjcf_export.py publish_or_perish/models/harurobo2027/harurobo2027.xml publish_or_perish/web/public/scenes/harurobo2027` で画面用の形も作り直す
@@ -99,7 +99,7 @@ ros2 launch publish_or_perish match.launch.xml
 
 ## 画面の機能
 
-- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/public/guide/ja/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。今あるのはステージ 3〜8 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない。ステージ 4 は「看板に文字を出す」だけ)
+- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/public/guide/ja/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。ターミナルに出る文は `{{msg:キー|名前=値}}` と書くと、英語の原文と訳になる (下の「ターミナルの文と訳」)。今あるのはステージ 3〜8 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない。ステージ 4 は「看板に文字を出す」だけ)
 - **点検** (課題パネルの上、VSCode では「問題」パネル): ターミナルにはエラーが出ないか、出ても原因が分かりにくい間違いを、ファイル・`~/.bashrc`・動いているプロセスを外から見て見つける。ファイルは読むだけで書き換えない
 
   | 見つける間違い | 調べ方 |
@@ -158,14 +158,32 @@ ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ス
 - CLI のノードがなく、自分のノードだけが動いているときは「無人運転中」になる
 - `ros2 topic echo` や rqt_graph、RViz、`ros2 bag record` を使うと解ける隠し実績がある
 
+## ターミナルの文と訳
+
+ターミナルに出る文 (service の返事、`ros2 param set` で断った理由、起動のログ) は英語にしている。
+ROS のエラーと同じく英語で読み、画面とガイドが訳を添える。
+画面にだけ出る文 (課題、点検、お店、実績、通知) は、農場からキーと値で送り、画面が訳す。
+
+文はすべて訳の表 `publish_or_perish/web/public/i18n/<言語>.json` にある。
+
+| 表 | 中身 |
+|---|---|
+| `en.json` | ターミナルに出る文の元 (`srv` `param` `console` `crop` `match`)。C++ はビルドのときにここから `messages_en.hpp` を作り (`cmake/gen_messages.py`)、`match_sim.py` は起動時に読む |
+| `ja.json` | すべての文の日本語。画面にだけ出る文はここが元 (英語の画面はまだないので、英語の表にない文は日本語で出す) |
+
+- 文を足すときは、C++ では `Msg{"キー", {{"名前", 値}}}`、`match_sim.py` では `msg('キー', 名前=値)` と書き、表に `{{名前}}` を使った文を足す。値には、それ自体を訳す文 (例: 作物の名前 `Msg{"crop.wheat"}`) も渡せる
+- 表と使う側が合っているかは `pnpm test` (キーがあるか、埋め込みの名前が同じか) と、C++ の `test_messages` (英語の文が作れるか。`colcon test --merge-install --packages-select publish_or_perish`) で確かめる
+- 画面の言語は `?lang=en` で変えられる (試すとき用)。VSCode の中では VSCode の表示言語になる
+- VSCode 拡張そのものの文言は `vscode/package.nls*.json` と `vscode/l10n/` にある
+
 ## 画面を作る
 
 画面のソースは `publish_or_perish/web/` にあり (React, three.js, TypeScript), ビルドした `web/dist/` を colcon build が share へ入れる。
 `web/dist/` は git に入れない。ビルドは Docker の中で行うので, ROS の環境に Node は要らない。
 
 ```bash
-cd ~/src26_ws/src/publish_or_perish/publish_or_perish/web
-docker build --output type=local,dest=dist .   # テストも走る
+cd ~/src26_ws/src/publish_or_perish/publish_or_perish
+docker build -f web/Dockerfile --output type=local,dest=web/dist .   # テストも走る
 cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select publish_or_perish
 ```
 
@@ -177,7 +195,7 @@ cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-selec
 cd publish_or_perish/web
 pnpm install
 pnpm dev          # http://localhost:5173 (rosbridge の 9090 に直接つなぐ)。大会モードは /match.html
-pnpm test         # ガイドの描画と, 記録した /farm/state がスキーマに合うか
+pnpm test         # ガイドの描画, 記録した /farm/state がスキーマに合うか, 訳の表と C++ / match_sim.py / 画面が合っているか
 pnpm typecheck
 ```
 
