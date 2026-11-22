@@ -47,8 +47,8 @@
  │   ┌──────────┴──────────────────────────────┐                   │
  │   │ ブラウザ / VSCode の iframe              │                   │
  │   │  packages/ros   接続と状態のストア      │                   │
- │   │  apps/farm      HUD (React) + 3D (R3F)  │                   │
- │   │  apps/match     3D (R3F)                │                   │
+ │   │  src/farm       HUD (React) + 3D (R3F)  │                   │
+ │   │  src/match      3D (R3F)                │                   │
  │   │  packages/i18n  英語を元にした訳の表    │                   │
  │   └─────────────────────────────────────────┘                   │
  │ web_server.py が web/dist を配る (8765)                         │
@@ -65,16 +65,15 @@
 | 3D を宣言的に書く | @react-three/fiber | 9.8 | three.js の上に乗るだけなので、今のコードを `<primitive>` で包んで少しずつ移せる |
 | 3D の部品 | @react-three/drei | 10.7 | `OrbitControls`、`useGLTF`、`Html`、`Instances` を使う |
 | 状態のストア | zustand | 5.1 | `useFrame` の中から `getState()` で読めば、React を再描画せずに 3D が状態を使える |
-| 状態の検証 | zod | 4 系 | `/farm/state` の形を一度だけ定義し、TS の型と開発中の検証の両方に使う |
+| 状態の検証 | zod | 4.6 | `/farm/state` の形を一度だけ定義し、TS の型と開発中の検証の両方に使う |
 | rosbridge | roslib | 2.1 | ESM 専用になった。subscribe、advertise、service の呼び出しを任せる |
 | i18n | i18next + react-i18next | 27 / 18 | 訳の表がただの JSON なので、C++ も同じ表から文を作れる |
 | ビルド | Vite | 8.3 | 開発中はすぐに画面へ反映され、本番は `web/dist` に書き出す |
-| 言語 | TypeScript | | 状態の形とメッセージのキーに型を付ける |
+| 言語 | TypeScript | 7.0 | 状態の形とメッセージのキーに型を付ける |
 | パッケージ管理 | pnpm | 12 | 農場と大会モードを一つのワークスペースで扱う |
 | アセットの変換 | @gltf-transform/cli | 4.5 | Blender から書き出した glb を圧縮する |
-| テスト | Vitest, Playwright | 5.1 / 1.65 | ロジックの単体テストと、HUD のスクリーンショットの比較 |
+| テスト | Vitest | 5.1 | ロジックの単体テスト (E2E の Playwright は当面見送る) |
 
-zod の版は、作り始めるときに確かめて固定する。
 React Three Fiber の v10 は alpha であり、`Canvas` の置き場所が変わる予定がある。
 安定版が出るまでは v9 に留める。
 
@@ -83,9 +82,10 @@ React Three Fiber の v10 は alpha であり、`Canvas` の置き場所が変�
 ```
 publish_or_perish/
   web/
-    package.json, pnpm-workspace.yaml, Dockerfile
-    apps/
-      farm/                農場の画面 (index.html, src/)
+    package.json, pnpm-workspace.yaml, vite.config.ts, Dockerfile
+    index.html, match.html 二つのページ (URL は今と同じ / と /match.html)
+    src/
+      farm/                農場の画面
       match/               大会モードの画面
     packages/
       ros/                 rosbridge の接続、ストア、状態の型
@@ -100,7 +100,16 @@ publish_or_perish/
     blender/               Blender の元ファイル
 ```
 
+農場と大会モードは、アプリを分けず、一つの Vite の設定で二つのページとして作る。
+URL (`/` と `/match.html`) と、ガイドやフィールドを置く `public/` を共有できるからである。
+二つのページで共有するライブラリ (three.js, roslib) は `vendor.js` にまとまる。
+
+出力のファイル名には中身のハッシュを付けない。
+colcon の `--symlink-install` は `dist/` のファイルへのリンクを張るので、名前が変わらなければ、画面をビルドし直すだけで (colcon build し直さずに) 反映される。
+古い .js がブラウザに残る問題は、今と同じく `web_server.py` の no-cache で防ぐ。
+
 CMake は、今の `install(DIRECTORY ... web ...)` を `web/dist` に向け直す。
+`web/dist` がないときは警告を出して画面を入れない。
 `web_server.py` は配るディレクトリが変わるだけで、中身は変えない。
 VSCode 拡張は `packages/guide` の置き換えの規則を使えるよう、拡張のビルドのときに同じモジュールを取り込む (下の「ガイド」を参照)。
 
@@ -137,7 +146,7 @@ HUD はセレクターで必要な部分だけを読み、その部分が変わ�
 3D の物を React の state で動かすと、毎フレーム React の再描画が走って遅くなるので、この使い分けを守る。
 
 大会モードも同じ作りで、`/match/state` を受けるストアを持つ。
-キーで `/robot/cmd_vel` を送る処理は `apps/match` に置く。
+キーで `/robot/cmd_vel` を送る処理は `src/match` に置く。
 
 ## 3D
 
@@ -369,7 +378,7 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 | ガイドの描画と置き換え | Vitest で、Markdown から HTML への変換と `{{msg:...}}` の展開を確かめる |
 | 訳の表 | `en.json` のキーがすべて `ja.json` にあるか、埋め込みの名前が一致するかを Vitest で確かめる |
 | C++ のメッセージ | GTest で、`World` が返すキーが `en.json` にあり、引数の名前が合っているかを確かめる |
-| HUD | 固定の状態を流し込み、Playwright でスクリーンショットを比べる (通常の大きさと小窓の両方) |
+| HUD | 当面は書かない (E2E は見送る)。書くときは、固定の状態を流し込み、Playwright でスクリーンショットを比べる (通常の大きさと小窓の両方) |
 
 ## 移行の順序
 
@@ -379,6 +388,9 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 4. 大会モードを R3F で作り直す。小さく、作っている途中なので、R3F の書き方を固める場所にする
 5. 農場の 3D を R3F に移す。`<primitive>` で包むところから始め、作物、ロボット、小屋の順にコンポーネントにする
 6. Blender で作った物から glb に差し替える
+
+1 と 2 は済んだ (2026-11-22)。3D は、3 の前に `src/farm/scene/` の TypeScript のクラスへ移してある (形を作る関数は `models.ts`)。
+大会モードは、4 の前に TypeScript へ移してある (書き方は変えていない)。
 
 3 は 2 と並行して進められる。
 3 を終えるまでは、画面の言語は日本語だけにする。

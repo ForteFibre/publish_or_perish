@@ -19,6 +19,7 @@ ros2 launch publish_or_perish farm.launch.xml
 ```
 
 ブラウザで http://localhost:8765 を開く (WSL の場合も Windows 側のブラウザで開ける見込み。未確認)。
+画面 (`publish_or_perish/web/dist`) がまだなければ, colcon build の前に作る (下の「画面を作る」)。
 進み具合は `~/.publish_or_perish/save.txt` に保存される。最初からにするときは `reset:=true`、別の保存先は `save_path:=<path>` を付ける。
 
 途中のステージから試すときは `start_stage:=<番号>` を付ける (前のステージは済みになる)。今の記録を残すため、保存先も分ける。
@@ -79,7 +80,7 @@ ros2 launch publish_or_perish match.launch.xml
 - service の結果は response の `message` に日本語で返る (できなかった理由も)
 - 台車は木枠 (高さ 89 mm) を越えられない。スタートゾーンは外周と木枠に囲まれていて, 右 (+x) から出る。アームとハンドは何にも当たらない
 - 持っているボトルの底は, リフトの高さ + 5 mm。底が 89 mm より低いまま木枠に重なると, そのボトルはその場に落ちる。共通ゾーンへ運ぶときはリフトを上げて木枠を越え, ゾーンの上で下ろしてから置く
-- フィールドは `tools/harurobo2027_field.py` が `publish_or_perish/models/harurobo2027/harurobo2027.xml` に書き出す。寸法は運営委員会のフィールド CAD から取った (取り方はスクリプトの先頭)。直したら書き出し直し, `python3 tools/mjcf_export.py publish_or_perish/models/harurobo2027/harurobo2027.xml publish_or_perish/web/scenes/harurobo2027` で画面用の形も作り直す
+- フィールドは `tools/harurobo2027_field.py` が `publish_or_perish/models/harurobo2027/harurobo2027.xml` に書き出す。寸法は運営委員会のフィールド CAD から取った (取り方はスクリプトの先頭)。直したら書き出し直し, `python3 tools/mjcf_export.py publish_or_perish/models/harurobo2027/harurobo2027.xml publish_or_perish/web/public/scenes/harurobo2027` で画面用の形も作り直す
 
 ## ステージ
 
@@ -98,7 +99,7 @@ ros2 launch publish_or_perish match.launch.xml
 
 ## 画面の機能
 
-- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/guide/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。今あるのはステージ 3〜8 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない。ステージ 4 は「看板に文字を出す」だけ)
+- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/public/guide/ja/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。今あるのはステージ 3〜8 (ステージ 1・2 は課題の欄のコマンドだけで進められるので付けていない。ステージ 4 は「看板に文字を出す」だけ)
 - **点検** (課題パネルの上、VSCode では「問題」パネル): ターミナルにはエラーが出ないか、出ても原因が分かりにくい間違いを、ファイル・`~/.bashrc`・動いているプロセスを外から見て見つける。ファイルは読むだけで書き換えない
 
   | 見つける間違い | 調べ方 |
@@ -157,16 +158,41 @@ ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ス
 - CLI のノードがなく、自分のノードだけが動いているときは「無人運転中」になる
 - `ros2 topic echo` や rqt_graph、RViz、`ros2 bag record` を使うと解ける隠し実績がある
 
+## 画面を作る
+
+画面のソースは `publish_or_perish/web/` にあり (React, three.js, TypeScript), ビルドした `web/dist/` を colcon build が share へ入れる。
+`web/dist/` は git に入れない。ビルドは Docker の中で行うので, ROS の環境に Node は要らない。
+
+```bash
+cd ~/src26_ws/src/publish_or_perish/publish_or_perish/web
+docker build --output type=local,dest=dist .   # テストも走る
+cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select publish_or_perish
+```
+
+出力のファイル名は毎回同じなので, `--symlink-install` で入れたあとは, 画面を直して `docker build` し直すだけで反映される (ファイルが増えたときは colcon build し直す)。
+
+画面を直すときは, 手元に Node (24 以上) と pnpm を入れて, 農場を起動したまま Vite の開発用サーバーを使うと, 保存するたびに画面が変わる。
+
+```bash
+cd publish_or_perish/web
+pnpm install
+pnpm dev          # http://localhost:5173 (rosbridge の 9090 に直接つなぐ)。大会モードは /match.html
+pnpm test         # ガイドの描画と, 記録した /farm/state がスキーマに合うか
+pnpm typecheck
+```
+
+`/farm/state` の形を変えたら, `packages/ros/src/farm.ts` のスキーマを直し, `packages/ros/src/fixtures/` に記録し直した状態を置く (`ros2 topic echo --once --field data /farm/state --full-length` の出力)。
+
 ## 構成
 
 - `publish_or_perish/src/world.cpp`: 農場の規則 (ROS に依存しない)
 - `publish_or_perish/src/progress.cpp`: 課題・実績・レベル
 - `publish_or_perish/src/farm_node.cpp`: ROS の topic / service、グラフの読み取り、保存、画面用の状態 (`/farm/state`)
-- `publish_or_perish/web/`: three.js の画面。rosbridge (9090) で `/farm/state` を読み、`/farm/ui` にお店と早送りの操作を送る
+- `publish_or_perish/web/`: 画面 (React, three.js, TypeScript)。rosbridge (9090) で `/farm/state` を読み、`/farm/ui` にお店と早送りの操作を送る。作り方は「画面を作る」、設計は `docs/design/web-architecture.md`
 - `vscode/`: VSCode 拡張 (畑を小窓で開く、ステータスバーに課題を出す)。colcon は読まない (`COLCON_IGNORE`)
 - `publish_or_perish/web/match.html`: 大会モードの見た目の試作 (動きはまだない)
-- `tools/mjcf_export.py`: MuJoCo のモデル (MJCF) から大会モードの画面用の形を書き出す。出力先 `web/scenes/` は git に入れない
+- `tools/mjcf_export.py`: MuJoCo のモデル (MJCF) から大会モードの画面用の形を書き出す。出力先 `web/public/scenes/` は git に入れない (春ロボ 2027 のフィールドだけは入れる)
 
 ```bash
-python3 tools/mjcf_export.py ~/src26_ws/src/src_ros2/src_ros2_simulation/models/src.xml publish_or_perish/web/scenes/src2026
+python3 tools/mjcf_export.py ~/src26_ws/src/src_ros2/src_ros2_simulation/models/src.xml publish_or_perish/web/public/scenes/src2026
 ```
