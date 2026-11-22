@@ -1,0 +1,515 @@
+{
+  "crop": {
+    "wheat": "小麦",
+    "tomato": "トマト",
+    "pumpkin": "カボチャ"
+  },
+  "srv": {
+    "plant": {
+      "well": "ここには植えられない (井戸)",
+      "occupied": "({{x}}, {{y}}) にはもう作物がある",
+      "no_money": "お金が足りない ({{crop}}の種は {{cost}} G)",
+      "done": "({{x}}, {{y}}) に{{crop}}を植えた (-{{cost}} G)"
+    },
+    "water": {
+      "well": "ここは井戸. 立つとタンクが満タンになる",
+      "tank_empty": "タンクが空. 井戸 (左下のマス) で補給する",
+      "done": "({{x}}, {{y}}) に水をやった (水分 {{before}} -> {{after}}, タンク {{tank}}/{{max}})"
+    },
+    "harvest": {
+      "none": "({{x}}, {{y}}) には作物がない",
+      "cleared": "({{x}}, {{y}}) の枯れた作物を片付けた",
+      "not_ripe": "({{x}}, {{y}}) はまだ実っていない ({{pct}}%)",
+      "done": "({{x}}, {{y}}) の{{crop}}を収穫した (+{{price}} G)"
+    },
+    "bell": "カーン ({{n}} 回目)"
+  },
+  "param": {
+    "bad_seed": "作物は wheat / tomato / pumpkin のどれか",
+    "locked": "{{seed}} はまだ解禁していない (お店で買う)"
+  },
+  "console": {
+    "opened": "農場を開いた. ブラウザで http://localhost:{{port}} を開く",
+    "resumed": "{{path}} から続きを読んだ (最初からにするときは -p reset:=true)",
+    "diag": "画面の自己診断: {{text}}"
+  },
+  "log": {
+    "ripe": "({{x}}, {{y}}) の作物が実った",
+    "wither": "({{x}}, {{y}}) の作物が枯れた",
+    "notice": "{{title}} {{body}}",
+    "doctor": "点検: {{title}}",
+    "param_set": "param {{name}} = {{value}}",
+    "speed": "作物の時間を {{n}} 倍速にした",
+    "no_money": "お金が足りない: {{item}}",
+    "bought": "買った: {{item}} (-{{price}} G)"
+  },
+  "notice": {
+    "mission": { "title": "課題クリア: {{mission}}", "body": "+{{reward}} G  +{{xp}} XP" },
+    "stage": { "title": "{{stage}} 完了", "body": "次: {{next}}" },
+    "all_clear": "全ステージクリア",
+    "achievement": { "title": "実績: {{name}}", "body": "{{desc}}" },
+    "level": { "title": "レベル {{level}}", "body": "称号「{{title}}」" }
+  },
+  "title": {
+    "1": "見習い農家",
+    "2": "新米オペレーター",
+    "3": "topic 使い",
+    "4": "service 使い",
+    "5": "ノード職人",
+    "6": "自動化の芽",
+    "7": "農場エンジニア",
+    "8": "ロボット農場主",
+    "9": "ROS 2 の達人",
+    "10": "伝説の農場主"
+  },
+  "unit": {
+    "m": "m",
+    "times": "回",
+    "tiles": "マス",
+    "G": "G",
+    "crops": "個"
+  },
+  "stage": {
+    "s1": { "title": "ステージ 1: 手で動かしてみよう", "lesson": "入門 第8回 (topic) ・第9回 (service)" },
+    "ws": { "title": "ステージ 2: ワークスペースを作ろう", "lesson": "実践 第1回 (ワークスペース)" },
+    "node": { "title": "ステージ 3: 最初のノードを動かそう", "lesson": "実践 第2回 (ノード) ・第3回 (CMakeLists.txt と package.xml) ・第4回 (colcon)" },
+    "board": { "title": "ステージ 4: ノードで topic と service を使おう", "lesson": "実践 第2回 (ノード) ・第5回 (タイマー) ・第6回 (Publisher) ・第7回 (Subscriber) ・入門 第9回 (service)" },
+    "s2": { "title": "ステージ 5: 自分のノードでロボットを動かそう", "lesson": "実践 第6回 (Publisher)" },
+    "s3": { "title": "ステージ 6: 畑を見て判断しよう", "lesson": "実践 第7回 (Subscriber) ・入門 第9回 (service)" },
+    "s4": { "title": "ステージ 7: パラメータで作物を選ぼう", "lesson": "入門 第10回 ・実践 第12回 (パラメータ)" },
+    "s5": { "title": "ステージ 8: ロボットを 2 台にしよう", "lesson": "実践 第11回 (launch) ・namespace" }
+  },
+  "upcoming": {
+    "s9": "ステージ 9: action で「ここへ行け」",
+    "s10": "ステージ 10: 収穫ロボと運搬ロボの連携",
+    "s11": "ステージ 11: Behavior Tree で農場を回す",
+    "graduate": "卒業: 自分のノードで MuJoCo の部のロボットを動かす"
+  },
+  "mission": {
+    "s1_move": {
+      "title": "ロボットを動かす",
+      "desc": "ターミナルから /bot1/cmd_vel に速度を publish して, bot1 を 2 m 動かす。\ncmd_vel は 0.5 秒途切れると止まる (実機と同じ安全のしくみ)。-r 10 で出し続ける。",
+      "hint": "ros2 topic pub -r 10 /bot1/cmd_vel geometry_msgs/msg/Twist \"{linear: {x: 0.5}}\""
+    },
+    "s1_echo": {
+      "title": "位置を見る",
+      "desc": "/bot1/pose を subscribe して, ロボットの位置 (x, y, theta) を表示する。",
+      "hint": "ros2 topic echo /bot1/pose"
+    },
+    "s1_plant": {
+      "title": "種をまく",
+      "desc": "service /bot1/plant を呼ぶと, ロボットの足元のマスに種をまく (小麦は 5 G)。",
+      "hint": "ros2 service call /bot1/plant std_srvs/srv/Trigger"
+    },
+    "s1_water": {
+      "title": "水をやる",
+      "desc": "service /bot1/water で足元のマスに水をやる。水分が 20 以上ないと育たない。\nタンクが空になったら, 左下の井戸のマスに行くと満タンになる。",
+      "hint": "ros2 service call /bot1/water std_srvs/srv/Trigger"
+    },
+    "s1_harvest": {
+      "title": "初収穫",
+      "desc": "水を切らさずに 30 秒待つと実る。実ったら service /bot1/harvest で収穫する。\n実ってから 40 秒放っておくと枯れる。",
+      "hint": "ros2 service call /bot1/harvest std_srvs/srv/Trigger"
+    },
+    "ws_src": {
+      "title": "ワークスペースを作る",
+      "desc": "ホームに src26_ws を作り, その中に src を作る。src まで作ればワークスペースになる。",
+      "hint": "mkdir -p ~/src26_ws/src"
+    },
+    "ws_pkg": {
+      "title": "パッケージを作る",
+      "desc": "src の中で ros2 pkg create を実行し, tutorial_nodes パッケージを作る。\nこのあとのステージのノードは, すべてこのパッケージに入れる。",
+      "hint": "cd ~/src26_ws/src && ros2 pkg create tutorial_nodes"
+    },
+    "ws_build": {
+      "title": "ビルドする",
+      "desc": "ワークスペースの直下 (src と同じ階層) で colcon build する。\n--symlink-install と --merge-install は毎回付ける (付けたり付けなかったりすると install/ が壊れる)。",
+      "hint": "cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select tutorial_nodes"
+    },
+    "ws_bashrc": {
+      "title": "source を .bashrc に書く",
+      "desc": "ビルドしたパッケージを ros2 が見つけられるように, ~/.bashrc に source の行を 1 回だけ足す。\n足したらターミナルを開き直す。",
+      "hint": "echo 'source ~/src26_ws/install/setup.bash' >> ~/.bashrc"
+    },
+    "node_cpp": {
+      "title": "hello_node.cpp を書く",
+      "desc": "tutorial_nodes/src/hello_node.cpp を作り, rclcpp::Node を継承したクラスと main() を書く。\n書く中身は「説明」に全部ある。",
+      "hint": "~/src26_ws/src/tutorial_nodes/src/hello_node.cpp"
+    },
+    "node_xml": {
+      "title": "package.xml を書き換える",
+      "desc": "package.xml の <buildtool_depend> を ament_cmake_auto にし, <depend>rclcpp</depend> を足す。",
+      "hint": "<buildtool_depend>ament_cmake_auto</buildtool_depend>"
+    },
+    "node_cmake": {
+      "title": "CMakeLists.txt に登録する",
+      "desc": "CMakeLists.txt を ament_cmake_auto の形に書き直し, hello_node を実行ファイルとして登録する。",
+      "hint": "ament_auto_add_executable(hello_node src/hello_node.cpp)"
+    },
+    "node_build": {
+      "title": "hello_node をビルドする",
+      "desc": "colcon build で install/lib/tutorial_nodes/hello_node ができればよい。\n失敗したら, 点検の欄に最初のエラーとその意味が出る。",
+      "hint": "cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-select tutorial_nodes"
+    },
+    "node_run": {
+      "title": "hello_node を起動する",
+      "desc": "ros2 run で hello_node を起動し, 農場から見えるようにする (右上の「あなたのノード」に出る)。",
+      "hint": "ros2 run tutorial_nodes hello_node"
+    },
+    "board_pub": {
+      "title": "看板に文字を出す",
+      "desc": "自分のノードから /board/text (std_msgs/msg/String) に文字を送り, 畑の横の看板に出す。5 回届けばクリア。\nros2 topic pub ではなく, C++ で書いたノードから送る。",
+      "hint": "create_publisher<std_msgs::msg::String>(\"/board/text\", 10) と create_wall_timer"
+    },
+    "board_sub": {
+      "title": "看板の数を受け取る",
+      "desc": "看板は 2 秒ごとに /board/number (std_msgs/msg/Int32) に 1〜50 の数を送っている。\n自分のノードでこれを subscribe し, 受け取った数をログに出す。",
+      "hint": "create_subscription<std_msgs::msg::Int32>(\"/board/number\", 10, ...)"
+    },
+    "board_reply": {
+      "title": "受け取った数を 2 倍して返す",
+      "desc": "/board/number で受け取った数を 2 倍して, 自分のノードから /board/answer (std_msgs/msg/Int32) に送る。\n正しければ看板に「正解」と出る。5 つの数に正解すればクリア。",
+      "hint": "subscription のコールバックの中で publish する"
+    },
+    "board_bell": {
+      "title": "鐘を鳴らす",
+      "desc": "看板の鐘は service /board/bell (std_srvs/srv/Trigger)。自分のノードから 3 回呼ぶ。\n返事 (response) の message に, 何回目に鳴ったかが入っている。",
+      "hint": "create_client<std_srvs::srv::Trigger>(\"/board/bell\") と async_send_request"
+    },
+    "s2_node": {
+      "title": "C++ のノードから動かす",
+      "desc": "tutorial_nodes に新しいノードを作り, タイマーで /bot1/cmd_vel を publish して 3 m 動かす。\nros2 topic pub は止めておく (どのノードが出したかを農場が見ている)。",
+      "hint": "create_publisher<geometry_msgs::msg::Twist>(\"/bot1/cmd_vel\", 10) と create_wall_timer"
+    },
+    "s2_patrol": {
+      "title": "畑を巡回する",
+      "desc": "自分のノードで bot1 を動かし, 20 マスを通る。畝に沿って往復すると早い。\n例: 4 秒進んだら 1 秒横へずれて, 向きを逆にする (経過時間で速度を切り替える)。",
+      "hint": "経過時間 (now() - start_) で vx と vy を切り替える"
+    },
+    "s3_sub": {
+      "title": "畑の水分を読む",
+      "desc": "自分のノードで /field/moisture (nav_msgs/msg/OccupancyGrid) を subscribe する。\ndata[y * width + x] がマス (x, y) の水分 (0〜100)。",
+      "hint": "create_subscription<nav_msgs::msg::OccupancyGrid>(\"/field/moisture\", 10, ...)"
+    },
+    "s3_dry": {
+      "title": "乾いたマスに水をやる",
+      "desc": "水分が 30 未満のマスに, 自分のノードから 10 回水をやる (CLI は止めておく)。\n/bot1/pose で自分のいるマスを, /field/moisture でそのマスの水分を調べる。",
+      "hint": "rclcpp::Client<std_srvs::srv::Trigger> の async_send_request"
+    },
+    "s3_auto": {
+      "title": "無人農場",
+      "desc": "CLI を使わず, 自分のノードだけで 60 秒間に 100 G 稼ぐ。\n/field/crops は作物の育ち具合 (-1: なし, 0〜99: 生育中, 100: 実った, -2: 枯れた)。",
+      "hint": "種まき → 水やり → 収穫 を 1 つのノードで回す"
+    },
+    "s4_tomato": {
+      "title": "トマトを植える",
+      "desc": "お店でトマトの種を解禁し, 農場のパラメータ bot1.seed を tomato にしてから植える。\nトマトは 15 G で植えて 70 G で売れる (育つのに 50 秒)。",
+      "hint": "ros2 param set /farm bot1.seed tomato"
+    },
+    "s4_harvest": {
+      "title": "トマトを 5 個収穫",
+      "desc": "自分のノードの中から作物を切り替えてもよい (rclcpp::AsyncParametersClient で /farm の bot1.seed を変える)。",
+      "hint": "ros2 param get /farm bot1.seed で今の作物を確かめる"
+    },
+    "s5_buy": {
+      "title": "2 台目を買う",
+      "desc": "お店で 2 台目のロボット (bot2) を買う。bot2 は /bot2/cmd_vel, /bot2/pose ... で動く。",
+      "hint": "お店 → 2 台目のロボット"
+    },
+    "s5_ns": {
+      "title": "namespace で 2 台を動かす",
+      "desc": "同じノードを namespace だけ変えて 2 つ起動し, bot1 と bot2 を動かす。\nノードの中の topic 名を \"cmd_vel\" のように / なしで書くと, namespace の下につながる。",
+      "hint": "ros2 run <pkg> <node> --ros-args -r __ns:=/bot2  (launch なら <node namespace=\"bot2\" .../>)"
+    },
+    "s5_auto": {
+      "title": "2 台の無人農場",
+      "desc": "CLI を使わず, 2 台で 60 秒間に 300 G 稼ぐ。2 台が同じマスを取り合わないように分担を決める (例: パラメータで担当の列を渡す)。",
+      "hint": "launch ファイルで 2 つのノードに別々のパラメータを渡す"
+    }
+  },
+  "achievement": {
+    "hidden": { "name": "???", "desc": "隠し実績" },
+    "first_step": { "name": "はじめの一歩", "desc": "ロボットを初めて動かした" },
+    "first_harvest": { "name": "実りの秋", "desc": "初めて収穫した" },
+    "rqt": { "name": "つながりが見える", "desc": "rqt_graph でノードのつながりを見た" },
+    "rviz": { "name": "RViz 農家", "desc": "RViz で /field/moisture か /field/crops を表示した" },
+    "bag": { "name": "記録係", "desc": "ros2 bag record で農場を記録した" },
+    "twin": { "name": "二刀流", "desc": "自分のノードを 2 つ同時に動かした" },
+    "water100": { "name": "水やり名人", "desc": "水やり 100 回" },
+    "streak10": { "name": "枯らさない人", "desc": "枯らさずに 10 回続けて収穫" },
+    "rich": { "name": "小金持ち", "desc": "所持金 1000 G" },
+    "green": { "name": "一面の緑", "desc": "井戸以外の全マスに作物がある" },
+    "wall": { "name": "壁と友達", "desc": "壁に 30 回ぶつかった" },
+    "pumpkin": { "name": "大物", "desc": "カボチャを収穫した" }
+  },
+  "shop": {
+    "col": { "name": "畑を 1 列広げる", "desc": "横に 1 列" },
+    "row": { "name": "畑を 1 行広げる", "desc": "縦に 1 行" },
+    "tomato": { "name": "トマトの種", "desc": "15 G で植えて 70 G で売れる" },
+    "pumpkin": { "name": "カボチャの種", "desc": "40 G で植えて 200 G で売れる" },
+    "tank": { "name": "大きいタンク", "desc": "全ロボットのタンク +5" },
+    "bot2": { "name": "2 台目のロボット", "desc": "/bot2/... で動く bot2 が来る" }
+  },
+  "wire": {
+    "type_mismatch": "型が合っていない: {{a}} と {{b}}",
+    "no_sub": "受け手がいない",
+    "no_pub": "送り手がいない",
+    "qos": "QoS が合っていない: {{pub}} は best_effort, {{sub}} は reliable",
+    "hint": "{{topic}} のつもり?"
+  },
+  "doctor": {
+    "ws_typo": {
+      "title": "ワークスペースの名前が違う",
+      "detail": "{{found}} に src がある。講習のワークスペースは {{ws}}。"
+    },
+    "build_place": {
+      "title": "ワークスペースの直下以外で colcon build した",
+      "detail": "{{place}} に build/ と install/ ができている。colcon build は {{ws}} (src と同じ階層) で実行する。\nここにできた install/ は使われないので, 消してから {{ws}} でビルドし直す。"
+    },
+    "pkg_place_ws": {
+      "title": "パッケージを src の外に作った",
+      "detail": "{{path}} にパッケージがある。colcon は見つけてビルドするが, 講習の構成 (パッケージは src の中) とずれる。"
+    },
+    "pkg_place_home": {
+      "title": "パッケージを src の外に作った",
+      "detail": "{{path}} にパッケージがある。{{ws}} で colcon build してもホームは探さないので, ビルドされない。"
+    },
+    "pkg_place_nested": {
+      "title": "パッケージの中にパッケージを作った",
+      "detail": "{{path}} にパッケージがある。src/{{pkg}} の中で ros2 pkg create したもの。\n同じ名前のパッケージが 2 つになり, colcon build が「Duplicate package names」で止まる。"
+    },
+    "isolated": {
+      "title": "最初のビルドで --merge-install を付け忘れた",
+      "detail": "install/ がパッケージごとに分かれた形 (isolated) で作られている。\nこのあと --merge-install を付けると colcon がエラーで止まる。付けずに続けると講習の手順とずれる。\nbuild/ install/ log/ を消して, 講習のコマンドでビルドし直す。"
+    },
+    "no_symlink": {
+      "title": "--symlink-install を付けずにビルドした",
+      "detail": "install/ にファイルがコピーされている。launch ファイルやパラメータのファイルを直しても, ビルドし直すまで反映されない。"
+    },
+    "bashrc_relative": {
+      "title": ".bashrc の source が相対パス",
+      "detail": "{{path}} は, ターミナルを開いた場所から見たパスになる。ホームで開いたときは見つからない。"
+    },
+    "bashrc_dup": {
+      "title": ".bashrc に同じ source が 2 回ある",
+      "detail": "echo >> ~/.bashrc を 2 回実行すると同じ行が増える。動きは変わらないが, 片方を消しておく。"
+    },
+    "bashrc_unbuilt": {
+      "title": "まだ setup.bash がない",
+      "detail": "{{path}} は colcon build をすると作られる。先にビルドする。"
+    },
+    "bashrc_missing": {
+      "title": ".bashrc の source 先がない",
+      "detail": "{{path}} がない。ターミナルを開くたびに「そのようなファイルはありません」が出る。打ち間違いか, 消したワークスペース。"
+    },
+    "auto_xml": {
+      "title": "package.xml に ament_cmake_auto がない",
+      "detail": "CMakeLists.txt は ament_auto_... を使っているが, package.xml の <buildtool_depend> が ament_cmake のまま。\nament_auto_find_build_dependencies() は package.xml の依存を読むので, 書き換えないと依存が入らない。"
+    },
+    "cmake_file": {
+      "title": "CMakeLists.txt に書いたファイルがない",
+      "detail": "{{exe}} のソース {{src}} がない。ファイル名の打ち間違いか, 置いた場所 (src/) の違い。"
+    },
+    "not_built": {
+      "title": "{{file}} がビルドされない",
+      "detail": "CMakeLists.txt に書いていないので, colcon build しても実行ファイルができない (エラーも出ない)。"
+    },
+    "no_depend": {
+      "title": "package.xml に {{dep}} がない",
+      "detail": "{{dep}} のヘッダーを include しているが, package.xml に書いていない。\nビルドすると「{{dep}}/...: No such file or directory」などのエラーになる。"
+    },
+    "stale": {
+      "title": "{{exe}} はまだ古い",
+      "detail": "{{src}} を保存したあと, まだビルドしていない。ros2 run すると前のコードで動く。"
+    },
+    "stale_running": {
+      "title": "動いている {{exe}} は前のコード",
+      "detail": "{{file}} を保存したあと, ビルドも起動し直しもしていない。\nビルドしてから Ctrl+C で止め, もう一度 ros2 run する。"
+    },
+    "build_error": {
+      "title": "ビルドに失敗した",
+      "detail": "最初のエラー: {{first}}"
+    },
+    "build_error_why": {
+      "title": "ビルドに失敗した: {{why}}",
+      "detail": "最初のエラー: {{first}}\n{{full}}"
+    },
+    "build_error_noline": {
+      "title": "ビルドに失敗した",
+      "detail": "エラーの行を見つけられなかった。{{log}} を見る。"
+    },
+    "domain": {
+      "title": "{{exe}} が農場から見えない (ROS_DOMAIN_ID が違う)",
+      "detail": "{{exe}} (pid {{pid}}) は ROS_DOMAIN_ID={{dom}} で動いている。農場は {{farm}}。\nROS_DOMAIN_ID が違うノード同士は topic がつながらない。エラーは出ない。.bashrc の export の行も確かめる。"
+    },
+    "old_process": {
+      "title": "動いている {{exe}} はビルド前のもの",
+      "detail": "{{exe}} (pid {{pid}}) はビルドし直す前に起動したまま。直したコードは, 起動し直すまで動かない。\nCtrl+C で止めて, もう一度起動する。"
+    }
+  },
+  "build_why": {
+    "no_depend": {
+      "title": "package.xml に <depend>{{dep}}</depend> がない",
+      "full": "package.xml に <depend>{{dep}}</depend> がない"
+    },
+    "header_name": {
+      "title": "ヘッダーのファイル名が違う",
+      "full": "ヘッダーのファイル名が違う\nmsg のヘッダーは小文字とアンダースコア (例: Twist → twist.hpp, Pose2D → pose2_d.hpp)。"
+    },
+    "semicolon": {
+      "title": "セミコロンがない",
+      "full": "セミコロンがない\nエラーの行か, その 1 つ前の行の末尾に ; を足す。"
+    },
+    "undeclared": {
+      "title": "宣言されていない名前を使っている",
+      "full": "宣言されていない名前を使っている\n名前の打ち間違いか, include のし忘れ。"
+    },
+    "no_member": {
+      "title": "そのクラスにない名前を使っている",
+      "full": "そのクラスにない名前を使っている\n打ち間違いか, -> と . の取り違え (shared_ptr は ->)。"
+    },
+    "no_match": {
+      "title": "関数の引数の型か数が違う",
+      "full": "関数の引数の型か数が違う\nエラーの下に出る candidate: の行が, 受け付ける引数の形。"
+    },
+    "undefined_ref": {
+      "title": "関数の中身が見つからない (リンクのエラー)",
+      "full": "関数の中身が見つからない (リンクのエラー)\nmain() の書き忘れか, CMakeLists.txt に .cpp を足し忘れ。"
+    },
+    "no_source": {
+      "title": "CMakeLists.txt に書いたファイルがない",
+      "full": "CMakeLists.txt に書いたファイルがない\nファイル名と場所 (src/) を確かめる。"
+    },
+    "no_package": {
+      "title": "find_package したパッケージが見つからない",
+      "full": "find_package したパッケージが見つからない\nパッケージ名の打ち間違いか, 未インストール。"
+    }
+  },
+  "match": {
+    "loaded": "{{path}} を読んだ. 物体 {{bodies}}, 形 {{geoms}}",
+    "reset": "最初の位置に戻した",
+    "dropped": "{{name}} が木枠に当たって落ちた (リフトを {{height}} m 以上にして越える)",
+    "grab": {
+      "lift_high": "リフトが高い ({{lift}} m). {{max}} m 以下に下ろしてからつかむ",
+      "none": "ハンドの前に立っているボトルがない (ハンドの中心から前後 {{front}}〜{{back}} m, 左右 {{side}} m 以内)",
+      "full": "サイコロの目が {{limit}} なので, これ以上は持てない (持っているのは {{held}} 本. ルール 5.4)",
+      "done": "{{n}} 本つかんだ ({{names}}). 持っているのは {{held}} 本",
+      "done_rest": "{{n}} 本つかんだ ({{names}}). 持っているのは {{held}} 本. サイコロの目が {{limit}} なので残り {{rest}} 本は持てない"
+    },
+    "place": {
+      "none": "ボトルを持っていない",
+      "done": "{{name}} を離した (底の高さ {{z}} m, 場所: {{zone}})",
+      "outside": "ゾーンの外"
+    },
+    "throw": {
+      "none": "除草剤ボトルを持っていない",
+      "done": "{{name}} を投げた (前へ {{fwd}} m/s, 上へ {{up}} m/s)"
+    },
+    "dice": {
+      "far": "サイコロが遠い (ハンドの中心から {{dist}} m. {{reach}} m 以内に寄せる)",
+      "done": "サイコロを転がした ({{before}} → {{after}})"
+    },
+    "signal": {
+      "on": "合図を付けた",
+      "off": "合図を消した"
+    }
+  },
+  "guide": {
+    "translation": "訳"
+  },
+  "ui": {
+    "copy": "コピー",
+    "copied": "済",
+    "close": "閉じる",
+    "status": {
+      "lv": "Lv"
+    },
+    "ros": {
+      "conn": "接続",
+      "connected": "接続中",
+      "disconnected": "切断",
+      "never": "未接続",
+      "mode": "運転",
+      "players": "あなたのノード",
+      "none": "なし",
+      "robots": "ロボット",
+      "bot": "{{name}} タンク {{tank}}/{{max}} ・ {{seed}}"
+    },
+    "mode": {
+      "auto": "無人運転中",
+      "auto_short": "無人",
+      "cli": "CLI で操作中 ({{n}})",
+      "cli_short": "CLI",
+      "moving": "動作中",
+      "moving_short": "動作中",
+      "off": "停止中",
+      "off_short": "停止"
+    },
+    "quest": {
+      "lesson": "対応する講習: {{lesson}}",
+      "all_clear": "今あるステージをすべてクリアした",
+      "preparing": "次のステージを準備中",
+      "upcoming": "準備中: {{name}}",
+      "read_guide": "説明を読む (書くものと, うまくいかないときの直し方)"
+    },
+    "doctor": {
+      "error": "エラー: {{title}}",
+      "warn": "注意: {{title}}",
+      "info": "{{title}}",
+      "open": "開く",
+      "mini": "点検: {{title}}"
+    },
+    "mini": {
+      "all_clear": "すべてクリア",
+      "wires": "配線 !"
+    },
+    "buttons": {
+      "speed": "時間 ×{{n}}",
+      "wires": "配線",
+      "shop": "お店",
+      "achievements": "実績",
+      "sound_on": "音: 入",
+      "sound_off": "音: 切"
+    },
+    "modal": {
+      "shop": "お店",
+      "sold_out": "売り切れ",
+      "wires": "配線図",
+      "wires_legend": "送り手 → topic (頻度 ・ 1 秒あたりのデータ量) → 受け手。点線が流れる速さは頻度に比例する。",
+      "guide": "説明",
+      "achievements": "実績"
+    },
+    "wires": {
+      "none": "つながっている topic はまだない",
+      "no_pub": "送り手なし",
+      "no_sub": "受け手なし",
+      "idle": "まだ誰も見ていない",
+      "rate": "{{hz}} Hz ・ {{bytes}}/s",
+      "stopped": "流れていない"
+    },
+    "tip": {
+      "tile": "マス ({{x}}, {{y}})",
+      "info": "水分 {{moist}} ・ 作物 {{crop}}",
+      "no_crop": "なし",
+      "dead": "{{crop}} (枯れた)",
+      "ripe": "{{crop}} (実った)",
+      "growing": "{{crop}} {{pct}}%"
+    },
+    "connect": {
+      "title": "農場に接続しています…",
+      "run": "ターミナルで次を起動してください。",
+      "note": "rosbridge (ポート 9090) につながると自動で始まります。"
+    },
+    "scene": {
+      "refill": "満タン",
+      "bump": "ゴツン",
+      "correct": "正解",
+      "wrong": "ちがう",
+      "board_empty": "(まだ何も届いていない)",
+      "from_player": "自分のノードから",
+      "from_cli": "CLI から",
+      "from_mixed": "自分のノードと CLI から",
+      "bells": "鐘 {{n}} 回"
+    }
+  }
+}

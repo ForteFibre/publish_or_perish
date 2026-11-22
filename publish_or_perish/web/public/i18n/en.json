@@ -1,0 +1,68 @@
+{
+  "crop": {
+    "wheat": "wheat",
+    "tomato": "tomato",
+    "pumpkin": "pumpkin"
+  },
+  "srv": {
+    "plant": {
+      "well": "Can't plant here. This is the well.",
+      "occupied": "({{x}}, {{y}}) already has a crop.",
+      "no_money": "Not enough money. A {{crop}} seed costs {{cost}} G.",
+      "done": "Planted {{crop}} at ({{x}}, {{y}}) (-{{cost}} G)."
+    },
+    "water": {
+      "well": "This is the well. Standing here fills the tank.",
+      "tank_empty": "Tank is empty. Refill at the well (bottom-left tile).",
+      "done": "Watered ({{x}}, {{y}}): moisture {{before}} -> {{after}}, tank {{tank}}/{{max}}."
+    },
+    "harvest": {
+      "none": "No crop at ({{x}}, {{y}}).",
+      "cleared": "Cleared the dead crop at ({{x}}, {{y}}).",
+      "not_ripe": "({{x}}, {{y}}) is not ripe yet ({{pct}}%).",
+      "done": "Harvested {{crop}} at ({{x}}, {{y}}) (+{{price}} G)."
+    },
+    "bell": "Ding! (ring {{n}})"
+  },
+  "param": {
+    "bad_seed": "The seed must be wheat, tomato or pumpkin.",
+    "locked": "{{seed}} is not unlocked yet. Buy it in the shop."
+  },
+  "console": {
+    "opened": "The farm is open. Open http://localhost:{{port}} in a browser.",
+    "resumed": "Continued from {{path}}. To start over, add -p reset:=true.",
+    "diag": "Screen self-check: {{text}}"
+  },
+  "match": {
+    "loaded": "Loaded {{path}}: {{bodies}} bodies, {{geoms}} geoms.",
+    "reset": "Moved everything back to the start.",
+    "dropped": "{{name}} hit the wooden frame and fell. Raise the lift to {{height}} m or more to cross it.",
+    "grab": {
+      "lift_high": "The lift is too high ({{lift}} m). Lower it to {{max}} m or less, then grab.",
+      "none": "No standing bottle in front of the hand (from the hand center: {{front}} to {{back}} m forward, within {{side}} m left or right).",
+      "full": "The dice shows {{limit}}, so you can't hold more. You hold {{held}} bottles (rule 5.4).",
+      "done": "Grabbed {{n}} bottles ({{names}}). You hold {{held}}.",
+      "done_rest": "Grabbed {{n}} bottles ({{names}}). You hold {{held}}. The dice shows {{limit}}, so {{rest}} more can't be held."
+    },
+    "place": {
+      "none": "You are not holding a bottle.",
+      "done": "Released {{name}} (bottom height {{z}} m, zone: {{zone}}).",
+      "outside": "outside the zones"
+    },
+    "throw": {
+      "none": "You are not holding a herbicide bottle.",
+      "done": "Threw {{name}} ({{fwd}} m/s forward, {{up}} m/s up)."
+    },
+    "dice": {
+      "far": "The dice is too far ({{dist}} m from the hand center). Move within {{reach}} m.",
+      "done": "Rolled the dice ({{before}} -> {{after}})."
+    },
+    "signal": {
+      "on": "Signal on.",
+      "off": "Signal off."
+    }
+  },
+  "guide": {
+    "translation": "Translation"
+  }
+}

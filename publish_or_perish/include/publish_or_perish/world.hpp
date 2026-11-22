@@ -9,13 +9,14 @@
 #include <utility>
 #include <vector>
 
+#include "publish_or_perish/messages.hpp"
+
 namespace publish_or_perish
 {
 
 struct CropInfo
 {
-  std::string id;
-  std::string name;
+  std::string id;  // 名前は訳の表の crop.<id>
   int cost;      // 種の値段 [G]
   int price;     // 売値 [G]
   double grow;   // 水が足りているときに実るまでの秒数
@@ -81,10 +82,11 @@ struct Event
   double t = 0.0;
 };
 
+// 操作の結果. msg は service の返事 (英語にして返す) と, 画面のログ (画面が訳す) に使う
 struct Result
 {
   bool ok;
-  std::string message;
+  Msg msg;
 };
 
 class World

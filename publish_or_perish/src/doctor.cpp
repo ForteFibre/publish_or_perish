@@ -129,12 +129,11 @@ DoctorReport Doctor::scan() const
   // 直したあとビルドしていない実行ファイルが動いているなら, 動いているのは前のコード
   for (auto & f : r.findings) {
     if (f.id != "stale") {continue;}
-    const std::string name = f.title.substr(0, f.title.find(' '));
+    const std::string name = f.title.args.front().second.text;  // doctor.stale.title の exe
     if (r.facts.count("run:" + name)) {
       f.level = "warn";
-      f.title = "動いている " + name + " は前のコード";
-      f.detail = f.file.substr(f.file.rfind('/') + 1) + " を保存したあと, ビルドも起動し直しもしていない。\n"
-        "ビルドしてから Ctrl+C で止め, もう一度 ros2 run する。";
+      f.title = {"doctor.stale_running.title", {{"exe", name}}};
+      f.detail = {"doctor.stale_running.detail", {{"file", f.file.substr(f.file.rfind('/') + 1)}}};
     }
   }
   return r;
@@ -162,8 +161,8 @@ void Doctor::check_places(DoctorReport & r) const
     for (const auto & d : fs::directory_iterator(ws.parent_path(), ec)) {
       const std::string n = d.path().filename().string();
       if (d.is_directory() && n != ws.filename().string() && distance(n, ws.filename().string()) <= 2 && has_file(d.path() / "src")) {
-        r.findings.push_back({"ws_typo", "warn", "ワークスペースの名前が違う",
-            tilde(d.path().string(), home_) + " に src がある。講習のワークスペースは " + ws_t + "。",
+        r.findings.push_back({"ws_typo", "warn", {"doctor.ws_typo.title"},
+            {"doctor.ws_typo.detail", {{"found", tilde(d.path().string(), home_)}, {"ws", ws_t}}},
             "mv " + tilde(d.path().string(), home_) + " " + ws_t, "", 0});
       }
     }
@@ -172,9 +171,8 @@ void Doctor::check_places(DoctorReport & r) const
   for (const fs::path & place : {src, pkg, fs::path(home_)}) {
     if (has_file(place / "build" / "COLCON_IGNORE") || has_file(place / "install" / "setup.bash")) {
       const std::string p = tilde(place.string(), home_);
-      r.findings.push_back({"build_place", "error", "ワークスペースの直下以外で colcon build した",
-          p + " に build/ と install/ ができている。colcon build は " + ws_t + " (src と同じ階層) で実行する。\n"
-          "ここにできた install/ は使われないので, 消してから " + ws_t + " でビルドし直す。",
+      r.findings.push_back({"build_place", "error", {"doctor.build_place.title"},
+          {"doctor.build_place.detail", {{"place", p}, {"ws", ws_t}}},
           "rm -rf " + p + "/build " + p + "/install " + p + "/log && cd " + ws_t, "", 0});
     }
   }
@@ -182,18 +180,17 @@ void Doctor::check_places(DoctorReport & r) const
   for (const fs::path & place : {ws, fs::path(home_), pkg}) {
     if (!has_file(place / pkg_ / "package.xml")) {continue;}
     const std::string p = tilde((place / pkg_).string(), home_);
-    Finding f{"pkg_place", "error", "パッケージを src の外に作った", "", "mv " + p + " " + ws_t + "/src/",
+    Finding f{"pkg_place", "error", {"doctor.pkg_place_home.title"},
+      {"doctor.pkg_place_home.detail", {{"path", p}, {"ws", ws_t}}}, "mv " + p + " " + ws_t + "/src/",
       (place / pkg_ / "package.xml").string(), 0};
     if (place == ws) {
       f.level = "warn";
-      f.detail = p + " にパッケージがある。colcon は見つけてビルドするが, 講習の構成 (パッケージは src の中) とずれる。";
+      f.title = {"doctor.pkg_place_ws.title"};
+      f.detail = {"doctor.pkg_place_ws.detail", {{"path", p}}};
     } else if (place == pkg) {
-      f.title = "パッケージの中にパッケージを作った";
-      f.detail = p + " にパッケージがある。src/" + pkg_ + " の中で ros2 pkg create したもの。\n"
-        "同じ名前のパッケージが 2 つになり, colcon build が「Duplicate package names」で止まる。";
+      f.title = {"doctor.pkg_place_nested.title"};
+      f.detail = {"doctor.pkg_place_nested.detail", {{"path", p}, {"pkg", pkg_}}};
       f.fix = "rm -r " + p;
-    } else {
-      f.detail = p + " にパッケージがある。" + ws_t + " で colcon build してもホームは探さないので, ビルドされない。";
     }
     r.findings.push_back(f);
   }
@@ -206,10 +203,7 @@ void Doctor::check_install(DoctorReport & r) const
   const std::string ws_t = tilde(ws_, home_);
   const std::string layout = read_file(ws / "install" / ".colcon_install_layout");
   if (layout.rfind("isolated", 0) == 0) {
-    r.findings.push_back({"isolated", "error", "最初のビルドで --merge-install を付け忘れた",
-        "install/ がパッケージごとに分かれた形 (isolated) で作られている。\n"
-        "このあと --merge-install を付けると colcon がエラーで止まる。付けずに続けると講習の手順とずれる。\n"
-        "build/ install/ log/ を消して, 講習のコマンドでビルドし直す。",
+    r.findings.push_back({"isolated", "error", {"doctor.isolated.title"}, {"doctor.isolated.detail"},
         "cd " + ws_t + " && rm -rf build install log && colcon build --symlink-install --merge-install --packages-select " + pkg_,
         "", 0});
   }
@@ -220,8 +214,7 @@ void Doctor::check_install(DoctorReport & r) const
     if (fs::is_symlink(share_xml, ec)) {
       r.facts.insert("symlink");
     } else {
-      r.findings.push_back({"no_symlink", "warn", "--symlink-install を付けずにビルドした",
-          "install/ にファイルがコピーされている。launch ファイルやパラメータのファイルを直しても, ビルドし直すまで反映されない。",
+      r.findings.push_back({"no_symlink", "warn", {"doctor.no_symlink.title"}, {"doctor.no_symlink.detail"},
           "cd " + ws_t + " && colcon build --symlink-install --merge-install --packages-select " + pkg_, "", 0});
     }
   }
@@ -244,23 +237,23 @@ void Doctor::check_bashrc(DoctorReport & r) const
     if (p.rfind("${HOME}/", 0) == 0) {p = home_ + p.substr(7);}
     const int line = static_cast<int>(i + 1);
     if (p.front() != '/') {
-      r.findings.push_back({"bashrc_relative", "warn", ".bashrc の source が相対パス",
-          m[2].str() + " は, ターミナルを開いた場所から見たパスになる。ホームで開いたときは見つからない。",
+      r.findings.push_back({"bashrc_relative", "warn", {"doctor.bashrc_relative.title"},
+          {"doctor.bashrc_relative.detail", {{"path", m[2].str()}}},
           "source " + tilde(want, home_), rc.string(), line});
       continue;
     }
     if (p == want) {
       if (++found == 2) {
-        r.findings.push_back({"bashrc_dup", "warn", ".bashrc に同じ source が 2 回ある",
-            "echo >> ~/.bashrc を 2 回実行すると同じ行が増える。動きは変わらないが, 片方を消しておく。", "", rc.string(), line});
+        r.findings.push_back({"bashrc_dup", "warn", {"doctor.bashrc_dup.title"}, {"doctor.bashrc_dup.detail"}, "",
+            rc.string(), line});
       }
       if (!has_file(p)) {
-        r.findings.push_back({"bashrc_unbuilt", "info", "まだ setup.bash がない",
-            tilde(p, home_) + " は colcon build をすると作られる。先にビルドする。", "", rc.string(), line});
+        r.findings.push_back({"bashrc_unbuilt", "info", {"doctor.bashrc_unbuilt.title"},
+            {"doctor.bashrc_unbuilt.detail", {{"path", tilde(p, home_)}}}, "", rc.string(), line});
       }
     } else if (!has_file(p)) {
-      r.findings.push_back({"bashrc_missing", "error", ".bashrc の source 先がない",
-          tilde(p, home_) + " がない。ターミナルを開くたびに「そのようなファイルはありません」が出る。打ち間違いか, 消したワークスペース。",
+      r.findings.push_back({"bashrc_missing", "error", {"doctor.bashrc_missing.title"},
+          {"doctor.bashrc_missing.detail", {{"path", tilde(p, home_)}}},
           "source " + tilde(want, home_), rc.string(), line});
     }
   }
@@ -283,9 +276,7 @@ void Doctor::check_package(DoctorReport & r) const
   const bool uses_auto = cmake.find("ament_auto_") != std::string::npos;
   if (uses_auto && !depends.count("ament_cmake_auto")) {
     const size_t at = xml.find("<buildtool_depend>");
-    r.findings.push_back({"auto_xml", "error", "package.xml に ament_cmake_auto がない",
-        "CMakeLists.txt は ament_auto_... を使っているが, package.xml の <buildtool_depend> が ament_cmake のまま。\n"
-        "ament_auto_find_build_dependencies() は package.xml の依存を読むので, 書き換えないと依存が入らない。",
+    r.findings.push_back({"auto_xml", "error", {"doctor.auto_xml.title"}, {"doctor.auto_xml.detail"},
         "<buildtool_depend>ament_cmake_auto</buildtool_depend>", (pkg / "package.xml").string(),
         at == std::string::npos ? 0 : line_at(xml, at)});
   }
@@ -299,8 +290,8 @@ void Doctor::check_package(DoctorReport & r) const
     for (const auto & s : e.sources) {
       listed.insert(fs::path(s).lexically_normal().string());
       if (!has_file(pkg / s)) {
-        r.findings.push_back({"cmake_file", "error", "CMakeLists.txt に書いたファイルがない",
-            e.name + " のソース " + s + " がない。ファイル名の打ち間違いか, 置いた場所 (src/) の違い。", "",
+        r.findings.push_back({"cmake_file", "error", {"doctor.cmake_file.title"},
+            {"doctor.cmake_file.detail", {{"exe", e.name}, {"src", s}}}, "",
             (pkg / "CMakeLists.txt").string(), e.line});
       }
     }
@@ -322,8 +313,7 @@ void Doctor::check_package(DoctorReport & r) const
     }
     if (!listed.count(rel)) {
       const std::string name = f.stem().string();
-      r.findings.push_back({"not_built", "warn", rel + " がビルドされない",
-          "CMakeLists.txt に書いていないので, colcon build しても実行ファイルができない (エラーも出ない)。",
+      r.findings.push_back({"not_built", "warn", {"doctor.not_built.title", {{"file", rel}}}, {"doctor.not_built.detail"},
           "ament_auto_add_executable(" + name + " " + rel + ")", f.string(), 1});
     }
   }
@@ -338,9 +328,8 @@ void Doctor::check_package(DoctorReport & r) const
       const std::string dep = m[1];
       if (dep == pkg_ || depends.count(dep) || reported.count(dep) || !is_ros_package(dep)) {continue;}
       reported.insert(dep);
-      r.findings.push_back({"no_depend", "error", "package.xml に " + dep + " がない",
-          dep + " のヘッダーを include しているが, package.xml に書いていない。\n"
-          "ビルドすると「" + dep + "/...: No such file or directory」などのエラーになる。",
+      r.findings.push_back({"no_depend", "error", {"doctor.no_depend.title", {{"dep", dep}}},
+          {"doctor.no_depend.detail", {{"dep", dep}}},
           "<depend>" + dep + "</depend>", f.string(), static_cast<int>(i + 1)});
     }
   }
@@ -353,8 +342,8 @@ void Doctor::check_package(DoctorReport & r) const
     for (const auto & s : e.sources) {
       if (mtime(pkg / s) > built) {
         r.facts.insert("stale:" + e.name);
-        r.findings.push_back({"stale", "info", e.name + " はまだ古い",
-            s + " を保存したあと, まだビルドしていない。ros2 run すると前のコードで動く。",
+        r.findings.push_back({"stale", "info", {"doctor.stale.title", {{"exe", e.name}}},
+            {"doctor.stale.detail", {{"src", s}}},
             "cd " + tilde(ws_, home_) + " && colcon build --symlink-install --merge-install --packages-select " + pkg_,
             (pkg / s).string(), 0});
         break;
@@ -387,69 +376,65 @@ void Doctor::check_build_log(DoctorReport & r) const
   const auto lines = lines_of(read_file(log / pkg_ / "stderr.log"));
   for (size_t i = 0; i < lines.size(); ++i) {
     std::smatch g;
-    Finding f{"build_error", "error", "ビルドに失敗した", "", "", "", 0};
+    Finding f{"build_error", "error", {}, {}, "", "", 0};
+    std::string first;  // 最初のエラーの文 (コンパイラや CMake が出したまま)
     if (std::regex_search(lines[i], g, gcc_re)) {
       f.file = g[1];
       f.line = std::stoi(g[2]);
-      f.detail = g[3].str();
+      first = g[3].str();
     } else if (std::regex_search(lines[i], g, cmake_re)) {
       f.file = (fs::path(pkg_dir) / g[1].str()).string();
       f.line = std::stoi(g[2]);
-      f.detail = i + 1 < lines.size() ? lines[i + 1] : "";
+      first = i + 1 < lines.size() ? lines[i + 1] : "";
       for (size_t k = i + 1; k < std::min(lines.size(), i + 4); ++k) {
         if (lines[k].find("Cannot find source file") != std::string::npos ||
           lines[k].find("Could not find a package") != std::string::npos)
         {
-          f.detail = lines[k] + (k + 1 < lines.size() ? " " + lines[k + 1] : "");
+          first = lines[k] + (k + 1 < lines.size() ? " " + lines[k + 1] : "");
         }
       }
     } else if (std::regex_search(lines[i], g, link_re)) {
-      f.detail = lines[i];
+      first = lines[i];
     } else {
       continue;
     }
-    const std::string why = explain_build_error(f.detail, depends);
-    f.title = why.empty() ? "ビルドに失敗した" : "ビルドに失敗した: " + why.substr(0, why.find('\n'));
-    f.detail = "最初のエラー: " + f.detail + (why.empty() ? "" : "\n" + why);
+    std::string dep;
+    const std::string why = explain_build_error(first, depends, dep);
+    if (why.empty()) {
+      f.title = {"doctor.build_error.title"};
+      f.detail = {"doctor.build_error.detail", {{"first", first}}};
+    } else {
+      f.title = {"doctor.build_error_why.title", {{"why", Msg{"build_why." + why + ".title", {{"dep", dep}}}}}};
+      f.detail = {"doctor.build_error_why.detail",
+        {{"first", first}, {"full", Msg{"build_why." + why + ".full", {{"dep", dep}}}}}};
+    }
     r.findings.push_back(f);
     return;
   }
-  r.findings.push_back({"build_error", "error", "ビルドに失敗した",
-      "エラーの行を見つけられなかった。" + tilde((log / pkg_ / "stderr.log").string(), home_) + " を見る。", "", "", 0});
+  r.findings.push_back({"build_error", "error", {"doctor.build_error_noline.title"},
+      {"doctor.build_error_noline.detail", {{"log", tilde((log / pkg_ / "stderr.log").string(), home_)}}}, "", "", 0});
 }
 
-std::string explain_build_error(const std::string & msg, const std::set<std::string> & depends)
+std::string explain_build_error(const std::string & msg, const std::set<std::string> & depends, std::string & dep)
 {
-  // gcc の文は英語のまま (gcc の訳は標準で入っていない). OS が出す部分だけ日本語になり, 引用符は ' か ‘’ になる
+  // gcc の文は英語のまま (gcc の訳は標準で入っていない). OS が出す部分だけ日本語になり, 引用符は ' か ‘’ になる.
+  // 返すのは原因の種類 (訳の表の build_why.<種類>). 分からなければ空
   auto has = [&](const char * a) {return msg.find(a) != std::string::npos;};
   std::smatch m;
   static const std::regex nofile(
     R"(([a-z][a-z0-9_]*)/[^:]*: (No such file or directory|そのようなファイルやディレクトリはありません))");
   if (std::regex_search(msg, m, nofile)) {
-    const std::string dep = m[1];
-    if (!depends.count(dep)) {return "package.xml に <depend>" + dep + "</depend> がない";}
-    return "ヘッダーのファイル名が違う\nmsg のヘッダーは小文字とアンダースコア (例: Twist → twist.hpp, Pose2D → pose2_d.hpp)。";
+    dep = m[1];
+    return depends.count(dep) ? "header_name" : "no_depend";
   }
   static const std::regex semicolon(R"(expected (';'|‘;’))");
-  if (std::regex_search(msg, semicolon)) {return "セミコロンがない\nエラーの行か, その 1 つ前の行の末尾に ; を足す。";}
-  if (has("was not declared in this scope")) {
-    return "宣言されていない名前を使っている\n名前の打ち間違いか, include のし忘れ。";
-  }
-  if (has("has no member named")) {
-    return "そのクラスにない名前を使っている\n打ち間違いか, -> と . の取り違え (shared_ptr は ->)。";
-  }
-  if (has("no matching function for call")) {
-    return "関数の引数の型か数が違う\nエラーの下に出る candidate: の行が, 受け付ける引数の形。";
-  }
-  if (has("undefined reference")) {
-    return "関数の中身が見つからない (リンクのエラー)\nmain() の書き忘れか, CMakeLists.txt に .cpp を足し忘れ。";
-  }
-  if (has("Cannot find source file")) {
-    return "CMakeLists.txt に書いたファイルがない\nファイル名と場所 (src/) を確かめる。";
-  }
-  if (has("Could not find a package configuration file")) {
-    return "find_package したパッケージが見つからない\nパッケージ名の打ち間違いか, 未インストール。";
-  }
+  if (std::regex_search(msg, semicolon)) {return "semicolon";}
+  if (has("was not declared in this scope")) {return "undeclared";}
+  if (has("has no member named")) {return "no_member";}
+  if (has("no matching function for call")) {return "no_match";}
+  if (has("undefined reference")) {return "undefined_ref";}
+  if (has("Cannot find source file")) {return "no_source";}
+  if (has("Could not find a package configuration file")) {return "no_package";}
   return "";
 }
 
@@ -494,10 +479,9 @@ void Doctor::check_processes(DoctorReport & r) const
     }
     const std::string dom = env.count("ROS_DOMAIN_ID") && !env["ROS_DOMAIN_ID"].empty() ? env["ROS_DOMAIN_ID"] : "0";
     if (dom != domain_id_) {
-      r.findings.push_back({"domain", "error", name + " が農場から見えない (ROS_DOMAIN_ID が違う)",
-          name + " (pid " + pid + ") は ROS_DOMAIN_ID=" + dom + " で動いている。農場は " + domain_id_ + "。\n"
-          "ROS_DOMAIN_ID が違うノード同士は topic がつながらない。エラーは出ない。",
-          "export ROS_DOMAIN_ID=" + domain_id_ + "  (または .bashrc の export の行を確かめる)", "", 0});
+      r.findings.push_back({"domain", "error", {"doctor.domain.title", {{"exe", name}}},
+          {"doctor.domain.detail", {{"exe", name}, {"pid", pid}, {"dom", dom}, {"farm", domain_id_}}},
+          "export ROS_DOMAIN_ID=" + domain_id_, "", 0});
       continue;
     }
     r.facts.insert("run:" + name);
@@ -513,9 +497,8 @@ void Doctor::check_processes(DoctorReport & r) const
     }
     const long long started_ns = (btime * 1000000000LL) + start_ticks * (1000000000LL / ticks);
     if (deleted || mtime(install + name) > started_ns + 1000000000LL) {
-      r.findings.push_back({"old_process", "warn", "動いている " + name + " はビルド前のもの",
-          name + " (pid " + pid + ") はビルドし直す前に起動したまま。直したコードは, 起動し直すまで動かない。",
-          "Ctrl+C で止めて, もう一度 ros2 run " + pkg_ + " " + name, "", 0});
+      r.findings.push_back({"old_process", "warn", {"doctor.old_process.title", {{"exe", name}}},
+          {"doctor.old_process.detail", {{"exe", name}, {"pid", pid}}}, "ros2 run " + pkg_ + " " + name, "", 0});
     }
   }
 }

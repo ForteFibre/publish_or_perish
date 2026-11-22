@@ -24,7 +24,10 @@
 #include "std_srvs/srv/trigger.hpp"
 
 using namespace std::chrono_literals;
+using publish_or_perish::Msg;
+using publish_or_perish::render_en;
 using publish_or_perish::Source;
+using publish_or_perish::to_json;
 
 namespace
 {
@@ -100,9 +103,10 @@ const char * reliability(rclcpp::ReliabilityPolicy r)
   return r == rclcpp::ReliabilityPolicy::BestEffort ? "best_effort" : "reliable";
 }
 
+// お店の品. 名前と説明は訳の表の shop.<id>
 struct ShopItem
 {
-  std::string id, name, desc;
+  std::string id;
   long price;
 };
 
@@ -141,7 +145,6 @@ public:
       const bool under_home = !h.empty() && ws.rfind(h + "/", 0) == 0;
       ws_shown_ = under_home ? "~" + ws.substr(h.size()) : ws;
       pkg_ = pkg;
-      progress_.set_workspace(ws_shown_, pkg);
     }
     for (auto & [name, b] : world_.bots) {declare_parameter(name + ".seed", b.seed);}
     param_cb_ = add_on_set_parameters_callback(
@@ -164,7 +167,7 @@ public:
     state_timer_ = create_wall_timer(66ms, [this] {publish_state();});
     graph_timer_ = create_wall_timer(1s, [this] {scan_graph();});
     save_timer_ = create_wall_timer(20s, [this] {save();});
-    RCLCPP_INFO(get_logger(), "農場を開いた. ブラウザで http://localhost:%ld を開く", port_);
+    RCLCPP_INFO(get_logger(), "%s", render_en({"console.opened", {{"port", port_}}}).c_str());
   }
 
   ~FarmNode() override {save();}
@@ -186,8 +189,8 @@ private:
             p + srv, [this, name, p, srv, op](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
               auto r = (world_.*op)(name);
               res->success = r.ok;
-              res->message = r.message;
-              log(std::string("service ") + p + srv + " → " + (r.ok ? "" : "失敗: ") + r.message, r.ok);
+              res->message = render_en(r.msg);
+              log_cli("service " + p + srv, r.msg, res->message, r.ok);
             }));
       };
     serve("plant", &publish_or_perish::World::plant);
@@ -249,9 +252,10 @@ private:
         const std::string src = publish_or_perish::to_string(service_client_source("/board/bell"));
         board_.bells++;
         res->success = true;
-        res->message = "カーン (" + std::to_string(board_.bells) + " 回目)";
+        const Msg msg{"srv.bell", {{"n", board_.bells}}};
+        res->message = render_en(msg);
         world_.emit(publish_or_perish::Event{"board_bell", src});
-        log("service /board/bell → " + res->message, true);
+        log_cli("service /board/bell", msg, res->message, true);
       });
     board_timer_ = create_wall_timer(2s, [this] {next_board_number();});
     next_board_number();
@@ -300,18 +304,22 @@ private:
       const auto dot = p.get_name().find(".seed");
       if (dot == std::string::npos) {continue;}
       const std::string bot = p.get_name().substr(0, dot), seed = p.as_string();
+      // 断った理由は ros2 param set の出力に出るので英語にする
+      Msg why;
       if (!publish_or_perish::find_crop(seed)) {
-        r.successful = false;
-        r.reason = "作物は wheat / tomato / pumpkin のどれか";
+        why = {"param.bad_seed"};
       } else if (!world_.unlocked.count(seed)) {
-        r.successful = false;
-        r.reason = seed + " はまだ解禁していない (お店で買う)";
+        why = {"param.locked", {{"seed", seed}}};
       } else if (world_.bots.count(bot)) {
         world_.bots[bot].seed = seed;
-        log("param " + p.get_name() + " = " + seed, true);
+        log({"log.param_set", {{"name", p.get_name()}, {"value", seed}}}, true);
+      }
+      if (!why.empty()) {
+        r.successful = false;
+        r.reason = render_en(why);
+        log_cli("param " + p.get_name(), why, r.reason, false);
       }
     }
-    if (!r.successful) {log("param の変更を断った: " + r.reason, false);}
     return r;
   }
 
@@ -328,20 +336,25 @@ private:
     for (const auto & e : events) {
       if (e.kind == "move" || e.kind == "enter" || e.kind == "board_text") {continue;}
       fx_.push_back({++fx_id_, e});
-      if (e.kind == "ripe") {log("(" + std::to_string(e.x) + ", " + std::to_string(e.y) + ") の作物が実った", true);}
-      if (e.kind == "wither") {log("(" + std::to_string(e.x) + ", " + std::to_string(e.y) + ") の作物が枯れた", false);}
+      if (e.kind == "ripe") {log({"log.ripe", {{"x", e.x}, {"y", e.y}}}, true);}
+      if (e.kind == "wither") {log({"log.wither", {{"x", e.x}, {"y", e.y}}}, false);}
     }
     while (fx_.size() > 40) {fx_.pop_front();}
     for (auto & n : progress_.take_notices()) {
       notices_.push_back({++notice_id_, n});
-      log(n.title + " " + n.body, true);
+      log({"log.notice", {{"title", n.title}, {"body", n.body}}}, true);
     }
     while (notices_.size() > 20) {notices_.pop_front();}
   }
 
-  void log(const std::string & text, bool ok)
+  // 画面のログ (画面が訳す)
+  void log(const Msg & msg, bool ok) {log_cli("", msg, "", ok);}
+
+  // ターミナルにも出た結果 (service の返事, パラメータを断った理由). 画面は英語の text とその訳を並べて出す.
+  // tag は何への返事か (例: "service /bot1/water")
+  void log_cli(const std::string & tag, const Msg & msg, const std::string & text, bool ok)
   {
-    logs_.push_back({++log_id_, text, ok});
+    logs_.push_back({++log_id_, msg, tag, text, ok});
     while (logs_.size() > 40) {logs_.pop_front();}
   }
 
@@ -373,9 +386,9 @@ private:
     // 新しく見つかった間違いはログにも 1 行出す
     std::set<std::string> now;
     for (const auto & f : report_.findings) {
-      const std::string key = f.id + f.file + std::to_string(f.line) + f.title;
+      const std::string key = f.id + f.file + std::to_string(f.line) + to_json(f.title);
       now.insert(key);
-      if (f.level != "info" && !shown_findings_.count(key)) {log("点検: " + f.title, false);}
+      if (f.level != "info" && !shown_findings_.count(key)) {log({"log.doctor", {{"title", f.title}}}, false);}
     }
     shown_findings_ = now;
     graph_ = g;
@@ -467,26 +480,24 @@ private:
         if (e.node_name() == "farm" && !farm_consumes(topic)) {continue;}
         add(w.subs, e);
       }
-      w.warn.clear();
+      w.warn = {};
       w.hint.clear();
       bool sender = false, receiver = false;
       for (const auto & e : w.pubs) {sender |= e.kind == "player" || e.kind == "cli";}
       for (const auto & e : w.subs) {receiver |= e.kind == "player" || e.kind == "cli";}
       if (types.size() > 1) {
-        w.warn = "型が合っていない: " + types[0] + " と " + types[1];
+        w.warn = {"wire.type_mismatch", {{"a", types[0]}, {"b", types[1]}}};
       } else if (sender && w.subs.empty()) {
-        w.warn = "受け手がいない";
-        const auto n = nearest(topic, consumed);
-        if (!n.empty()) {w.hint = n + " のつもり?";}
+        w.warn = {"wire.no_sub"};
+        w.hint = nearest(topic, consumed);
       } else if (receiver && w.pubs.empty()) {
-        w.warn = "送り手がいない";
-        const auto n = nearest(topic, published);
-        if (!n.empty()) {w.hint = n + " のつもり?";}
+        w.warn = {"wire.no_pub"};
+        w.hint = nearest(topic, published);
       } else {
         for (const auto & p : w.pubs) {
           for (const auto & q : w.subs) {
             if (p.rel == std::string("best_effort") && q.rel == std::string("reliable")) {
-              w.warn = "QoS が合っていない: " + p.node + " は best_effort, " + q.node + " は reliable";
+              w.warn = {"wire.qos", {{"pub", p.node}, {"sub", q.node}}};
             }
           }
         }
@@ -550,14 +561,15 @@ private:
   std::vector<ShopItem> shop() const
   {
     std::vector<ShopItem> s;
-    if (world_.width < 14) {s.push_back({"col", "畑を 1 列広げる", "横に 1 列", 150 + 50L * (world_.width - 8)});}
-    if (world_.height < 9) {s.push_back({"row", "畑を 1 行広げる", "縦に 1 行", 200 + 80L * (world_.height - 5)});}
-    if (!world_.unlocked.count("tomato")) {s.push_back({"tomato", "トマトの種", "15 G で植えて 70 G で売れる", 120});}
-    if (!world_.unlocked.count("pumpkin")) {s.push_back({"pumpkin", "カボチャの種", "40 G で植えて 200 G で売れる", 400});}
+    // 名前と説明は訳の表の shop.<id>
+    if (world_.width < 14) {s.push_back({"col", 150 + 50L * (world_.width - 8)});}
+    if (world_.height < 9) {s.push_back({"row", 200 + 80L * (world_.height - 5)});}
+    if (!world_.unlocked.count("tomato")) {s.push_back({"tomato", 120});}
+    if (!world_.unlocked.count("pumpkin")) {s.push_back({"pumpkin", 400});}
     const auto & b = world_.bots.at("bot1");
-    if (b.tank_max < 30) {s.push_back({"tank", "大きいタンク", "全ロボットのタンク +5", 100 + 20L * (b.tank_max - 10)});}
+    if (b.tank_max < 30) {s.push_back({"tank", 100 + 20L * (b.tank_max - 10)});}
     if (!world_.bots.count("bot2") && progress_.stage_index() >= stage_of("s5_buy")) {
-      s.push_back({"bot2", "2 台目のロボット", "/bot2/... で動く bot2 が来る", 500});
+      s.push_back({"bot2", 500});
     }
     return s;
   }
@@ -565,14 +577,14 @@ private:
   void on_ui(const std::string & cmd)
   {
     if (cmd.rfind("diag ", 0) == 0) {
-      RCLCPP_INFO(get_logger(), "画面の自己診断: %s", cmd.c_str() + 5);
+      RCLCPP_INFO(get_logger(), "%s", render_en({"console.diag", {{"text", cmd.substr(5)}}}).c_str());
       return;
     }
     if (cmd.rfind("speed ", 0) == 0) {
       const double v = std::atof(cmd.c_str() + 6);
       if (v == 1 || v == 2 || v == 4) {
         world_.farm_speed = v;
-        log("作物の時間を " + std::to_string(static_cast<int>(v)) + " 倍速にした", true);
+        log({"log.speed", {{"n", static_cast<int>(v)}}}, true);
       }
       return;
     }
@@ -581,7 +593,7 @@ private:
     for (const auto & it : shop()) {
       if (it.id != id) {continue;}
       if (world_.money < it.price) {
-        log("お金が足りない: " + it.name, false);
+        log({"log.no_money", {{"item", Msg{"shop." + id + ".name"}}}}, false);
         return;
       }
       world_.money -= it.price;
@@ -596,7 +608,7 @@ private:
         declare_parameter("bot2.seed", world_.bots["bot2"].seed);
         setup_bot("bot2");
       }
-      log("買った: " + it.name + " (-" + std::to_string(it.price) + " G)", true);
+      log({"log.bought", {{"item", Msg{"shop." + id + ".name"}}, {"price", it.price}}}, true);
       world_.emit(publish_or_perish::Event{"buy", "", -1, -1, id});
       save();
       return;
@@ -609,7 +621,7 @@ private:
     std::ostringstream o;
     const int lv = progress_.level();
     o << "{\"t\":" << num(world_.time) << ",\"money\":" << world_.money << ",\"xp\":" << progress_.xp
-      << ",\"level\":" << lv + 1 << ",\"title\":" << q(progress_.title())
+      << ",\"level\":" << lv + 1
       << ",\"lv_xp\":" << progress_.level_xp(lv) << ",\"next_xp\":" << progress_.level_xp(lv + 1)
       << ",\"w\":" << world_.width << ",\"h\":" << world_.height << ",\"tiles\":[";
     bool first = true;
@@ -635,11 +647,10 @@ private:
       << ",\"workspace\":" << q(ws_shown_) << ",\"package\":" << q(pkg_);
     if (si < progress_.stages.size()) {
       const auto & s = progress_.stages[si];
-      o << ",\"stage\":{\"title\":" << q(s.title) << ",\"lesson\":" << q(s.lesson) << ",\"missions\":[";
+      o << ",\"stage\":{\"id\":" << q(s.id) << ",\"missions\":[";
       first = true;
       for (const auto & m : s.missions) {
-        o << (first ? "" : ",") << "{\"id\":" << q(m.id) << ",\"title\":" << q(m.title) << ",\"desc\":" << q(m.desc)
-          << ",\"hint\":" << q(m.hint) << ",\"unit\":" << q(m.unit) << ",\"goal\":" << num(m.goal)
+        o << (first ? "" : ",") << "{\"id\":" << q(m.id) << ",\"unit\":" << q(m.unit) << ",\"goal\":" << num(m.goal)
           << ",\"value\":" << num(m.value) << ",\"done\":" << (m.done ? 1 : 0)
           << ",\"reward\":" << m.reward << "}";
         first = false;
@@ -652,16 +663,15 @@ private:
     o << "],\"achievements\":[";
     first = true;
     for (const auto & a : progress_.achievements) {
+      // 隠し実績は, 取るまで id を見せない (画面は achievement.hidden を出す)
       const bool show = a.done || !a.hidden;
-      o << (first ? "" : ",") << "{\"name\":" << q(show ? a.name : "???") << ",\"desc\":"
-        << q(show ? a.desc : "隠し実績") << ",\"done\":" << (a.done ? 1 : 0) << "}";
+      o << (first ? "" : ",") << "{\"id\":" << q(show ? a.id : "hidden") << ",\"done\":" << (a.done ? 1 : 0) << "}";
       first = false;
     }
     o << "],\"shop\":[";
     first = true;
     for (const auto & it : shop()) {
-      o << (first ? "" : ",") << "{\"id\":" << q(it.id) << ",\"name\":" << q(it.name) << ",\"desc\":"
-        << q(it.desc) << ",\"price\":" << it.price << "}";
+      o << (first ? "" : ",") << "{\"id\":" << q(it.id) << ",\"price\":" << it.price << "}";
       first = false;
     }
     o << "],\"speed\":" << world_.farm_speed << ",\"board\":{\"text\":" << q(board_.text)
@@ -671,7 +681,8 @@ private:
     first = true;
     for (const auto & [t, w] : wires_) {
       o << (first ? "" : ",") << "{\"topic\":" << q(t) << ",\"type\":" << q(w.types.empty() ? "" : w.types.front())
-        << ",\"hz\":" << num(w.hz) << ",\"bps\":" << std::lround(w.bps) << ",\"warn\":" << q(w.warn)
+        << ",\"hz\":" << num(w.hz) << ",\"bps\":" << std::lround(w.bps)
+        << ",\"warn\":" << (w.warn.empty() ? "null" : to_json(w.warn))
         << ",\"hint\":" << q(w.hint) << ",\"pubs\":[";
       bool f2 = true;
       for (const auto & e : w.pubs) {o << (f2 ? "" : ",") << "[" << q(e.node) << "," << q(e.kind) << "]"; f2 = false;}
@@ -690,8 +701,8 @@ private:
     for (const char * level : {"error", "warn", "info"}) {
       for (const auto & f : report_.findings) {
         if (f.level != level) {continue;}
-        o << (first ? "" : ",") << "{\"id\":" << q(f.id) << ",\"level\":" << q(f.level) << ",\"title\":" << q(f.title)
-          << ",\"detail\":" << q(f.detail) << ",\"fix\":" << q(f.fix) << ",\"file\":" << q(f.file)
+        o << (first ? "" : ",") << "{\"id\":" << q(f.id) << ",\"level\":" << q(f.level) << ",\"title\":" << to_json(f.title)
+          << ",\"detail\":" << to_json(f.detail) << ",\"fix\":" << q(f.fix) << ",\"file\":" << q(f.file)
           << ",\"line\":" << f.line << "}";
         first = false;
       }
@@ -699,7 +710,8 @@ private:
     o << "],\"log\":[";
     first = true;
     for (const auto & l : logs_) {
-      o << (first ? "" : ",") << "{\"id\":" << l.id << ",\"text\":" << q(l.text) << ",\"ok\":" << (l.ok ? 1 : 0) << "}";
+      o << (first ? "" : ",") << "{\"id\":" << l.id << ",\"msg\":" << to_json(l.msg) << ",\"tag\":" << q(l.tag)
+        << ",\"text\":" << q(l.text) << ",\"ok\":" << (l.ok ? 1 : 0) << "}";
       first = false;
     }
     o << "],\"fx\":[";
@@ -714,7 +726,7 @@ private:
     first = true;
     for (const auto & n : notices_) {
       o << (first ? "" : ",") << "{\"id\":" << n.id << ",\"kind\":" << q(n.n.kind) << ",\"title\":"
-        << q(n.n.title) << ",\"body\":" << q(n.n.body) << "}";
+        << to_json(n.n.title) << ",\"body\":" << to_json(n.n.body) << "}";
       first = false;
     }
     o << "]}";
@@ -813,7 +825,7 @@ private:
         for (auto & a : progress_.achievements) {if (a.id == id) {a.done = true;}}
       }
     }
-    RCLCPP_INFO(get_logger(), "%s から続きを読んだ (最初からにするときは -p reset:=true)", save_path_.c_str());
+    RCLCPP_INFO(get_logger(), "%s", render_en({"console.resumed", {{"path", save_path_}}}).c_str());
   }
 
   struct Endpoint { std::string node, kind, rel; };
@@ -824,7 +836,8 @@ private:
     double hz = 0.0, bps = 0.0;
     bool alive = false;
     std::vector<Endpoint> pubs, subs;
-    std::string warn, hint;
+    Msg warn;          // 空なら警告なし
+    std::string hint;  // 打ち間違いのとき, つもりだったらしい topic
     rclcpp::GenericSubscription::SharedPtr sub;
   };
   std::map<std::string, Wire> wires_;
@@ -842,7 +855,7 @@ private:
   Board board_;
   std::mt19937 rng_{std::random_device{}()};
 
-  struct Log { long id; std::string text; bool ok; };
+  struct Log { long id; Msg msg; std::string tag, text; bool ok; };
   struct Fx { long id; publish_or_perish::Event e; };
   struct NoticeItem { long id; publish_or_perish::Notice n; };
 
