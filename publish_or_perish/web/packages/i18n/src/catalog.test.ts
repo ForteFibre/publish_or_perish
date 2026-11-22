@@ -143,6 +143,13 @@ describe('ガイドが使うキー', () => {
     const bad = refs.filter(r => !(r.key in en) || !(r.key in ja) || placeholders(en[r.key] as string).join() !== r.args)
     expect(bad).toEqual([])
   })
+
+  it('{{msg:...|名前=$キー}} の $キー が英語と日本語の表にある', () => {
+    const dir = join(pkg, 'web/public/guide/ja')
+    const keys = readdirSync(dir).flatMap(f => [...readFileSync(join(dir, f), 'utf8').matchAll(/\{\{msg:[\w.]+\|([^}]*)\}\}/g)]
+      .flatMap(m => all(/=\$([\w.]+)/g, m[1] as string)))
+    expect(keys.filter(k => !(k in en) || !(k in ja))).toEqual([])
+  })
 })
 
 describe('tr と tm', () => {

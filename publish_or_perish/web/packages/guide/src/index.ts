@@ -25,6 +25,7 @@ export function substitute(text: string, ws?: string, pkg?: string): string {
  * ターミナルに出る文を, 訳の表から引いて展開する.
  * - ```output のコードブロックの中の {{msg:キー|名前=値,...}} は英語の原文にし, ブロックのあとに訳を引用 (> ) で添える
  * - それ以外の場所の {{msg:...}} は `英語の原文` (訳: ...) にする
+ * - 値が $ で始まるときは, それ自体を訳す (例: crop=$crop.wheat は, 英語では wheat, 日本語では 小麦)
  * translated が null (画面が英語) なら訳は添えない. 展開したあとはただの Markdown なので, VSCode のプレビューでも読める
  */
 export type MessageLookup = {
@@ -45,6 +46,12 @@ function parseArgs(s: string | undefined): Record<string, string> {
 }
 
 export function expandMessages(md: string, look: MessageLookup): string {
+  // 値のうち $キー のものを, その言語で訳してから文にする
+  const resolve = (tr: (key: string, args: Record<string, string>) => string, args: Record<string, string>) =>
+    Object.fromEntries(Object.entries(args).map(([k, v]) => [k, v.startsWith('$') ? tr(v.slice(1), {}) : v]))
+  const original = (key: string, args: Record<string, string>) => look.original(key, resolve(look.original, args))
+  const tl = look.translated
+  const translated = tl && ((key: string, args: Record<string, string>) => tl(key, resolve(tl, args)))
   const out: string[] = []
   const lines = md.replace(/\r/g, '').split('\n')
   for (let i = 0; i < lines.length; i++) {
@@ -55,8 +62,8 @@ export function expandMessages(md: string, look: MessageLookup): string {
       for (i++; i < lines.length && !(lines[i] ?? '').startsWith('```'); i++) {
         out.push((lines[i] ?? '').replace(MSG_RE, (_, key: string, a?: string) => {
           const args = parseArgs(a)
-          if (look.translated) notes.push(look.translated(key, args))
-          return look.original(key, args)
+          if (translated) notes.push(translated(key, args))
+          return original(key, args)
         }))
       }
       out.push('```')
@@ -69,8 +76,8 @@ export function expandMessages(md: string, look: MessageLookup): string {
     } else {
       out.push(l.replace(MSG_RE, (_, key: string, a?: string) => {
         const args = parseArgs(a)
-        const tr = look.translated ? ` (${look.label}: ${look.translated(key, args)})` : ''
-        return `\`${look.original(key, args)}\`${tr}`
+        const tr = translated ? ` (${look.label}: ${translated(key, args)})` : ''
+        return `\`${original(key, args)}\`${tr}`
       }))
     }
   }

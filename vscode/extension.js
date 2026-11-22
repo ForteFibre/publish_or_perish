@@ -119,8 +119,10 @@ function parseArgs(s) {
 }
 function expandMessages(md) {
   const label = tr('guide.translation')
-  const original = (key, args) => tr(key, args, 'en')
-  const translated = lang === 'en' ? null : (key, args) => tr(key, args)
+  // 値が $ で始まるときは, それ自体を訳す (例: crop=$crop.wheat)
+  const resolve = (args, l) => Object.fromEntries(Object.entries(args).map(([k, v]) => [k, v.startsWith('$') ? tr(v.slice(1), {}, l) : v]))
+  const original = (key, args) => tr(key, resolve(args, 'en'), 'en')
+  const translated = lang === 'en' ? null : (key, args) => tr(key, resolve(args, lang))
   const lines = md.replace(/\r/g, '').split('\n'), out = []
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i]

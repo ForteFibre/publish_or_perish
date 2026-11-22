@@ -84,6 +84,15 @@ describe('expandMessages', () => {
     expect(expandMessages('{{msg:srv.water.tank_empty}}', { ...look, translated: null })).toBe('`Tank is empty.`')
   })
 
+  it('$ で始まる値は, それ自体を訳す', () => {
+    const look2: MessageLookup = {
+      original: (k, a) => fill(({ ...EN, 'crop.wheat': 'wheat', p: 'Planted {{crop}}' } as Record<string, string>)[k] as string, a),
+      translated: (k, a) => fill(({ ...JA, 'crop.wheat': '小麦', p: '{{crop}}を植えた' } as Record<string, string>)[k] as string, a),
+      label: '訳',
+    }
+    expect(expandMessages('{{msg:p|crop=$crop.wheat}}', look2)).toBe('`Planted wheat` (訳: 小麦を植えた)')
+  })
+
   it('ほかのコードブロックの中は展開しない', () => {
     const md = '```cpp\n// {{msg:srv.bell}}\n```'
     expect(expandMessages(md, look)).toBe(md)
