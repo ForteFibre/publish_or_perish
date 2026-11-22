@@ -3,9 +3,13 @@
 // - 背景は 空, 草, 札の地 から選ぶ (HUD の札は畑の上に置くので, 空と草の上で確かめる)
 // - 画面の大きさは 広い画面 1366×820, 狭い画面 1000×700, 小さい窓 500×380
 // - parameters.fixture に記録の名前 (farm-mistakes など) を書くと, その /farm/state をストアに入れてから描く
+// - parameters.field に { width, height } を書くと, その大きさの畑の面 (field-container) の中に置く.
+//   narrow: と mini: (畑の面の大きさで畳む決まり) を確かめるときに使う
 import { changeLang, initI18n, type Lang } from '@pop/i18n'
 import { loadFixture } from '@pop/ros'
+import { TooltipProvider } from '@pop/ui'
 import type { Preview } from '@storybook/react-vite'
+import '@pop/ui/styles.css'
 
 let ready: Promise<unknown> | null = null
 
@@ -42,6 +46,22 @@ const preview: Preview = {
       },
     },
   },
+  decorators: [
+    (Story, { parameters }) => {
+      const field = parameters.field as { width: number; height: number } | undefined
+      return (
+        <TooltipProvider>
+          {field ? (
+            <div className="field-container relative overflow-hidden" style={{ width: field.width, height: field.height }}>
+              <Story />
+            </div>
+          ) : (
+            <Story />
+          )}
+        </TooltipProvider>
+      )
+    },
+  ],
   loaders: [
     async ({ globals, parameters }) => {
       const lang = (globals.lang ?? 'ja') as Lang

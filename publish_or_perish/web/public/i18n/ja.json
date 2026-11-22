@@ -457,7 +457,17 @@
       "warn": "注意: {{title}}",
       "info": "{{title}}",
       "open": "開く",
-      "mini": "点検: {{title}}"
+      "mini": "点検: {{title}}",
+      "label": "点検",
+      "errors": "エラー {{n}}",
+      "warns": "注意 {{n}}"
+    },
+    "log": {
+      "failed": "失敗"
+    },
+    "guide": {
+      "label": "説明",
+      "sections": "説明の見出し"
     },
     "mini": {
       "all_clear": "すべてクリア",

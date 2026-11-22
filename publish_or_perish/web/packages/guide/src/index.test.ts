@@ -23,7 +23,7 @@ describe('render', () => {
 
   it('表の 2 行目 (区切り) を飛ばす', () => {
     expect(render('| a | b |\n|---|---|\n| `x` | y |')).toBe(
-      '<table><tr><th>a</th><th>b</th></tr><tr><td><code>x</code></td><td>y</td></tr></table>',
+      '<div class="table"><table><tr><th>a</th><th>b</th></tr><tr><td><code>x</code></td><td>y</td></tr></table></div>',
     )
   })
 
@@ -103,10 +103,17 @@ describe('expandMessages', () => {
     expect(expandMessages(md, look)).toBe(md)
   })
 
-  it('展開したものを描くと, 原文はコード, 訳は引用になる', () => {
-    const html = render(expandMessages('```output\n{{msg:srv.bell|n=1}}\n```', look), { copy: 'Copy' })
+  it('展開したものを描くと, 原文はターミナルの出力 (コピーなし) になり, 訳がその下につながる', () => {
+    const html = render(expandMessages('```output\n{{msg:srv.bell|n=1}}\n```', look), { copy: 'Copy', translation: '訳' })
     expect(html).toBe(
-      '<div class="code"><button>Copy</button><pre data-lang="text">Ding! (ring 1)</pre></div>\n<blockquote>訳: カーン (1 回目)</blockquote>',
+      '<div class="term-out"><pre data-lang="text" lang="en">Ding! (ring 1)</pre><div class="tr"><span>訳</span>カーン (1 回目)</div></div>',
+    )
+  })
+
+  it('訳の文字を渡さなければ, 訳は引用のまま残す (VSCode のプレビューと同じ)', () => {
+    const html = render(expandMessages('```output\n{{msg:srv.bell|n=1}}\n```', look))
+    expect(html).toBe(
+      '<div class="term-out"><pre data-lang="text" lang="en">Ding! (ring 1)</pre></div>\n<blockquote>訳: カーン (1 回目)</blockquote>',
     )
   })
 })

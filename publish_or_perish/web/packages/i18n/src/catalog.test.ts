@@ -146,10 +146,11 @@ describe('画面が使うキー', () => {
       for (const f of readdirSync(d)) {
         const p = join(d, f)
         if (statSync(p).isDirectory()) walk(p)
-        else if (/\.tsx?$/.test(f) && !f.endsWith('.test.ts')) files.push(p)
+        else if (/\.tsx?$/.test(f) && !/\.test\.tsx?$/.test(f)) files.push(p)
       }
     }
     walk(join(pkg, 'web/src'))
+    walk(join(pkg, 'web/packages/ui/src'))
     const keys = files.flatMap(f => all(/\btr\('([\w.]+)'/g, readFileSync(f, 'utf8')))
     expect(keys.length).toBeGreaterThan(30)
     expect(keys.filter(k => !(k in ja))).toEqual([])

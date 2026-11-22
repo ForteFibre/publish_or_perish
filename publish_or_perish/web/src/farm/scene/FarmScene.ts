@@ -4,11 +4,11 @@
 
 import { tr } from '@pop/i18n'
 import type { FarmState, Fx } from '@pop/ros'
+import { CONFETTI, SCENE_TEXT, SRC_GLOW, srcOf } from '@pop/ui/tokens'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { sfx } from '../sfx'
 import { pushFloat, useUi } from '../ui'
-import { SRC_GLOW, srcOf } from './colors'
 import {
   type BoardView,
   type BotParts,
@@ -236,7 +236,7 @@ export class FarmScene {
 
   #makeBotView(name: string): BotView {
     const parts = makeBot()
-    const tag = label(name, 0, 0.95, 0, 0.22, '#ffffff', 'rgba(40,50,40,0.75)')
+    const tag = label(name, 0, 0.95, 0, 0.22, '#ffffff', SCENE_TEXT.botTag)
     this.scene.add(tag, parts.g)
     return { ...parts, tag, x: null, y: 0, th: 0, tx: 0, ty: 0, tth: 0, moving: false, blink: 2 }
   }
@@ -315,9 +315,7 @@ export class FarmScene {
     dirt: new THREE.MeshBasicMaterial({ color: '#8a5a30', transparent: true }),
     smoke: new THREE.MeshBasicMaterial({ color: '#9a9a9a', transparent: true }),
     spark: new THREE.MeshBasicMaterial({ color: '#fff3a0', transparent: true }),
-    confetti: ['#e05244', '#f0a020', '#4caf50', '#3b82c4', '#9b6bd6'].map(
-      c => new THREE.MeshBasicMaterial({ color: c, transparent: true }),
-    ),
+    confetti: CONFETTI.map(c => new THREE.MeshBasicMaterial({ color: c, transparent: true })),
   }
 
   #burst(kind: string, x: number, z: number, n: number) {

@@ -2,8 +2,8 @@
 // Blender で作った glb に差し替えるときも, 画面が動かす部分は同じ名前にする (docs/design/web-architecture.md).
 
 import { tr } from '@pop/i18n'
+import { HUT, SCENE_TEXT } from '@pop/ui/tokens'
 import * as THREE from 'three'
-import { HUT } from './colors'
 
 /** 決まった並びの乱数 (毎回同じ景色にする) */
 export function seeded(seed: number): () => number {
@@ -199,8 +199,8 @@ export function makeFence(w: number, h: number): THREE.Group {
   rail(x0, z0, x0, z1)
   rail(x1, z0, x1, z1)
   // 座標の目盛り (data[y * width + x] の x, y)
-  for (let x = 0; x < w; x++) g.add(label(`x=${x}`, x + 0.5, 0.05, 0.75, 0.32, '#4d5a3c'))
-  for (let y = 0; y < h; y++) g.add(label(`y=${y}`, -0.85, 0.05, -(y + 0.5), 0.32, '#4d5a3c'))
+  for (let x = 0; x < w; x++) g.add(label(`x=${x}`, x + 0.5, 0.05, 0.75, 0.32, SCENE_TEXT.coord))
+  for (let y = 0; y < h; y++) g.add(label(`y=${y}`, -0.85, 0.05, -(y + 0.5), 0.32, SCENE_TEXT.coord))
   return g
 }
 
@@ -276,10 +276,10 @@ export type BoardFace = { text: string; text_src: string; number: number; answer
 
 export function drawBoard(v: BoardView, b: BoardFace) {
   const g = v.cv.getContext('2d') as CanvasRenderingContext2D
-  g.fillStyle = '#2f4a3a'
+  g.fillStyle = SCENE_TEXT.boardBg
   g.fillRect(0, 0, 512, 320)
   g.textBaseline = 'middle'
-  g.fillStyle = '#a9c4b0'
+  g.fillStyle = SCENE_TEXT.boardSub
   g.font = '600 26px sans-serif'
   g.fillText('/board/text', 24, 34)
   // 届いた文字は幅に収まるまで小さくする
@@ -290,11 +290,11 @@ export function drawBoard(v: BoardView, b: BoardFace) {
     fs -= 2
     g.font = `700 ${fs}px sans-serif`
   }
-  g.fillStyle = b.text ? '#ffffff' : '#7f9a86'
+  g.fillStyle = b.text ? SCENE_TEXT.boardText : SCENE_TEXT.boardSub
   g.fillText(text, 24, 98)
   if (b.text) {
     g.font = '500 22px sans-serif'
-    g.fillStyle = '#a9c4b0'
+    g.fillStyle = SCENE_TEXT.boardSub
     const from = ['player', 'cli', 'mixed'].includes(b.text_src) ? tr(`ui.scene.from_${b.text_src}`) : ''
     g.fillText(from, 24, 146)
   }
@@ -305,21 +305,21 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   g.lineTo(496, 176)
   g.stroke()
   g.font = '600 26px sans-serif'
-  g.fillStyle = '#a9c4b0'
+  g.fillStyle = SCENE_TEXT.boardSub
   g.fillText('/board/number', 24, 210)
   g.fillText('/board/answer', 24, 260)
   g.font = '700 40px sans-serif'
-  g.fillStyle = '#ffe9a0'
+  g.fillStyle = SCENE_TEXT.boardNumber
   g.fillText(b.number > 0 ? String(b.number) : '-', 230, 210)
   if (b.ok >= 0) {
     g.fillStyle = '#ffffff'
     g.fillText(String(b.answer), 230, 260)
     g.font = '700 30px sans-serif'
-    g.fillStyle = b.ok ? '#7be07b' : '#ff8a7a'
+    g.fillStyle = b.ok ? SCENE_TEXT.boardOk : SCENE_TEXT.boardNg
     g.fillText(tr(b.ok ? 'ui.scene.correct' : 'ui.scene.wrong'), 340, 260)
   }
   g.font = '500 22px sans-serif'
-  g.fillStyle = '#a9c4b0'
+  g.fillStyle = SCENE_TEXT.boardSub
   g.textAlign = 'right'
   g.fillText(tr('ui.scene.bells', { n: String(b.bells) }), 492, 300)
   g.textAlign = 'left'

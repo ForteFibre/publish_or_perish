@@ -10,6 +10,7 @@ COPY web/package.json web/pnpm-lock.yaml web/pnpm-workspace.yaml ./
 COPY web/packages/ros/package.json packages/ros/
 COPY web/packages/guide/package.json packages/guide/
 COPY web/packages/i18n/package.json packages/i18n/
+COPY web/packages/ui/package.json packages/ui/
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --frozen-lockfile
 COPY src ../src
 COPY scripts ../scripts

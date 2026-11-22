@@ -93,8 +93,15 @@ export function expandMessages(md: string, look: MessageLookup): string {
   return out.join('\n')
 }
 
-export function render(md: string, opts: { copy?: string } = {}): string {
+/**
+ * Markdown を HTML にする.
+ * - ```text のブロックはターミナルの出力として, コピーのボタンを付けずに出す. すぐあとに 「訳: 」 で始まる引用
+ *   (expandMessages() が添えたもの) が続けば, 原文の下につなげる (opts.translation にその「訳」の文字を渡す)
+ * - 表は横に送れるよう <div class="table"> で包む
+ */
+export function render(md: string, opts: { copy?: string; translation?: string } = {}): string {
   const copy = esc(opts.copy ?? 'コピー')
+  const trHead = opts.translation ? `> ${opts.translation}: ` : null
   const lines = md.replace(/\r/g, '').split('\n')
   const out: string[] = []
   let i = 0
@@ -112,7 +119,13 @@ export function render(md: string, opts: { copy?: string } = {}): string {
       const code: string[] = []
       for (i++; i < lines.length && !at(i).startsWith('```'); i++) code.push(at(i))
       i++
-      out.push(`<div class="code"><button>${copy}</button><pre data-lang="${esc(lang)}">${esc(code.join('\n'))}</pre></div>`)
+      if (lang === 'text') {
+        // ターミナルの出力. 打つものではないのでコピーのボタンを付けない
+        const notes: string[] = []
+        for (; trHead && at(i).startsWith(trHead); i++) notes.push(inline(at(i).slice(trHead.length)))
+        const tr = notes.map(n => `<div class="tr"><span>${esc(opts.translation ?? '')}</span>${n}</div>`).join('')
+        out.push(`<div class="term-out"><pre data-lang="text" lang="en">${esc(code.join('\n'))}</pre>${tr}</div>`)
+      } else out.push(`<div class="code"><button>${copy}</button><pre data-lang="${esc(lang)}">${esc(code.join('\n'))}</pre></div>`)
     } else if (/^<details><summary>.*<\/summary>$/.test(l)) {
       out.push(`<details><summary>${inline(l.replace(/^<details><summary>|<\/summary>$/g, ''))}</summary>`)
       i++
@@ -129,9 +142,9 @@ export function render(md: string, opts: { copy?: string } = {}): string {
       const head = cells(rows[0] ?? ''),
         body = rows.slice(2).map(cells)
       out.push(
-        `<table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${body
+        `<div class="table"><table><tr>${head.map(c => `<th>${inline(c)}</th>`).join('')}</tr>${body
           .map(r => `<tr>${r.map(c => `<td>${inline(c)}</td>`).join('')}</tr>`)
-          .join('')}</table>`,
+          .join('')}</table></div>`,
       )
     } else if (/^\d+\. /.test(l)) {
       // 番号付き. 間にコードブロックなどを挟んで続けるときのため, 最初の番号から始める

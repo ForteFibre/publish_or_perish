@@ -129,7 +129,8 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
 #guidebody summary { cursor: pointer; font-weight: 700; padding: 6px 0; color: #1d4f80; }
 #guidebody .code { position: relative; margin: 8px 0; }
 #guidebody blockquote { margin: 4px 0 10px; padding: 4px 10px; border-left: 4px solid var(--line); color: var(--sub); font-size: 13px; }
-#guidebody .code pre { background: #263238; color: #d7f5c9; border-radius: 8px; padding: 10px 12px; margin: 0;
+#guidebody .term-out { margin: 8px 0; }
+#guidebody .code pre, #guidebody .term-out pre { background: #263238; color: #d7f5c9; border-radius: 8px; padding: 10px 12px; margin: 0;
   overflow-x: auto; font-family: "Noto Sans Mono", monospace; font-size: 12.5px; line-height: 1.5; }
 #guidebody .code button { position: absolute; right: 6px; top: 6px; border: 0; border-radius: 6px; background: #445a63;
   color: #fff; font-size: 11px; padding: 3px 8px; cursor: pointer; }
