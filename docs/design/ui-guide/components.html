@@ -17,10 +17,11 @@
   --line: #e3d9bf; --edge: #c9bc98; --lip: #b9a876; --control: #8a7848;
   --gold: #e8a923; --gold-bright: #ffd45a; --gold-soft: #fff6d8; --gold-ink: #8a5600; --on-gold: #4a2c00;
   --success: #4caf50; --success-bright: #7bc96f; --success-deep: #3fa34d; --success-soft: #d9f5d3; --success-ink: #237a2a;
-  --warning: #f0a020; --warning-soft: #fff3d6; --warning-ink: #8a5600; --cli-soft: #ffe9c2;
+  --warning: #d9640f; --warning-soft: #ffedd6; --warning-ink: #8f3f00;
+  --cli: #8e63d9; --cli-soft: #ece3fb; --cli-ink: #5b34a8;
   --danger: #e05244; --danger-strong: #c43a2c; --danger-soft: #ffe9e6; --danger-ink: #a3271a;
   --info: #3b82c4; --info-soft: #e6f1fb; --info-ink: #1d4f80;
-  --special: #9b6bd6;
+  --special: #d6529a;
   --term: #263238; --term-hud: rgb(38 50 56 / 0.92); --term-raised: #445a63; --term-text: #d7f5c9; --term-sub: #9fc49a;
   --term-danger: #ffb4a8; --term-danger-sub: #e0a49a; --term-focus: #ffd45a;
   --font-sans: "Hiragino Sans", "Yu Gothic UI", "Meiryo", "Noto Sans CJK JP", "Noto Sans JP", sans-serif;
@@ -82,7 +83,8 @@ h1 { font: 700 22px/30px var(--font-display); margin: 0 0 4px; }
 .pill { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 10px; border-radius: 9999px;
   font: 700 12px/1 var(--font-display); white-space: nowrap; }
 .pill.player { background: var(--success-soft); color: var(--success-ink); }
-.pill.cli { background: var(--cli-soft); color: var(--warning-ink); }
+.pill.cli { background: var(--cli-soft); color: var(--cli-ink); }
+.pill.warning { background: var(--warning-soft); color: var(--warning-ink); }
 .pill.farm { background: var(--info-soft); color: var(--info-ink); }
 .pill.danger { background: var(--danger-soft); color: var(--danger-ink); }
 .pill.neutral { background: var(--neutral-soft); color: var(--ink-sub); }
@@ -154,7 +156,7 @@ code.inline { background: var(--surface-sunken); border-radius: 4px; padding: 0 
 
 /* 配線図 */
 .node { font: 12px/18px var(--font-mono); padding: 2px 8px; border: 2px solid; border-radius: 8px; background: var(--surface); }
-.node.player { border-color: var(--success); } .node.cli { border-color: var(--warning); } .node.farm { border-color: var(--info); }
+.node.player { border-color: var(--success); } .node.cli { border-color: var(--cli); } .node.farm { border-color: var(--info); }
 .node.none { border-style: dashed; border-color: var(--danger); color: var(--danger-ink); }
 .node.tool { border-color: var(--edge); color: var(--ink-faint); }
 .topic { background: var(--term); color: var(--term-text); border-radius: 9999px; padding: 4px 12px; font: 12px/18px var(--font-mono); text-align: center; }
@@ -188,6 +190,31 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; 
   border-radius: 0 0 12px 12px; font-size: 12px; }
 .led { width: 8px; height: 8px; border-radius: 50%; background: #5bf06a; display: inline-block; }
 
+/* 説明の面と畑の面 */
+.wide { grid-column: 1 / -1; }
+.split { display: grid; grid-template-columns: minmax(480px, 720px) 8px minmax(320px, 1fr); height: 520px; border: 2px solid var(--edge);
+  border-radius: 16px; overflow: hidden; background: var(--surface); }
+.guide { display: flex; flex-direction: column; min-width: 0; background: var(--surface); }
+.guide .gh { padding: 12px 20px 8px; border-bottom: 2px solid var(--line); }
+.guide .gh h2 { font: 700 18px/26px var(--font-display); margin: 0; }
+.guide .toc { display: flex; gap: 8px; align-items: center; height: 40px; padding: 0 20px; border-bottom: 1px dashed var(--line); overflow-x: auto; }
+.guide .toc a { flex: none; height: 24px; padding: 0 12px; border-radius: 9999px; border: 2px solid transparent; background: var(--surface-sunken);
+  color: var(--ink-sub); font: 700 12px/20px var(--font-display); text-decoration: none; }
+.guide .toc a[aria-current] { background: var(--gold-soft); color: var(--gold-ink); border-color: var(--gold); }
+.guide .gb { flex: 1; overflow-y: auto; padding: 0 20px 20px; font-size: 14px; line-height: 24px; }
+.guide .gb > * { max-width: 680px; }
+.guide .gb h3 { font: 700 18px/26px var(--font-display); margin: 24px 0 8px; padding-top: 12px; border-top: 2px solid var(--line); }
+.guide .gb pre { position: relative; margin: 8px 0; background: var(--term); color: var(--term-text); border-radius: 8px; padding: 8px 12px;
+  font: 13px/20px var(--font-mono); overflow-x: auto; }
+.guide table { border-collapse: collapse; font-size: 13px; line-height: 20px; width: 100%; }
+.guide th, .guide td { border: 1px solid var(--line); padding: 4px 8px; text-align: left; vertical-align: top; }
+.guide th { background: var(--surface-sunken); }
+.splitter { background: var(--track); display: grid; place-items: center; cursor: col-resize; }
+.splitter::after { content: ""; width: 2px; height: 32px; background: var(--control); }
+.fieldpane { position: relative; background: linear-gradient(var(--sky) 0 30%, var(--grass) 30%); }
+.fieldpane .card { position: absolute; padding: 8px 12px; }
+.fieldpane .log { position: absolute; left: 12px; right: 12px; bottom: 56px; }
+
 @media (prefers-reduced-motion: reduce) { .pill.live { animation: none; } .btn, .meter i { transition: none; } }
 </style>
 </head>
@@ -217,6 +244,7 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; 
     <span class="pill player live"><i></i>無人運転中</span>
     <span class="pill cli">CLI で操作中 (1)</span>
     <span class="pill farm">farm</span>
+    <span class="pill warning">注意 1</span>
     <span class="pill danger">切断</span>
     <span class="pill neutral">停止中</span>
     <span class="badge">2/12</span>
@@ -252,7 +280,7 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; 
     <div class="stagebar"><span class="done"></span><span class="now"></span><span></span><span></span><span></span><span></span><b>2 / 6</b></div>
     <h2>ステージ 2: 自分のノードで動かす</h2>
     <div class="sub">対応する講習: 入門 第10回</div>
-    <div class="doctor-head">点検 <span class="pill danger">エラー 2</span><span class="pill cli">注意 1</span></div>
+    <div class="doctor-head">点検 <span class="pill danger">エラー 2</span><span class="pill warning">注意 1</span></div>
     <div class="dr error">
       <div class="t"><span class="ic">×</span>エラー: ビルドに失敗した: セミコロンがない</div>
       <div class="where"><span title="~/src26_ws/src/tutorial_nodes/src/patrol.cpp:3">…/tutorial_nodes/src/patrol.cpp:3</span><button class="btn link">開く</button></div>
@@ -341,6 +369,54 @@ kbd { display: inline-grid; place-items: center; min-width: 24px; height: 24px; 
 <div><span class="ln">4</span><span class="k">return</span> <span class="n">0</span>;</div>
     </div>
     <div class="statusline"><span class="pill danger">ビルド失敗</span><span><span class="led"></span> /my_patrol</span><span class="mono" style="margin-left:auto">3:58</span></div>
+  </div>
+</section>
+
+
+<section class="wide">
+  <span class="label">説明を開いたとき: 左が説明の面 (頭、見出しの帯、本文)、中央が分割の持ち手、右が畑の面 (課題の札は出さない)</span>
+  <div class="split">
+    <aside class="guide" aria-label="説明">
+      <div class="gh">
+        <div class="row"><h2>看板に文字を出す</h2><span class="reward" style="margin:0">+80 G</span>
+          <span style="margin-left:auto" class="row"><button class="btn sm">別のタブで開く</button><button class="btn sm" aria-label="閉じる">×</button></span></div>
+        <div class="row" style="margin-top:4px"><div class="meter" style="flex:1; max-width:280px"><i style="width:40%"></i></div><span class="sub">2 / 5 回</span>
+          <span class="pill danger">点検 エラー 1</span></div>
+      </div>
+      <nav class="toc" aria-label="この説明の見出し">
+        <a href="#">やること</a><a href="#" aria-current="location">説明</a><a href="#">この課題で書くもの</a><a href="#">ヒント</a><a href="#">うまくいかないとき</a>
+      </nav>
+      <div class="gb">
+        <h3>説明</h3>
+        <p>ノードは、タイマーの関数の中で <code class="inline">publish()</code> を呼ぶ。型の名前は、コマンドと C++ で書き方が違う。</p>
+        <table>
+          <tr><th>コマンドでの型名</th><th>C++ の型名</th><th>include するファイル</th></tr>
+          <tr><td><code class="inline">std_msgs/msg/String</code></td><td><code class="inline">std_msgs::msg::String</code></td><td><code class="inline">std_msgs/msg/string.hpp</code></td></tr>
+          <tr><td><code class="inline">std_msgs/msg/Int32</code></td><td><code class="inline">std_msgs::msg::Int32</code></td><td><code class="inline">std_msgs/msg/int32.hpp</code></td></tr>
+        </table>
+<pre>#include &lt;chrono&gt;
+#include &lt;rclcpp/rclcpp.hpp&gt;
+#include &lt;std_msgs/msg/string.hpp&gt;
+
+class BoardWriter : public rclcpp::Node
+{
+public:
+  BoardWriter() : Node("board_writer")
+  {
+    pub_ = create_publisher&lt;std_msgs::msg::String&gt;("/board/text", 10);
+  }
+};</pre>
+        <h3>この課題で書くもの</h3>
+        <p>本文は 1 行を 680 px までにし、説明の面を広げても広げない。</p>
+      </div>
+    </aside>
+    <div class="splitter" role="separator" aria-orientation="vertical" tabindex="0" aria-label="説明と畑の境"></div>
+    <div class="fieldpane">
+      <div class="card row" style="left:12px; top:12px"><div class="medal" style="width:44px; height:44px"><span>Lv<b style="font-size:18px">2</b></span></div><span class="coin">G</span><span class="money" style="font-size:22px">290</span></div>
+      <div class="card" style="right:12px; top:12px"><span class="pill cli">CLI で操作中 (1)</span></div>
+      <div class="log"><div class="e"><div class="o" lang="en"><span class="tag">service /board/bell →</span> Ding! (ring 1)</div><div class="t">カーン (1 回目)</div></div></div>
+      <div class="row" style="position:absolute; right:12px; bottom:12px"><button class="btn sm">配線</button><button class="btn sm">お店</button></div>
+    </div>
   </div>
 </section>
 

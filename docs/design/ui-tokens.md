@@ -22,7 +22,7 @@
 | トークン | 値 | 今の値 | 扱い | 使いどころ |
 |---|---|---|---|---|
 | `sky` | `#9fd8f5` | `body` の背景 `#9fd8f5` | 残す | 3D が描かれる前の背景、接続待ちの幕の色 |
-| `surface` | `#fffcf3` | `--card` の不透明な分 | 足す | 窓、横の紙、メニュー、通知。下が透けない札の地 |
+| `surface` | `#fffcf3` | `--card` の不透明な分 | 足す | 窓、説明の面、メニュー、通知。下が透けない札の地 |
 | `surface-hud` | `rgb(255 252 243 / 0.94)` | `--card` | 残す | 畑の上に常に出ている札の地 |
 | `surface-sunken` | `#f3ecd9` | `#f3ecd9` `#fbf7ea` `#fbf7ec` `#efe7d2` | まとめる | 表の見出し、文中のコード、折りたたみの地、まだ取っていない実績 |
 | `track` | `#eadfc4` | `#eadfc4` | 残す | メーターの溝、ステージの帯のまだの分、選んでいないタブ |
@@ -70,10 +70,12 @@
 | `success-deep` | `#3fa34d` | XP のグラデーション | 残す | XP のメーターの暗い側 |
 | `success-soft` | `#d9f5d3` | `.pill.auto` の地 | 残す | 「接続中」「無人運転中」の Pill の地 |
 | `success-ink` | `#237a2a` | `.pill.auto` の文字 | 残す | 上の地の文字。`success-soft` との比 4.62 |
-| `warning` | `#f0a020` | `--amber` | 残す | 注意の札の左の帯、CLI |
-| `warning-soft` | `#fff3d6` | `.dr.warn` の地 | 残す | 注意の札の地 |
-| `cli-soft` | `#ffe9c2` | `.pill.cli` の地 | 残す | 「CLI で操作中」の Pill の地 |
-| `warning-ink` | `#8a5600` | `.pill.cli` の文字 | 残す | 上の二つの地の文字。`cli-soft` との比 5.18、`warning-soft` との比 5.58 |
+| `warning` | `#d9640f` | `--amber` (`#f0a020`) | 変える | 注意の札の左の帯。CLI と同じ琥珀色をやめ、金から離した橙にした。`surface` との比 3.54 |
+| `warning-soft` | `#ffedd6` | `.dr.warn` の地 `#fff3d6` | 変える | 注意の札の地、「注意」の Pill の地 |
+| `warning-ink` | `#8f3f00` | なし | 足す | 上の地の文字、注意のアイコン。`warning-soft` との比 6.37 |
+| `cli` | `#8e63d9` | CLI の枠 `#f0a020` | 変える | 配線図の CLI のノードの枠。琥珀色をやめ、紫にした。`surface` との比 4.15 |
+| `cli-soft` | `#ece3fb` | `.pill.cli` の地 `#ffe9c2` | 変える | 「CLI で操作中」の Pill の地 |
+| `cli-ink` | `#5b34a8` | `.pill.cli` の文字 `#8a5600` | 変える | 上の地の文字。`cli-soft` との比 6.77 |
 | `danger` | `#e05244` | `--red` | 残す | エラーの札の左の帯、送り手なしの破線 |
 | `danger-strong` | `#c43a2c` | バッジの地 `#e05244` | 足す | 白い文字を載せる赤 (「!」のバッジ)。白との比 5.26 (`danger` は 3.85) |
 | `danger-soft` | `#ffe9e6` | `#ffe9e6` `#ffd9d4` `#fbe3df` | まとめる | エラーの札の地、「切断」の Pill の地 |
@@ -81,13 +83,13 @@
 | `info` | `#3b82c4` | `--blue` | 残す | 情報の札の左の帯、農場のノードの枠 |
 | `info-soft` | `#e6f1fb` | `.dr.info` の地 | 残す | 情報の札の地 |
 | `info-ink` | `#1d4f80` | `#1d4f80`。リンクとツールチップの式は `#3b82c4` | まとめる | リンク、ツールチップの式、フォーカスの輪。`surface` との比 8.25 (`#3b82c4` は 3.95) |
-| `special` | `#9b6bd6` | 実績の通知の枠 | 残す | 実績の通知の枠、紙吹雪 |
-| `special-soft` | `#f1e8fb` | なし | 足す | 実績の通知の地の強調 |
-| `special-ink` | `#6b3fb5` | なし | 足す | 上の地の文字。`special-soft` との比 5.89 |
+| `special` | `#d6529a` | 実績の通知の枠 `#9b6bd6` | 変える | 実績の通知の枠。紫を CLI に渡したので、桃色にした。`surface` との比 3.70 |
+| `special-soft` | `#fbe6f1` | なし | 足す | 実績の通知の地の強調 |
+| `special-ink` | `#a12a6c` | なし | 足す | 上の地の文字。`special-soft` との比 5.78 |
 
-`gold` と `warning` は色相が近く (`#e8a923` と `#f0a020`)、色だけでは見分けにくい。
-見分け方は、ガイドの「意味の色」に書いた形の決まりで補う。
-
+色相は、金が 41 度、注意が 25 度、エラーが 5 度、CLI が 262 度、実績が 327 度である。
+今の画面では、金 (41 度)、CLI と注意 (どちらも 37 度) の三つが見分けられなかった。
+注意とエラーは色相が近いが、どちらも「直すところがある」という同じ向きの意味で、言葉とアイコンでも分けている。
 ### ターミナルの暗い地
 
 | トークン | 値 | 今の値 | 扱い | 使いどころ | `term` との比 |
@@ -112,14 +114,43 @@
 | トークン | HUD の値 | 3D の発光 (LED、粒) | 3D の面 (小屋の屋根) | 3D の名札の地 |
 |---|---|---|---|---|
 | `src-player` (自分のノード) | `success` の三つ | `#5bf06a` | `#4caf50` | `rgb(35 122 42 / 0.9)` |
-| `src-cli` (CLI) | `warning`、`cli-soft`、`warning-ink` | `#ffb43a` | `#f0a020` | `rgb(138 86 0 / 0.9)` |
+| `src-cli` (CLI) | `cli`、`cli-soft`、`cli-ink` | `#b78cff` | 屋根 `#8e63d9`、壁 `#e6dcf5` | `rgb(91 52 168 / 0.9)` |
 | `src-farm` (農場) | `info` の三つ | `#5ab8ff` | なし | なし |
 | `src-mixed` (自分のノードと CLI がぶつかっている) | `danger` の三つ | `#ff5a4a` | なし | なし |
 | `src-tool` (rqt などの道具、誰も見ていない) | `edge`、`surface`、`ink-faint` | `#999999` | なし | なし |
 
-3D の発光の値は今のまま残す。
-名札の地は、今の `rgba(40, 110, 50, 0.8)` と `rgba(160, 100, 0, 0.8)` を、`success-ink` と `warning-ink` の 0.9 に変える。
-草の上に置いたときの白い文字との比は、自分のノードが 5.01 から 4.91 でほぼ変わらず、CLI が 4.29 から 5.67 に上がる。
+今の値から変えるのは CLI の行である。
+CLI の LED は `#ffb43a` から `#b78cff` に、小屋の屋根は `#f0a020` から `#8e63d9` に、壁は `#f3d9a6` から `#e6dcf5` に、名札の地は `rgba(160, 100, 0, 0.8)` から `rgb(91 52 168 / 0.9)` に変える。
+自分のノードの名札の地は、`rgba(40, 110, 50, 0.8)` を `success-ink` の 0.9 (`rgb(35 122 42 / 0.9)`) に変える。
+草の上に置いたときの白い文字との比は、自分のノードが 5.01 から 4.91 でほぼ変わらず、CLI が 4.29 から 7.67 に上がる。
+そのほかの発光の値は今のまま残す。
+
+### 3D の粒の色
+
+topic の粒は、topic の種類ではなく、送り手の色で塗る。
+`FarmScene.ts` の `FLOW_COLOR` (topic の名前から色を引く表) をやめ、次の表を使う。
+
+| 粒 | 値 | 今の値 |
+|---|---|---|
+| 自分のノードが出した粒 (小屋から相手へ) | `#5bf06a` | topic ごとの色 (`cmd_vel` は `#ffb43a`、`board` は `#ff8fd0` など) |
+| CLI が出した粒 (CLI の小屋から相手へ) | `#b78cff` | 同じく topic ごとの色 |
+| 農場が出した粒 (相手から小屋へ) | `#5ab8ff` | topic ごとの色 (`pose` と `tank` は `#5ab8ff`、`field` は `#7be07b`、`money` は `#f5c542`) |
+| 受け手がいなくて小屋の前に落ちる粒 | 送り手の色のまま | topic ごとの色 |
+
+粒の値は、ロボットの LED と同じにしてある。
+TypeScript では、次の形で `packages/ui` の定数に置く。
+
+```ts
+/** 誰が動かしているかの色 (3D の発光: LED と粒) */
+export const SRC_GLOW = { player: '#5bf06a', cli: '#b78cff', farm: '#5ab8ff', mixed: '#ff5a4a', tool: '#999999' } as const
+/** 小屋の屋根と壁, 名札の地 */
+export const HUT = {
+  player: { roof: '#4caf50', wall: '#e8efe0', tag: 'rgba(35, 122, 42, 0.9)' },
+  cli: { roof: '#8e63d9', wall: '#e6dcf5', tag: 'rgba(91, 52, 168, 0.9)' },
+} as const
+```
+
+紙吹雪の 5 色 (`#e05244`、`#f0a020`、`#4caf50`、`#3b82c4`、`#9b6bd6`) は、意味を持たない飾りなので今のまま残す。
 
 ### 3D の中の文字
 
@@ -215,7 +246,6 @@
 | `z-scene` | 0 | 0 | 3D の畑 |
 | `z-hud` | 10 | 指定なし | 四隅の札、小さい窓の 1 行 |
 | `z-float` | 20 | 9 | 畑から浮かぶ文字 |
-| `z-sheet` | 30 | なし | 横の紙 (説明) |
 | `z-modal` | 40 | 20 | 幕と窓 |
 | `z-popup` | 50 | 10 (マスの情報) | ツールチップ、メニュー。窓の中からも開くので窓より上 |
 | `z-banner` | 60 | 25 | レベルアップの帯 |
@@ -228,7 +258,7 @@
 |---|---|---|---|
 | `duration-press` | 80 ms | なし (瞬時) | ボタンの押し込み |
 | `duration-fast` | 160 ms | なし | ホバー、フォーカス、ツールチップ、動きを減らす設定のときのフェード |
-| `duration-base` | 240 ms | なし | 窓、横の紙、メニュー、折りたたみ |
+| `duration-base` | 240 ms | なし | 窓、説明の面の出入り、メニュー、折りたたみ |
 | `duration-meter` | 400 ms | `.4s` | メーター、お金の跳ね |
 | `duration-xp` | 600 ms | `.6s` | XP のメーター |
 | `duration-toast` | 450 ms | `.45s` | 通知が落ちてくる |
@@ -247,6 +277,20 @@
 | 広い画面 | 幅 1100 px 以上 | 同じ |
 | 狭い画面 (`narrow`) | 幅 1100 px 未満 | `@media (max-width: 1100px)` |
 | 小さい窓 (`mini`) | 幅 560 px 未満か、高さ 420 px 未満 | `isMini()` が `body.mini` を付ける |
+
+## 説明の面の寸法
+
+説明を開いたときの、画面の分け方の値である。
+決まりはガイドの「説明の面」に書いた。
+
+| トークン | 値 | 使いどころ |
+|---|---|---|
+| `guide-width` | 720 px (画面の幅の 62% まで) | 説明の面の、最初の幅 |
+| `guide-min` | 480 px | 説明の面を狭められる限度 |
+| `field-min` | 320 px | 畑の面を狭められる限度 |
+| `guide-measure` | 680 px | 説明の本文の 1 行の長さの上限 |
+| `splitter` | 8 px | 分割の持ち手の幅 |
+| `guide-stack` | 幅 860 px 未満 | 左右ではなく上下に分ける区切り |
 
 ## `@theme` に写す例
 
@@ -319,10 +363,12 @@
   --color-success-deep: #3fa34d;
   --color-success-soft: #d9f5d3;
   --color-success-ink: #237a2a;
-  --color-warning: #f0a020;
-  --color-warning-soft: #fff3d6;
-  --color-warning-ink: #8a5600;
-  --color-cli-soft: #ffe9c2;
+  --color-warning: #d9640f;
+  --color-warning-soft: #ffedd6;
+  --color-warning-ink: #8f3f00;
+  --color-cli: #8e63d9;
+  --color-cli-soft: #ece3fb;
+  --color-cli-ink: #5b34a8;
   --color-danger: #e05244;
   --color-danger-strong: #c43a2c;
   --color-danger-soft: #ffe9e6;
@@ -330,9 +376,9 @@
   --color-info: #3b82c4;
   --color-info-soft: #e6f1fb;
   --color-info-ink: #1d4f80;
-  --color-special: #9b6bd6;
-  --color-special-soft: #f1e8fb;
-  --color-special-ink: #6b3fb5;
+  --color-special: #d6529a;
+  --color-special-soft: #fbe6f1;
+  --color-special-ink: #a12a6c;
 
   /* ターミナルの暗い地 */
   --color-term: #263238;
@@ -348,9 +394,9 @@
   --color-src-player: var(--color-success);
   --color-src-player-soft: var(--color-success-soft);
   --color-src-player-ink: var(--color-success-ink);
-  --color-src-cli: var(--color-warning);
+  --color-src-cli: var(--color-cli);
   --color-src-cli-soft: var(--color-cli-soft);
-  --color-src-cli-ink: var(--color-warning-ink);
+  --color-src-cli-ink: var(--color-cli-ink);
   --color-src-farm: var(--color-info);
   --color-src-farm-soft: var(--color-info-soft);
   --color-src-farm-ink: var(--color-info-ink);
@@ -427,7 +473,6 @@
   --z-scene: 0;
   --z-hud: 10;
   --z-float: 20;
-  --z-sheet: 30;
   --z-modal: 40;
   --z-popup: 50;
   --z-banner: 60;
@@ -439,6 +484,13 @@
   --duration-base: 240ms;
   --duration-meter: 400ms;
   --duration-xp: 600ms;
+
+  /* 説明の面 */
+  --guide-width: min(720px, 62%);
+  --guide-min: 480px;
+  --field-min: 320px;
+  --guide-measure: 680px;
+  --splitter: 8px;
 
   /* フォーカスの輪. 太さ 3px, 部品から 2px 離す. 暗い地の中では色を term-focus に替える */
   --focus-width: 3px;
