@@ -450,7 +450,8 @@
       "all_clear": "今あるステージをすべてクリアした",
       "preparing": "次のステージを準備中",
       "upcoming": "準備中: {{name}}",
-      "read_guide": "説明を読む (書くものと, うまくいかないときの直し方)"
+      "read_guide": "説明を読む",
+      "stage_of": "ステージ {{n}} / {{total}}"
     },
     "doctor": {
       "error": "エラー: {{title}}",
@@ -467,26 +468,31 @@
     },
     "guide": {
       "label": "説明",
-      "sections": "説明の見出し"
+      "sections": "説明の見出し",
+      "close": "説明を閉じる",
+      "resize": "説明の面の大きさ",
+      "peek": "畑を見る",
+      "cleared": "クリア",
+      "next": "次の課題の説明へ"
     },
     "mini": {
       "all_clear": "すべてクリア",
+      "more": "そのほかの操作",
       "wires": "配線 !"
     },
     "buttons": {
-      "speed": "時間 ×{{n}}",
+      "speed_label": "時間の速さ",
       "wires": "配線",
       "shop": "お店",
       "achievements": "実績",
-      "sound_on": "音: 入",
-      "sound_off": "音: 切"
+      "sound": "音"
     },
     "modal": {
       "shop": "お店",
       "sold_out": "売り切れ",
+      "short": "あと {{n}} G",
       "wires": "配線図",
       "wires_legend": "送り手 → topic (頻度 ・ 1 秒あたりのデータ量) → 受け手。点線が流れる速さは頻度に比例する。",
-      "guide": "説明",
       "achievements": "実績"
     },
     "wires": {

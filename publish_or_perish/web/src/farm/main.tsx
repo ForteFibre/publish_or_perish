@@ -6,7 +6,7 @@ import { connectFarm, loadFixture, pickFixture } from '@pop/ros'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './App'
-import './farm.css'
+import '@pop/ui/styles.css'
 
 // 訳の表を読んでから描く (表は小さいので待っても目立たない)
 void initI18n().then(lng => {

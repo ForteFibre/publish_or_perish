@@ -56,8 +56,11 @@ type Hut = { g: THREE.Group; pile: THREE.Mesh[]; x: number; z: number }
 const DRY = new THREE.Color('#d2a873'),
   WET = new THREE.Color('#6b4428')
 
-/** 幅 560 px 未満か高さ 420 px 未満を小窓として扱う (VSCode の浮動ウィンドウ, ブラウザの小窓など) */
-export const isMini = () => innerWidth < 560 || innerHeight < 420
+/** 畑の面が幅 560 px 未満か高さ 420 px 未満なら小窓として扱う (CSS の mini: と同じ区切り) */
+export const isMini = (w: number, h: number) => w < 560 || h < 420
+
+/** OS の「動きを減らす」設定. 入っていれば, 紙吹雪と粒を出さない (ロボットの動きと作物の成長は状態なので残す) */
+const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export class FarmScene {
   readonly renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -85,6 +88,9 @@ export class FarmScene {
   lastFx = -1
 
   camSet = false
+  /** 畑の面の右に課題の札が出ているか (出ていれば, その分だけ畑を左に寄せて見せる) */
+  questShown = true
+  readonly #resizeObs = new ResizeObserver(() => this.resize())
   wasMini: boolean | null = null
   frames = 0
   #raf = 0
@@ -125,7 +131,7 @@ export class FarmScene {
 
     r.domElement.addEventListener('pointermove', this.#onPointer)
     r.domElement.addEventListener('pointerleave', this.#onLeave)
-    addEventListener('resize', this.resize)
+    this.#resizeObs.observe(container)
     this.buildField(8, 5)
     this.resize()
     this.#loop()
@@ -142,7 +148,7 @@ export class FarmScene {
   dispose() {
     cancelAnimationFrame(this.#raf)
     this.#timers.forEach(clearTimeout)
-    removeEventListener('resize', this.resize)
+    this.#resizeObs.disconnect()
     this.controls.dispose()
     this.renderer.dispose()
     this.renderer.domElement.remove()
@@ -319,6 +325,7 @@ export class FarmScene {
   }
 
   #burst(kind: string, x: number, z: number, n: number) {
+    if (reducedMotion()) return
     const rand = this.rand,
       fm = FarmScene.#fxMats
     for (let i = 0; i < n; i++) {
@@ -391,7 +398,8 @@ export class FarmScene {
   /** 3D の位置に文字を浮かべる (HUD の Floats が描く) */
   #float(text: string, x: number, y: number, z: number, color?: string) {
     const v = new THREE.Vector3(x, y, z).project(this.camera)
-    pushFloat(text, ((v.x + 1) / 2) * innerWidth - 30, ((1 - v.y) / 2) * innerHeight - 20, color)
+    const r = this.container.getBoundingClientRect()
+    pushFloat(text, r.left + ((v.x + 1) / 2) * r.width - 30, r.top + ((1 - v.y) / 2) * r.height - 20, color)
   }
 
   // ---------------------------------------------------------------- ノードの小屋と, メッセージの粒
@@ -506,7 +514,8 @@ export class FarmScene {
 
   // ---------------------------------------------------------------- マスの情報 (マウス)
   #onPointer = (e: PointerEvent) => {
-    this.#mouse.set((e.clientX / innerWidth) * 2 - 1, (-e.clientY / innerHeight) * 2 + 1)
+    const r = this.container.getBoundingClientRect()
+    this.#mouse.set(((e.clientX - r.left) / r.width) * 2 - 1, (-(e.clientY - r.top) / r.height) * 2 + 1)
     this.#ray.setFromCamera(this.#mouse, this.camera)
     const hit = this.#ray.intersectObjects(this.tiles.flat().map(t => t.soil))[0]
     if (!hit || !this.state) {
@@ -522,25 +531,32 @@ export class FarmScene {
   }
 
   // ---------------------------------------------------------------- カメラと描画
+  /** 畑の面の大きさ [px]. 説明を開くと窓より狭くなる */
+  size(): { w: number; h: number } {
+    return { w: Math.max(1, this.container.clientWidth), h: Math.max(1, this.container.clientHeight) }
+  }
+
   retarget() {
     const cx = this.fieldW / 2,
       cz = -this.fieldH / 2
-    const mini = isMini()
+    const { w, h } = this.size()
+    const mini = isMini(w, h)
     const camera = this.camera
-    // 右の課題パネルの分だけ畑を左に寄せて見せる (狭い画面ほどパネルが占める割合が大きい). 小窓にはパネルがない
-    const target = new THREE.Vector3(cx + (mini ? -0.4 : innerWidth < 1100 ? 2.6 : 1.6), 0, cz - (mini ? 0.3 : 0.6))
+    // 右の課題の札の分だけ畑を左に寄せて見せる (狭い画面ほど札が占める割合が大きい). 小窓と説明を開いたときは札がない
+    const shift = mini ? -0.4 : !this.questShown ? 0.2 : w < 1100 ? 2.6 : 1.6
+    const target = new THREE.Vector3(cx + shift, 0, cz - (mini ? 0.3 : 0.6))
     this.controls.target.copy(target)
     // 小窓は畑を広げたときや窓の大きさを変えたときも収まるように毎回置き直す
     if (!this.camSet || mini) {
       if (mini) {
         // 畑の幅と奥行きが両方収まる距離まで引く. 上の 1 行の分だけ少し余分に引く
         const vfov = (camera.fov * Math.PI) / 180,
-          hfov = 2 * Math.atan((Math.tan(vfov / 2) * innerWidth) / innerHeight)
+          hfov = 2 * Math.atan((Math.tan(vfov / 2) * w) / h)
         const dist = Math.max((this.fieldW + 2.4) / 2 / Math.tan(hfov / 2), ((this.fieldH + 1.5) / 2 / Math.tan(vfov / 2)) * 1.35) * 0.98
         camera.position.copy(target).add(new THREE.Vector3(0, 0.78, 0.62).normalize().multiplyScalar(dist))
       } else {
         // 縦長に近い画面では横に映る範囲が狭いので, その分カメラを引く
-        const k = Math.min(2, Math.max(1, 1.5 / (innerWidth / innerHeight)))
+        const k = Math.min(2, Math.max(1, 1.5 / (w / h)))
         camera.position.copy(target).add(new THREE.Vector3(-1.4, 6.5 + this.fieldH * 0.75, 7.1 + this.fieldH * 0.95).multiplyScalar(k))
       }
       this.camSet = true
@@ -549,13 +565,21 @@ export class FarmScene {
     this.sun.position.set(cx - 8, 16, cz + 10)
   }
 
+  /** 課題の札が出たか消えたか (説明を開いた, 閉じた). 畑の見せ方を置き直す */
+  setQuestShown(shown: boolean) {
+    if (shown === this.questShown) return
+    this.questShown = shown
+    this.camSet = false
+    if (this.fieldW) this.retarget()
+  }
+
   resize = () => {
-    this.renderer.setSize(innerWidth, innerHeight)
-    this.camera.aspect = innerWidth / innerHeight
+    const { w, h } = this.size()
+    this.renderer.setSize(w, h)
+    this.camera.aspect = w / h
     this.camera.updateProjectionMatrix()
     // 小窓と大きい画面を行き来したら, その画面に合う位置にカメラを置き直す
-    const mini = isMini()
-    document.body.classList.toggle('mini', mini)
+    const mini = isMini(w, h)
     if (mini !== this.wasMini) {
       this.wasMini = mini
       this.camSet = false

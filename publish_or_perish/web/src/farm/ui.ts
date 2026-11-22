@@ -1,10 +1,11 @@
-// 画面の中だけの状態 (農場には送らない). 開いている窓, 通知, マスの情報, 浮かぶ文字.
+// 画面の中だけの状態 (農場には送らない). 開いている窓, 説明の面, 帯, マスの情報, 浮かぶ文字.
+// 通知は @pop/ui の notify() が持つ.
 
-import { devtoolsEnabled, type Msg, type Notice } from '@pop/ros'
+import { devtoolsEnabled, type Msg } from '@pop/ros'
 import { create } from 'zustand'
 import { devtools } from 'zustand/middleware'
 
-export type Modal = 'shop' | 'wires' | 'achs' | 'guide' | null
+export type Modal = 'shop' | 'wires' | 'achs' | null
 
 /** マウスの下のマス. 画面上の位置 (px) と, マスの座標 */
 export type Tip = { px: number; py: number; x: number; y: number }
@@ -12,12 +13,12 @@ export type Tip = { px: number; py: number; x: number; y: number }
 /** 3D の位置から画面に浮かべる文字 (1.4 秒で消える) */
 export type Float = { id: number; text: string; px: number; py: number; color?: string }
 
-export type Toast = Notice & { key: number }
-
 type Ui = {
   modal: Modal
+  /** 開いている説明の課題の id. null なら説明の面を閉じている */
   guideId: string | null
-  toasts: Toast[]
+  /** 小さい窓で説明を開いているとき, 説明の代わりに畑を見ているか */
+  peekField: boolean
   banner: { title: Msg; body: Msg } | null
   tip: Tip | null
   floats: Float[]
@@ -30,7 +31,7 @@ export const useUi = create<Ui>()(
     set => ({
       modal: null,
       guideId: null,
-      toasts: [],
+      peekField: false,
       banner: null,
       tip: null,
       floats: [],
@@ -42,16 +43,22 @@ export const useUi = create<Ui>()(
 )
 
 let seq = 0
+// 帯が出ているあいだに次の帯が来たら, 順に出す
+const banners: { title: Msg; body: Msg }[] = []
 
-export function pushToast(n: Notice) {
-  const key = ++seq
-  useUi.setState(s => ({ toasts: [...s.toasts, { ...n, key }] }))
-  setTimeout(() => useUi.setState(s => ({ toasts: s.toasts.filter(t => t.key !== key) })), 4200)
+function nextBanner() {
+  const b = banners.shift()
+  if (!b) return
+  useUi.setState({ banner: b })
+  setTimeout(() => {
+    useUi.setState({ banner: null })
+    nextBanner()
+  }, 2600)
 }
 
 export function showBanner(title: Msg, body: Msg) {
-  useUi.setState({ banner: { title, body } })
-  setTimeout(() => useUi.setState({ banner: null }), 2600)
+  banners.push({ title, body })
+  if (!useUi.getState().banner && banners.length === 1) nextBanner()
 }
 
 export function pushFloat(text: string, px: number, py: number, color?: string) {

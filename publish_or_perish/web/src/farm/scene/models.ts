@@ -2,7 +2,7 @@
 // Blender で作った glb に差し替えるときも, 画面が動かす部分は同じ名前にする (docs/design/web-architecture.md).
 
 import { tr } from '@pop/i18n'
-import { HUT, SCENE_TEXT } from '@pop/ui/tokens'
+import { DISPLAY_FONT, HUT, SCENE_TEXT } from '@pop/ui/tokens'
 import * as THREE from 'three'
 
 /** 決まった並びの乱数 (毎回同じ景色にする) */
@@ -45,16 +45,16 @@ const castShadow = (o: THREE.Object3D) =>
     c.castShadow = true
   })
 
-/** 文字の札 (canvas に描いて Sprite にする. OS のフォントで描くので, オフラインでも日本語が出る) */
+/** 文字の札 (canvas に描いて Sprite にする. 見出しと同じ丸い書体で描く. 同梱の書体なのでオフラインでも出る) */
 export function label(text: string, x: number, y: number, z: number, h: number, color = '#ffffff', bg: string | null = null) {
   const cv = document.createElement('canvas')
   const g = cv.getContext('2d') as CanvasRenderingContext2D
   const fs = 48
-  g.font = `700 ${fs}px sans-serif`
+  g.font = `700 ${fs}px ${DISPLAY_FONT}`
   const w = Math.ceil(g.measureText(text).width) + 24
   cv.width = w
   cv.height = fs + 20
-  g.font = `700 ${fs}px sans-serif`
+  g.font = `700 ${fs}px ${DISPLAY_FONT}`
   if (bg) {
     g.fillStyle = bg
     g.beginPath()
@@ -280,20 +280,20 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   g.fillRect(0, 0, 512, 320)
   g.textBaseline = 'middle'
   g.fillStyle = SCENE_TEXT.boardSub
-  g.font = '600 26px sans-serif'
+  g.font = `600 26px ${DISPLAY_FONT}`
   g.fillText('/board/text', 24, 34)
   // 届いた文字は幅に収まるまで小さくする
   const text = b.text || tr('ui.scene.board_empty')
   let fs = 56
-  g.font = `700 ${fs}px sans-serif`
+  g.font = `700 ${fs}px ${DISPLAY_FONT}`
   while (fs > 22 && g.measureText(text).width > 464) {
     fs -= 2
-    g.font = `700 ${fs}px sans-serif`
+    g.font = `700 ${fs}px ${DISPLAY_FONT}`
   }
   g.fillStyle = b.text ? SCENE_TEXT.boardText : SCENE_TEXT.boardSub
   g.fillText(text, 24, 98)
   if (b.text) {
-    g.font = '500 22px sans-serif'
+    g.font = `500 22px ${DISPLAY_FONT}`
     g.fillStyle = SCENE_TEXT.boardSub
     const from = ['player', 'cli', 'mixed'].includes(b.text_src) ? tr(`ui.scene.from_${b.text_src}`) : ''
     g.fillText(from, 24, 146)
@@ -304,21 +304,21 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   g.moveTo(16, 176)
   g.lineTo(496, 176)
   g.stroke()
-  g.font = '600 26px sans-serif'
+  g.font = `600 26px ${DISPLAY_FONT}`
   g.fillStyle = SCENE_TEXT.boardSub
   g.fillText('/board/number', 24, 210)
   g.fillText('/board/answer', 24, 260)
-  g.font = '700 40px sans-serif'
+  g.font = `700 40px ${DISPLAY_FONT}`
   g.fillStyle = SCENE_TEXT.boardNumber
   g.fillText(b.number > 0 ? String(b.number) : '-', 230, 210)
   if (b.ok >= 0) {
     g.fillStyle = '#ffffff'
     g.fillText(String(b.answer), 230, 260)
-    g.font = '700 30px sans-serif'
+    g.font = `700 30px ${DISPLAY_FONT}`
     g.fillStyle = b.ok ? SCENE_TEXT.boardOk : SCENE_TEXT.boardNg
     g.fillText(tr(b.ok ? 'ui.scene.correct' : 'ui.scene.wrong'), 340, 260)
   }
-  g.font = '500 22px sans-serif'
+  g.font = `500 22px ${DISPLAY_FONT}`
   g.fillStyle = SCENE_TEXT.boardSub
   g.textAlign = 'right'
   g.fillText(tr('ui.scene.bells', { n: String(b.bells) }), 492, 300)

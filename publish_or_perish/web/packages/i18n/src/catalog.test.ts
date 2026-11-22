@@ -205,6 +205,6 @@ describe('tr と tm', () => {
   })
 
   it('画面の文に値を埋め込む', () => {
-    expect(tr('ui.buttons.speed', { n: '4' })).toBe('時間 ×4')
+    expect(tr('ui.modal.short', { n: '50' })).toBe('あと 50 G')
   })
 })

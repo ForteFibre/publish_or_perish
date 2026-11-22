@@ -43,5 +43,8 @@ export function openGuide(id: string) {
     window.parent.postMessage({ type: 'guide', id }, '*')
     return
   }
-  useUi.setState({ guideId: id, modal: 'guide' })
+  useUi.setState({ guideId: id, modal: null, peekField: false })
 }
+
+/** 説明の面を閉じる */
+export const closeGuide = () => useUi.setState({ guideId: null, peekField: false })

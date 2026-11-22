@@ -232,6 +232,16 @@ HUD は React のコンポーネントにする。
 
 小窓 (幅 560 px 未満か高さ 420 px 未満) のときの表示も、今の規則のまま移す。
 
+### 部品と画面の分け方 (2026-11-22)
+
+部品は `web/packages/ui` にまとめ、画面 (`src/farm`) はその部品だけで組む。
+見た目の値は `packages/ui/src/styles.css` (Tailwind CSS 4 の `@theme`) にあり、画面のコードには色や余白の値を書かない。
+3D が使う色は `packages/ui/src/tokens.ts` に写し、CSS と同じ値かをテストで比べる。
+
+- 札の畳み方 (`narrow:`、`mini:`) は、窓ではなく畑の面の大きさで決まる (コンテナクエリ)。説明を開くと畑の面だけが狭くなるためである
+- 説明は窓ではなく、画面を分けた説明の面に出す (`src/farm/App.tsx`)。3D は畑の面の大きさで描き直す
+- 通知は `@pop/ui` の `notify()`、窓は `Dialog` (Base UI) で出す
+
 ## メッセージと i18n
 
 ### 方針
@@ -373,8 +383,15 @@ docker build -f web/Dockerfile --output type=local,dest=web/dist .
 ### 開発
 
 開発中は、農場を `ros2 launch` で起動したうえで、Vite の dev server (5173) を別に起動する。
-画面は rosbridge へ WebSocket で直接つなぐので、dev server に proxy は要らない。
+dev server は、本番の `web_server.py` と同じく `/rosbridge` を rosbridge (9090) に中継する。
 VSCode 拡張の URL の設定を dev server に向ければ、拡張の中でもすぐに反映される。
+
+| 道具 | 使い方 |
+|---|---|
+| 記録した状態で動かす | `?fixture=farm-mistakes` のように付けると、農場につながずに `packages/ros/src/fixtures/` の状態で画面が動く |
+| Storybook | `pnpm storybook`。部品の見本と、記録した状態を流し込んだ画面の全体の見本がある。上の帯で言語、背景、画面の大きさを替えられる |
+| lint と整形 | `pnpm lint`、`pnpm format` (Biome) |
+| ストアを見る | 開発用のサーバーで Redux DevTools の拡張を入れると、`farm` と `ui` のストアが見える |
 
 ## テスト
 
@@ -384,7 +401,8 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 | ガイドの描画と置き換え | Vitest で、Markdown から HTML への変換と `{{msg:...}}` の展開を確かめる |
 | 訳の表 | `en.json` のキーがすべて `ja.json` にあるか、埋め込みの名前が一致するか。C++、`match_sim.py`、画面、ガイドが使うキーが表にあり、渡す値の名前が埋め込みと同じか (Vitest) |
 | C++ のメッセージ | GTest (`test/test_messages.cpp`) で、`World` の操作が返す文と、ターミナルに出すそのほかの文が英語の表から作れるかを確かめる |
-| HUD | 当面は書かない (E2E は見送る)。書くときは、固定の状態を流し込み、Playwright でスクリーンショットを比べる (通常の大きさと小窓の両方) |
+| 部品 | Testing Library と happy-dom で、押せないボタン、コピーの「済」が戻ること、点検を 1 件だけ開くこと、ログのまとめ方、分割の持ち手のキー操作を確かめる (`packages/ui/src/components.test.tsx`) |
+| HUD の全体 | E2E は見送る。見た目は Storybook の、記録した状態を流し込んだ見本で確かめる |
 
 ## 移行の順序
 

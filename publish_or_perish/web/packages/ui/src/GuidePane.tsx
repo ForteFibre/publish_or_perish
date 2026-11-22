@@ -3,7 +3,7 @@
 // 読んでいた場所と, 開いたヒントは説明ごとに覚える (ブラウザを閉じるまで).
 // 本文は @pop/guide の render() が作った HTML (# が h2, ## が h3).
 import { useTr } from '@pop/i18n'
-import { type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { type CSSProperties, type ReactNode, useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 
 export type Section = { id: string; label: string }
 
@@ -75,9 +75,11 @@ export type GuidePaneProps = {
   /** 読んでいた場所を覚える名前 (課題の id) */
   memoryKey: string
   className?: string
+  /** 幅や高さ (分割の持ち手で決まる) */
+  style?: CSSProperties
 }
 
-export function GuidePane({ header, below, html, memoryKey, className }: GuidePaneProps) {
+export function GuidePane({ header, below, html, memoryKey, className, style }: GuidePaneProps) {
   const { tr } = useTr()
   const scroller = useRef<HTMLDivElement>(null)
   const body = useRef<HTMLDivElement>(null)
@@ -157,7 +159,7 @@ export function GuidePane({ header, below, html, memoryKey, className }: GuidePa
   }
 
   return (
-    <section aria-label={tr('ui.guide.label')} className={`flex min-h-0 min-w-0 flex-col bg-surface ${className ?? ''}`}>
+    <section aria-label={tr('ui.guide.label')} style={style} className={`flex min-h-0 min-w-0 flex-col bg-surface ${className ?? ''}`}>
       {header}
       {below}
       <SectionNav sections={sections} current={current} onSelect={select} />

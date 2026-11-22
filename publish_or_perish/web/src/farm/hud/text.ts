@@ -3,15 +3,17 @@ import { substitute } from '@pop/guide'
 import { tr } from '@pop/i18n'
 import type { FarmState, Mission } from '@pop/ros'
 
-export type Mode = { cls: 'auto' | 'cli' | 'off'; text: string; short: string }
+/** 運転の Pill. 光る (live) のは無人運転中だけ */
+export type Mode = { tone: 'player' | 'cli' | 'neutral'; live: boolean; text: string; short: string }
 
 /** 運転の様子 (無人運転中 / CLI で操作中 / 動作中 / 停止中) */
 export function mode(s: FarmState): Mode {
-  if (s.graph.auto) return { cls: 'auto', text: tr('ui.mode.auto'), short: tr('ui.mode.auto_short') }
-  if (s.graph.cli > 0) return { cls: 'cli', text: tr('ui.mode.cli', { n: String(s.graph.cli) }), short: tr('ui.mode.cli_short') }
+  if (s.graph.auto) return { tone: 'player', live: true, text: tr('ui.mode.auto'), short: tr('ui.mode.auto_short') }
+  if (s.graph.cli > 0)
+    return { tone: 'cli', live: false, text: tr('ui.mode.cli', { n: String(s.graph.cli) }), short: tr('ui.mode.cli_short') }
   // 動いているが, 送り手が分からない (CLI でも自分のノードでもない) ので, どちらの色も使わない
-  if (s.bots.some(b => b.moving)) return { cls: 'off', text: tr('ui.mode.moving'), short: tr('ui.mode.moving_short') }
-  return { cls: 'off', text: tr('ui.mode.off'), short: tr('ui.mode.off_short') }
+  if (s.bots.some(b => b.moving)) return { tone: 'neutral', live: false, text: tr('ui.mode.moving'), short: tr('ui.mode.moving_short') }
+  return { tone: 'neutral', live: false, text: tr('ui.mode.off'), short: tr('ui.mode.off_short') }
 }
 
 export const fmtBytes = (b: number) => (b >= 1e6 ? `${(b / 1e6).toFixed(1)} MB` : b >= 1e3 ? `${(b / 1e3).toFixed(1)} kB` : `${b} B`)

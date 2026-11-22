@@ -108,7 +108,7 @@ function DoctorRow({ it, onOpen }: { it: DoctorItem; onOpen?: (it: DoctorItem) =
       </Accordion.Header>
       <Accordion.Panel className="flex flex-col gap-1.5 px-3 pb-2.5 pl-9">
         {it.file && <FileLine file={it.file} onOpen={onOpen && (() => onOpen(it))} />}
-        <p className="text-sm whitespace-pre-wrap">{it.detail}</p>
+        <p className="text-sm whitespace-pre-wrap [overflow-wrap:anywhere]">{it.detail}</p>
         {it.fix && <CodeBlock code={it.fix} />}
       </Accordion.Panel>
     </Accordion.Item>

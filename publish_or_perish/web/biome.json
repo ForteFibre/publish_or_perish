@@ -6,7 +6,7 @@
     "useIgnoreFile": true
   },
   "files": {
-    "includes": ["**", "!dist", "!storybook-static", "!public", "!**/fixtures/*.json", "!src/farm/farm.css"]
+    "includes": ["**", "!dist", "!storybook-static", "!public", "!**/fixtures/*.json"]
   },
   "formatter": {
     "indentStyle": "space",
@@ -43,24 +43,5 @@
     "parser": {
       "tailwindDirectives": true
     }
-  },
-  "overrides": [
-    {
-      "includes": ["src/farm/hud/**"],
-      "linter": {
-        "rules": {
-          "a11y": "off",
-          "suspicious": {
-            "noArrayIndexKey": "off"
-          },
-          "security": {
-            "noDangerouslySetInnerHtml": "off"
-          },
-          "correctness": {
-            "useExhaustiveDependencies": "off"
-          }
-        }
-      }
-    }
-  ]
+  }
 }
