@@ -65,7 +65,7 @@ async function openPip() {
 let storage = null      // 説明の .md を書き出す場所 (拡張ごとの保存場所)
 let lastState = null
 
-// 文中の ~/src26_ws と tutorial_nodes を, 農場の起動引数の値に置き換える (web/guide.js と同じ規則)
+// 文中の ~/src26_ws と tutorial_nodes を, 農場の起動引数の値に置き換える (web/packages/guide/src/index.ts と同じ規則)
 function substitute(text, ws, pkg) {
   if (!ws) return text
   const name = ws.split('/').pop()
@@ -80,7 +80,7 @@ async function openGuide(id) {
   }
   let text
   try {
-    const r = await fetch(`${cfg('url')}/guide/${id}.md`, { cache: 'no-cache' })
+    const r = await fetch(`${cfg('url')}/guide/ja/${id}.md`, { cache: 'no-cache' })
     if (!r.ok) throw new Error(String(r.status))
     text = await r.text()
   } catch {
