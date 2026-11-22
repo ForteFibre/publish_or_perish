@@ -5,7 +5,11 @@
 // React Three Fiber での作り直しは docs/design/web-architecture.md の移行の段階 4 で行う. ここでは書き方を変えずに型だけ付けた.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { initI18n, tm, type Msg } from '@pop/i18n'
 import { defaultUrl, RosLink } from '@pop/ros'
+
+// 操作の結果 (/match/state の action) を訳すので, 訳の表を先に読む
+await initI18n()
 
 const params = new URLSearchParams(location.search)
 const SCENE_DIR = params.get('scene') ?? 'scenes/harurobo2027'
@@ -34,7 +38,8 @@ type SceneDesc = {
 type MatchState = {
   t: number
   bodies: Record<string, [number, number, number, number, number, number, number]>
-  robot?: { extend: number; lift: number; carried: string[]; dice: number; signal: boolean }
+  /** action は最後の操作の結果 (キーと値. 訳の表の match.*), action_ok はそれがうまくいったか */
+  robot?: { extend: number; lift: number; carried: string[]; dice: number; signal: boolean; action: Msg | null; action_ok: boolean }
 }
 type Trigger = { success: boolean; message: string }
 
@@ -57,10 +62,10 @@ function connect(onState: (s: MatchState) => void) {
   for (const k of ['extend', 'lift']) pubArm[k] = link.publisher(`/robot/arm/${k}`, 'std_msgs/msg/Float64')
 }
 
+// 結果は /match/state の action を訳して出す (ほかのノードや CLI が呼んだ結果も出る). ここでは失敗 (service がない) だけを出す
 function callTrigger(name: string) {
   if (!link) return
-  link.call<object, Trigger>(name, 'std_srvs/srv/Trigger', {})
-    .then(r => setAction(r.message, r.success), (err: unknown) => setAction(String(err), false))
+  link.call<object, Trigger>(name, 'std_srvs/srv/Trigger', {}).catch((err: unknown) => setAction(String(err), false))
 }
 
 // ---------------------------------------------------------------- 3D
@@ -273,7 +278,7 @@ function startFree(bodies: Record<string, THREE.Group>) {
   for (const id of ['score', 'timer', 'checks']) $(id).style.display = 'none'
   $('drive').style.display = ''
   $('note').textContent = '自分のノードからも動かせる: /robot/cmd_vel, /robot/arm/extend, /robot/arm/lift, /robot/grab など (README)'
-  let shown = 0, synced = false
+  let shown = 0, synced = false, actionKey = ''
   const beacon = scene.getObjectByName('robot_beacon') as THREE.Mesh | undefined
   const beaconOff = beacon?.material
   const beaconOn = new THREE.MeshStandardMaterial({ color: '#7dff5a', emissive: '#4cff2a', emissiveIntensity: 1.2 })
@@ -295,6 +300,11 @@ function startFree(bodies: Record<string, THREE.Group>) {
       if (!synced) { armTarget.extend = rs.extend; armTarget.lift = rs.lift; synced = true }
       $('arm').textContent = `アーム ${rs.extend.toFixed(2)} m, リフト ${rs.lift.toFixed(2)} m, 持っている ${rs.carried.length} 本, サイコロの目 ${rs.dice}`
       if (beacon && beaconOff) beacon.material = rs.signal ? beaconOn : beaconOff
+      const key = JSON.stringify(rs.action)
+      if (rs.action && key !== actionKey) {
+        actionKey = key
+        setAction(tm(rs.action), rs.action_ok)
+      }
     }
     if (performance.now() - shown > 500) { setConn(`シミュレーターの時刻 ${st.t.toFixed(1)} 秒`); shown = performance.now() }
   })

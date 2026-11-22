@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { render, substitute } from './index'
+import { expandMessages, render, substitute, type MessageLookup } from './index'
 
 describe('render', () => {
   it('見出しを 1 段下げる', () => {
@@ -56,5 +56,41 @@ describe('substitute', () => {
 
   it('ワークスペースが分からないときは置き換えない', () => {
     expect(substitute('~/src26_ws', undefined, 'x')).toBe('~/src26_ws')
+  })
+})
+
+describe('expandMessages', () => {
+  const EN: Record<string, string> = { 'srv.bell': 'Ding! (ring {{n}})', 'srv.water.tank_empty': 'Tank is empty.' }
+  const JA: Record<string, string> = { 'srv.bell': 'カーン ({{n}} 回目)', 'srv.water.tank_empty': 'タンクが空' }
+  const fill = (t: string, a: Record<string, string>) => t.replace(/\{\{(\w+)\}\}/g, (_, k: string) => a[k] ?? '')
+  const look: MessageLookup = {
+    original: (k, a) => fill(EN[k] as string, a),
+    translated: (k, a) => fill(JA[k] as string, a),
+    label: '訳',
+  }
+
+  it('output のブロックは英語の原文にし, 訳を引用で添える', () => {
+    const md = '```output\n$ ros2 service call /board/bell std_srvs/srv/Trigger\n{{msg:srv.bell|n=3}}\n```'
+    expect(expandMessages(md, look)).toBe(
+      '```text\n$ ros2 service call /board/bell std_srvs/srv/Trigger\nDing! (ring 3)\n```\n> 訳: カーン (3 回目)')
+  })
+
+  it('文の中では `原文` (訳: ...) にする', () => {
+    expect(expandMessages('- **{{msg:srv.water.tank_empty}} と出る:** 井戸へ', look))
+      .toBe('- **`Tank is empty.` (訳: タンクが空) と出る:** 井戸へ')
+  })
+
+  it('画面が英語なら訳を添えない', () => {
+    expect(expandMessages('{{msg:srv.water.tank_empty}}', { ...look, translated: null })).toBe('`Tank is empty.`')
+  })
+
+  it('ほかのコードブロックの中は展開しない', () => {
+    const md = '```cpp\n// {{msg:srv.bell}}\n```'
+    expect(expandMessages(md, look)).toBe(md)
+  })
+
+  it('展開したものを描くと, 原文はコード, 訳は引用になる', () => {
+    const html = render(expandMessages('```output\n{{msg:srv.bell|n=1}}\n```', look), { copy: 'Copy' })
+    expect(html).toBe('<div class="code"><button>Copy</button><pre data-lang="text">Ding! (ring 1)</pre></div>\n<blockquote>訳: カーン (1 回目)</blockquote>')
   })
 })

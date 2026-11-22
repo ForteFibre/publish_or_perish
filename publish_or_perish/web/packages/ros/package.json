@@ -4,6 +4,7 @@
   "type": "module",
   "exports": { ".": "./src/index.ts" },
   "dependencies": {
+    "@pop/i18n": "workspace:*",
     "roslib": "^2.1.0",
     "zod": "^4.6.7",
     "zustand": "^5.1.0"

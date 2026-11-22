@@ -3,6 +3,7 @@
 // HUD は React (../hud) が描く. ここから HUD へは ui.ts のストア (マスの情報, 浮かぶ文字) を通して渡す.
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
+import { tr } from '@pop/i18n'
 import type { FarmState, Fx } from '@pop/ros'
 import { pushFloat, useUi } from '../ui'
 import { sfx } from '../sfx'
@@ -233,16 +234,16 @@ export class FarmScene {
       case 'clear': this.#burst('dirt', x, z, 8); sfx.plant(); break
       case 'wither': this.#burst('smoke', x, z, 6); sfx.wither(); break
       case 'ripe': this.#burst('spark', x, z, 6); break
-      case 'refill': this.#burst('water', 0.5, -0.5, 12); this.#float('満タン', 0.5, 1.1, -0.5, '#bfe8ff'); break
+      case 'refill': this.#burst('water', 0.5, -0.5, 12); this.#float(tr('ui.scene.refill'), 0.5, 1.1, -0.5, '#bfe8ff'); break
       case 'wall': {
         const b = this.bots[f.bot]
-        if (b?.x != null && Math.random() < 0.3) { this.#float('ゴツン', b.x, 0.8, -b.y, '#ffe0a0'); sfx.wall() }
+        if (b?.x != null && Math.random() < 0.3) { this.#float(tr('ui.scene.bump'), b.x, 0.8, -b.y, '#ffe0a0'); sfx.wall() }
         break
       }
       case 'buy': this.#burst('confetti', s.w / 2, -s.h / 2, 40); sfx.buy(); break
       case 'board_answer':
-        if (f.value > 0) { this.#float('正解', bp.x, 2.8, bp.z, '#b8ffb0'); this.#burst('spark', bp.x, bp.z, 10); sfx.mission() }
-        else this.#float('ちがう', bp.x, 2.8, bp.z, '#ffc0b8')
+        if (f.value > 0) { this.#float(tr('ui.scene.correct'), bp.x, 2.8, bp.z, '#b8ffb0'); this.#burst('spark', bp.x, bp.z, 10); sfx.mission() }
+        else this.#float(tr('ui.scene.wrong'), bp.x, 2.8, bp.z, '#ffc0b8')
         break
       case 'board_bell': this.bellSwing = 1; sfx.bell(); break
     }

@@ -1,6 +1,7 @@
 // コードで作るローポリの形 (材質, 作物, ロボット, 井戸, 看板, 小屋, 文字の札).
 // Blender で作った glb に差し替えるときも, 画面が動かす部分は同じ名前にする (docs/design/web-architecture.md).
 import * as THREE from 'three'
+import { tr } from '@pop/i18n'
 
 /** 決まった並びの乱数 (毎回同じ景色にする) */
 export function seeded(seed: number): () => number {
@@ -245,7 +246,7 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   g.font = '600 26px sans-serif'
   g.fillText('/board/text', 24, 34)
   // 届いた文字は幅に収まるまで小さくする
-  const text = b.text || '(まだ何も届いていない)'
+  const text = b.text || tr('ui.scene.board_empty')
   let fs = 56
   g.font = `700 ${fs}px sans-serif`
   while (fs > 22 && g.measureText(text).width > 464) { fs -= 2; g.font = `700 ${fs}px sans-serif` }
@@ -254,8 +255,8 @@ export function drawBoard(v: BoardView, b: BoardFace) {
   if (b.text) {
     g.font = '500 22px sans-serif'
     g.fillStyle = '#a9c4b0'
-    const from: Record<string, string> = { player: '自分のノードから', cli: 'CLI から', mixed: '自分のノードと CLI から' }
-    g.fillText(from[b.text_src] ?? '', 24, 146)
+    const from = ['player', 'cli', 'mixed'].includes(b.text_src) ? tr(`ui.scene.from_${b.text_src}`) : ''
+    g.fillText(from, 24, 146)
   }
   g.strokeStyle = 'rgba(255,255,255,0.25)'
   g.lineWidth = 2
@@ -272,12 +273,12 @@ export function drawBoard(v: BoardView, b: BoardFace) {
     g.fillText(String(b.answer), 230, 260)
     g.font = '700 30px sans-serif'
     g.fillStyle = b.ok ? '#7be07b' : '#ff8a7a'
-    g.fillText(b.ok ? '正解' : 'ちがう', 340, 260)
+    g.fillText(tr(b.ok ? 'ui.scene.correct' : 'ui.scene.wrong'), 340, 260)
   }
   g.font = '500 22px sans-serif'
   g.fillStyle = '#a9c4b0'
   g.textAlign = 'right'
-  g.fillText(`鐘 ${b.bells} 回`, 492, 300)
+  g.fillText(tr('ui.scene.bells', { n: String(b.bells) }), 492, 300)
   g.textAlign = 'left'
   v.tex.needsUpdate = true
 }

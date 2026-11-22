@@ -1,6 +1,6 @@
 // 画面の中だけの状態 (農場には送らない). 開いている窓, 通知, マスの情報, 浮かぶ文字.
 import { create } from 'zustand'
-import type { Notice } from '@pop/ros'
+import type { Msg, Notice } from '@pop/ros'
 
 export type Modal = 'shop' | 'wires' | 'achs' | 'guide' | null
 
@@ -16,7 +16,7 @@ type Ui = {
   modal: Modal
   guideId: string | null
   toasts: Toast[]
-  banner: { title: string; body: string } | null
+  banner: { title: Msg; body: Msg } | null
   tip: Tip | null
   floats: Float[]
   open: (m: Modal) => void
@@ -42,7 +42,7 @@ export function pushToast(n: Notice) {
   setTimeout(() => useUi.setState(s => ({ toasts: s.toasts.filter(t => t.key !== key) })), 4200)
 }
 
-export function showBanner(title: string, body: string) {
+export function showBanner(title: Msg, body: Msg) {
   useUi.setState({ banner: { title, body } })
   setTimeout(() => useUi.setState({ banner: null }), 2600)
 }

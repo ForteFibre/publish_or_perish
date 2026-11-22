@@ -1,8 +1,15 @@
 // 農場の状態 (/farm/state の JSON) の形. farm_node.cpp の publish_state() と合わせる.
 // 0 / 1 で送ってくる真偽値は, そのまま数で受ける (画面の側で真偽に読む).
 import { z } from 'zod'
+import type { Msg as MsgT } from '@pop/i18n'
 
 const flag = z.union([z.literal(0), z.literal(1)])
+
+/** 文言 (キーと値). 文は訳の表にあり, 画面が訳す. 値は文字列か, それ自体を訳す文 */
+export const Msg: z.ZodType<MsgT> = z.lazy(() => z.object({
+  key: z.string(),
+  args: z.record(z.string(), z.union([z.string(), Msg])),
+}))
 
 /** [水分 0〜100, 作物の種類 (なければ null), 生育 0〜1, 枯れた, 井戸] */
 export const Tile = z.tuple([z.number(), z.string().nullable(), z.number(), flag, flag])
@@ -20,11 +27,9 @@ export const Bot = z.object({
   src: z.enum(['', 'cli', 'player', 'mixed']),
 })
 
+/** 題・説明・ヒントは訳の表の mission.<id>. unit は単位の種類 (unit.<unit>. 空なら単位なし) */
 export const Mission = z.object({
   id: z.string(),
-  title: z.string(),
-  desc: z.string(),
-  hint: z.string(),
   unit: z.string(),
   goal: z.number(),
   value: z.number(),
@@ -32,15 +37,17 @@ export const Mission = z.object({
   reward: z.number(),
 })
 
+/** 題と講習は訳の表の stage.<id> */
 export const Stage = z.object({
-  title: z.string(),
-  lesson: z.string(),
+  id: z.string(),
   missions: z.array(Mission),
 })
 
-export const Achievement = z.object({ name: z.string(), desc: z.string(), done: flag })
+/** 名前と説明は訳の表の achievement.<id>. まだ取っていない隠し実績の id は hidden */
+export const Achievement = z.object({ id: z.string(), done: flag })
 
-export const ShopItem = z.object({ id: z.string(), name: z.string(), desc: z.string(), price: z.number() })
+/** 名前と説明は訳の表の shop.<id> */
+export const ShopItem = z.object({ id: z.string(), price: z.number() })
 
 export const Board = z.object({
   text: z.string(),
@@ -60,7 +67,9 @@ export const Wire = z.object({
   type: z.string(),
   hz: z.number(),
   bps: z.number(),
-  warn: z.string(),
+  /** なければ null */
+  warn: Msg.nullable(),
+  /** 打ち間違いのとき, つもりだったらしい topic (なければ空) */
   hint: z.string(),
   pubs: z.array(WireEnd),
   subs: z.array(WireEnd),
@@ -69,14 +78,19 @@ export const Wire = z.object({
 export const Finding = z.object({
   id: z.string(),
   level: z.enum(['error', 'warn', 'info']),
-  title: z.string(),
-  detail: z.string(),
+  title: Msg,
+  detail: Msg,
+  /** コピーして使うコマンド (訳さない) */
   fix: z.string(),
   file: z.string(),
   line: z.number(),
 })
 
-export const LogLine = z.object({ id: z.number(), text: z.string(), ok: flag })
+/**
+ * 画面のログの 1 行. ターミナルにも出た結果 (service の返事など) は, tag (何への返事か) と
+ * text (ターミナルに出た英語の文) を持つ. それ以外は tag と text が空で, msg を訳して出す
+ */
+export const LogLine = z.object({ id: z.number(), msg: Msg, tag: z.string(), text: z.string(), ok: flag })
 
 export const Fx = z.object({
   id: z.number(),
@@ -91,16 +105,16 @@ export const Fx = z.object({
 export const Notice = z.object({
   id: z.number(),
   kind: z.string(),
-  title: z.string(),
-  body: z.string(),
+  title: Msg,
+  body: Msg,
 })
 
 export const FarmState = z.object({
   t: z.number(),
   money: z.number(),
   xp: z.number(),
+  /** 1 始まり. 称号は訳の表の title.<level> */
   level: z.number(),
-  title: z.string(),
   lv_xp: z.number(),
   next_xp: z.number(),
   w: z.number().int(),
@@ -113,6 +127,7 @@ export const FarmState = z.object({
   package: z.string(),
   /** すべてのステージを終えると無い */
   stage: Stage.optional(),
+  /** 準備中のステージ. 名前は訳の表の upcoming.<id> */
   upcoming: z.array(z.string()),
   achievements: z.array(Achievement),
   shop: z.array(ShopItem),
@@ -127,6 +142,7 @@ export const FarmState = z.object({
   notices: z.array(Notice),
 })
 
+export type Msg = MsgT
 export type Tile = z.infer<typeof Tile>
 export type Bot = z.infer<typeof Bot>
 export type Mission = z.infer<typeof Mission>

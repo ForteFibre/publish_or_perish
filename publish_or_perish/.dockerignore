@@ -1,3 +1,5 @@
-node_modules
+# docker build -f web/Dockerfile . で, コンテナに持ち込まないもの
 **/node_modules
-dist
+web/dist
+models
+launch

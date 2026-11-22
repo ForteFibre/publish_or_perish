@@ -1,15 +1,20 @@
-// 課題の説明 (guide/<言語>/<課題の id>.md) を読む. 一度読んだものは覚えておく.
+// 課題の説明 (guide/<言語>/<課題の id>.md) を読む. その言語の版がなければ日本語の版を読む. 一度読んだものは覚えておく.
 import { useEffect, useState } from 'react'
+import { currentLang } from '@pop/i18n'
 import { inVSCode, useUi } from '../ui'
 
-const LANG = 'ja'
 const cache = new Map<string, Promise<string | null>>()
 
+const fetchText = (path: string) =>
+  fetch(path, { cache: 'no-cache' }).then(r => r.ok ? r.text() : null).catch(() => null)
+
 export function loadGuide(id: string): Promise<string | null> {
-  let p = cache.get(id)
+  const lang = currentLang()
+  const key = `${lang}/${id}`
+  let p = cache.get(key)
   if (!p) {
-    p = fetch(`guide/${LANG}/${id}.md`, { cache: 'no-cache' }).then(r => r.ok ? r.text() : null).catch(() => null)
-    cache.set(id, p)
+    p = fetchText(`guide/${lang}/${id}.md`).then(t => t ?? (lang === 'ja' ? null : fetchText(`guide/ja/${id}.md`)))
+    cache.set(key, p)
   }
   return p
 }

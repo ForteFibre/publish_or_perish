@@ -80,6 +80,10 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
 #log div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #log .ng { color: #ffb4a8; }
 #log .t { color: #7b9a7b; margin-right: 8px; }
+/* ターミナルにも出た結果: 英語の原文 (ターミナルと同じ等幅) と, その下に訳 */
+#log .cli span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#log .cli .tr { color: #9db99d; font-size: 11px; padding-left: 1.2em; }
+#log .cli.ng .tr { color: #e0a49a; }
 
 /* 右下: ボタン */
 #buttons { position: fixed; right: 16px; bottom: 16px; display: flex; gap: 8px; }
@@ -124,6 +128,7 @@ code, .mono { font-family: "Cascadia Code", "DejaVu Sans Mono", Consolas, monosp
 #guidebody details[open] { padding-bottom: 6px; }
 #guidebody summary { cursor: pointer; font-weight: 700; padding: 6px 0; color: #1d4f80; }
 #guidebody .code { position: relative; margin: 8px 0; }
+#guidebody blockquote { margin: 4px 0 10px; padding: 4px 10px; border-left: 4px solid var(--line); color: var(--sub); font-size: 13px; }
 #guidebody .code pre { background: #263238; color: #d7f5c9; border-radius: 8px; padding: 10px 12px; margin: 0;
   overflow-x: auto; font-family: "Noto Sans Mono", monospace; font-size: 12.5px; line-height: 1.5; }
 #guidebody .code button { position: absolute; right: 6px; top: 6px; border: 0; border-radius: 6px; background: #445a63;
