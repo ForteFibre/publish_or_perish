@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(publish_or_perish)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -31,8 +31,9 @@ target_include_directories(farm_core PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/generated>)
 
 add_executable(farm_node src/farm_node.cpp)
-target_link_libraries(farm_node farm_core)
-ament_target_dependencies(farm_node rclcpp geometry_msgs nav_msgs std_msgs std_srvs)
+# ament_target_dependencies は Lyrical で無くなったので, ターゲットを直接つなぐ (Jazzy でも同じに動く)
+target_link_libraries(farm_node farm_core
+  rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS} ${std_msgs_TARGETS} ${std_srvs_TARGETS})
 
 install(TARGETS farm_node DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch scripts models DESTINATION share/${PROJECT_NAME})
