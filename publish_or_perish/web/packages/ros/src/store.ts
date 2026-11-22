@@ -1,6 +1,8 @@
 // 農場の状態のストア. rosbridge から /farm/state を受けて入れ, /farm/ui へ操作を送る.
 // HUD はセレクターで必要な部分だけを読む. 3D は useFarm.getState() で毎フレーム読む (React を再描画しない).
 import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
+import { devtoolsEnabled } from './devtools'
 import { encodeUi, type FarmState, parseFarmState, type UiCommand } from './farm'
 import { defaultUrl, RosLink } from './link'
 
@@ -11,11 +13,16 @@ export type FarmStore = {
   send: (cmd: UiCommand) => void
 }
 
-export const useFarm = create<FarmStore>(() => ({
-  connected: null,
-  state: null,
-  send: () => {},
-}))
+export const useFarm = create<FarmStore>()(
+  devtools(
+    () => ({
+      connected: null,
+      state: null,
+      send: () => {},
+    }),
+    { name: 'farm', enabled: devtoolsEnabled() },
+  ),
+)
 
 /** 農場につなぐ. 返す関数で切る */
 export function connectFarm(url = defaultUrl(), check = import.meta.env.DEV): () => void {

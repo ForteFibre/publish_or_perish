@@ -1,7 +1,8 @@
-// 農場の画面. rosbridge (ws://<host>:9090) で /farm/state を読み, /farm/ui に操作を送る.
+// 農場の画面. rosbridge (同じ口の /rosbridge) で /farm/state を読み, /farm/ui に操作を送る.
+// ?fixture=farm-mistakes を付けると, 農場につながずに記録した状態で動く (packages/ros/src/fixtures/).
 
 import { initI18n } from '@pop/i18n'
-import { connectFarm } from '@pop/ros'
+import { connectFarm, loadFixture, pickFixture } from '@pop/ros'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Modals } from './hud/Modals'
@@ -33,7 +34,9 @@ function App() {
 // 訳の表を読んでから描く (表は小さいので待っても目立たない)
 void initI18n().then(lng => {
   document.documentElement.lang = lng.language
-  connectFarm()
+  const fixture = pickFixture()
+  if (fixture) void loadFixture(fixture)
+  else connectFarm()
   createRoot(document.getElementById('root') as HTMLElement).render(
     <StrictMode>
       <App />

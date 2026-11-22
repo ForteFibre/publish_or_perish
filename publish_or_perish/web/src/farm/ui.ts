@@ -1,7 +1,8 @@
 // 画面の中だけの状態 (農場には送らない). 開いている窓, 通知, マスの情報, 浮かぶ文字.
 
-import type { Msg, Notice } from '@pop/ros'
+import { devtoolsEnabled, type Msg, type Notice } from '@pop/ros'
 import { create } from 'zustand'
+import { devtools } from 'zustand/middleware'
 
 export type Modal = 'shop' | 'wires' | 'achs' | 'guide' | null
 
@@ -24,16 +25,21 @@ type Ui = {
   close: () => void
 }
 
-export const useUi = create<Ui>(set => ({
-  modal: null,
-  guideId: null,
-  toasts: [],
-  banner: null,
-  tip: null,
-  floats: [],
-  open: modal => set({ modal }),
-  close: () => set({ modal: null }),
-}))
+export const useUi = create<Ui>()(
+  devtools(
+    set => ({
+      modal: null,
+      guideId: null,
+      toasts: [],
+      banner: null,
+      tip: null,
+      floats: [],
+      open: modal => set({ modal }),
+      close: () => set({ modal: null }),
+    }),
+    { name: 'ui', enabled: devtoolsEnabled() },
+  ),
+)
 
 let seq = 0
 

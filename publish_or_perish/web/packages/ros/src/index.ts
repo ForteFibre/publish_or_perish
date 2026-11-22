@@ -1,3 +1,5 @@
+export { devtoolsEnabled } from './devtools'
 export * from './farm'
+export { fixtureNames, loadFixture, pickFixture } from './fixture'
 export { defaultUrl, RosLink } from './link'
 export { connectFarm, type FarmStore, useFarm } from './store'
