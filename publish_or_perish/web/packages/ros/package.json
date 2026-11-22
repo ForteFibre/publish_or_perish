@@ -1,0 +1,11 @@
+{
+  "name": "@pop/ros",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "dependencies": {
+    "roslib": "^2.1.0",
+    "zod": "^4.6.7",
+    "zustand": "^5.1.0"
+  }
+}
