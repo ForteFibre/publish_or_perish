@@ -27,17 +27,17 @@ ros2 run tutorial_nodes watch_node
 | 書き方 | 意味 |
 |---|---|
 | `create_subscription<型>("topic 名", 10, 関数)` | その topic を受け取る Subscriber を作る。メッセージが届くたびに 3 つ目の関数が呼ばれる (呼ばれるのは `rclcpp::spin` の中) |
-| `[this](const geometry_msgs::msg::Pose2D & msg) {...}` | 届いたメッセージを `msg` で受け取る関数の書き方 |
+| `[this](const geometry_msgs::msg::Pose & msg) {...}` | 届いたメッセージを `msg` で受け取る関数の書き方 |
 | `rclcpp::Subscription<型>::SharedPtr` | Subscriber をしまっておく変数の型。メンバ変数にする |
-| `#include <geometry_msgs/msg/pose2_d.hpp>` `#include <nav_msgs/msg/occupancy_grid.hpp>` | 2 つの型を使うための include |
-| `geometry_msgs/msg/Pose2D` | `x` `y` [m] と `theta` [rad]。1 マス = 1 m なので、`std::floor(x)` がマスの番号 (`#include <cmath>`) |
+| `#include <geometry_msgs/msg/pose.hpp>` `#include <nav_msgs/msg/occupancy_grid.hpp>` | 2 つの型を使うための include |
+| `geometry_msgs/msg/Pose` | 位置 `position` (`x` `y` `z` [m]) と向き `orientation`。1 マス = 1 m なので、`std::floor(msg.position.x)` がマスの番号 (`#include <cmath>`)。向きはクォータニオン (`x` `y` `z` `w`) という形で入っている。この課題では向きは使わない |
 | `nav_msgs/msg/OccupancyGrid` | マス目の値を 1 列に並べたもの。マス (x, y) の値は `data[y * info.width + x]` |
 
 農場が出している topic:
 
 | topic | 型 | 中身 |
 |---|---|---|
-| `/bot1/pose` | `geometry_msgs/msg/Pose2D` | ロボットの位置と向き (20 回/秒) |
+| `/bot1/pose` | `geometry_msgs/msg/Pose` | ロボットの位置と向き (20 回/秒) |
 | `/bot1/tank` | `std_msgs/msg/Int32` | 水タンクの残り |
 | `/field/moisture` | `nav_msgs/msg/OccupancyGrid` | マスの水分 0〜100 (5 回/秒) |
 | `/field/crops` | `nav_msgs/msg/OccupancyGrid` | 作物の育ち具合。-1: なし、0〜99: 育っている途中、100: 実った、-2: 枯れた |
@@ -53,8 +53,8 @@ ros2 run tutorial_nodes watch_node
 <details><summary>ヒント 2: 今いるマスの水分を出す</summary>
 
 ```cpp
-const int x = static_cast<int>(std::floor(pose_.x));
-const int y = static_cast<int>(std::floor(pose_.y));
+const int x = static_cast<int>(std::floor(pose_.position.x));
+const int y = static_cast<int>(std::floor(pose_.position.y));
 const int m = moisture_.data[y * moisture_.info.width + x];
 ```
 

@@ -44,7 +44,7 @@ ros2 run tutorial_nodes farmer_node
 
 | 使うもの | 名前 | 型 |
 |---|---|---|
-| 受け取る | `/bot1/pose` | `geometry_msgs/msg/Pose2D` |
+| 受け取る | `/bot1/pose` | `geometry_msgs/msg/Pose`。位置は `position.x` `position.y`、向きは `orientation` (下のヒント 3) |
 | 受け取る | `/bot1/tank` | `std_msgs/msg/Int32` (`#include <std_msgs/msg/int32.hpp>`、値は `msg.data`) |
 | 受け取る | `/field/moisture` `/field/crops` | `nav_msgs/msg/OccupancyGrid`。crops は -1: なし、0〜99: 育っている途中、100: 実った、-2: 枯れた |
 | 送る | `/bot1/cmd_vel` | `geometry_msgs/msg/Twist` |
@@ -74,7 +74,7 @@ ros2 run tutorial_nodes farmer_node
 全部のマスを調べ、1〜4 の条件に合うマスの中から 1 つ選ぶ。優先度と近さを一度に比べるには、距離に「罰点」を足した値がいちばん小さいマスを選ぶ。罰点は、収穫 0、水やり 0.5、種まき 3.0 のようにする (罰点 3.0 は「3 m 遠い」のと同じ扱い)。
 
 ```cpp
-const double d = std::hypot(x + 0.5 - pose_.x, y + 0.5 - pose_.y) + penalty;
+const double d = std::hypot(x + 0.5 - pose_.position.x, y + 0.5 - pose_.position.y) + penalty;
 ```
 
 `x + 0.5` は、マス x の中心の座標。
@@ -83,14 +83,18 @@ const double d = std::hypot(x + 0.5 - pose_.x, y + 0.5 - pose_.y) + penalty;
 
 <details><summary>ヒント 3: マスへ向かう速度</summary>
 
-`/bot1/pose` は畑の向き、`cmd_vel` はロボットから見た向き (x 前・y 左)。ロボットが `theta` 回っていると両者がずれるので、差を `-theta` 回してから速度にする。
+`/bot1/pose` は畑の向き、`cmd_vel` はロボットから見た向き (x 前・y 左)。ロボットが角度 `th` だけ回っていると両者がずれるので、差を `-th` 回してから速度にする。
+
+向き `orientation` はクォータニオンという 4 つの数 (`x` `y` `z` `w`) で入っている。ロボットは床の上で回るだけなので、角度 [rad] は `z` と `w` から求まる。
 
 ```cpp
-const double ex = tx_ + 0.5 - pose_.x, ey = ty_ + 0.5 - pose_.y;   // 行き先までの差 (畑の向き)
-const double c = std::cos(pose_.theta), s = std::sin(pose_.theta);
+const auto & p = pose_.position, & q = pose_.orientation;
+const double th = 2.0 * std::atan2(q.z, q.w);                       // 向きの角度 [rad]
+const double ex = tx_ + 0.5 - p.x, ey = ty_ + 0.5 - p.y;           // 行き先までの差 (畑の向き)
+const double c = std::cos(th), s = std::sin(th);
 cmd.linear.x = std::clamp(2.0 * (c * ex + s * ey), -1.2, 1.2);      // ロボットから見た前
 cmd.linear.y = std::clamp(2.0 * (-s * ex + c * ey), -1.2, 1.2);     // ロボットから見た左
-cmd.angular.z = -2.0 * pose_.theta;                                  // 向きを 0 に戻していく
+cmd.angular.z = -2.0 * th;                                           // 向きを 0 に戻していく
 ```
 
 中心まで 0.12 m 以内 (`std::hypot(ex, ey) <= 0.12`) なら着いたとする。

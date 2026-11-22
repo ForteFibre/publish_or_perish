@@ -68,7 +68,7 @@ ros2 launch publish_or_perish match.launch.xml
 | `/robot/cmd_vel` | `geometry_msgs/msg/Twist` | 送る | 台車の速度 (機体座標, x 前 / y 左)。0.5 秒途切れると止まる。最大 2 m/s, 3 rad/s |
 | `/robot/arm/extend` | `std_msgs/msg/Float64` | 送る | アームの伸びの目標 [m] (0〜0.42)。0.4 m/s で動く |
 | `/robot/arm/lift` | `std_msgs/msg/Float64` | 送る | リフトの高さの目標 [m] (0〜0.35)。0.3 m/s で動く |
-| `/robot/pose` | `geometry_msgs/msg/Pose2D` | 受ける | 台車の位置 [m] と向き [rad]。原点はフィールドの中心, x は赤コートから青コートへ, y はスタートゾーンから奥へ |
+| `/robot/pose` | `geometry_msgs/msg/Pose` | 受ける | 台車の位置 [m] と向き (z 軸まわりのクォータニオン)。原点はフィールドの中心, x は赤コートから青コートへ, y はスタートゾーンから奥へ |
 | `/robot/status` | `std_msgs/msg/String` | 受ける | アーム・リフト・持っているボトル・サイコロの目・合図・最後の操作の結果 (JSON。`last_action` は英語の文, `action` はキーと値) |
 | `/robot/grab` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの前に立っているボトル (自チームの桜ボトルと除草剤ボトル) をつかむ。リフトを 0.03 m 以下に下ろしておく。持てるのはサイコロの目の数まで (ルール 5.4) |
 | `/robot/place` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの真ん中のボトルを今の高さで離す (下ろしてから離す) |
@@ -137,7 +137,7 @@ ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ス
 | 名前 | 型 | 向き | 内容 |
 |---|---|---|---|
 | `/bot1/cmd_vel` | `geometry_msgs/msg/Twist` | 送る | 速度 (機体座標, x 前 / y 左)。0.5 秒途切れると止まる |
-| `/bot1/pose` | `geometry_msgs/msg/Pose2D` | 受ける | 位置 [m] と向き [rad]。1 マス = 1 m |
+| `/bot1/pose` | `geometry_msgs/msg/Pose` | 受ける | 位置 `position` [m] と向き `orientation` (z 軸まわりのクォータニオン。角度 [rad] は `2 * atan2(z, w)`)。1 マス = 1 m |
 | `/bot1/tank` | `std_msgs/msg/Int32` | 受ける | 水タンクの残り。井戸 (マス (0, 0)) に立つと満タン |
 | `/bot1/plant` `/bot1/water` `/bot1/harvest` | `std_srvs/srv/Trigger` | 呼ぶ | 足元のマスに種まき / 水やり / 収穫 |
 | `/bot2/...` | 同上 | | 2 台目を買うと増える |

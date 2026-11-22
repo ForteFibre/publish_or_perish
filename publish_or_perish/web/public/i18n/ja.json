@@ -93,7 +93,7 @@
     },
     "s1_echo": {
       "title": "位置を見る",
-      "desc": "/bot1/pose を subscribe して, ロボットの位置 (x, y, theta) を表示する。",
+      "desc": "/bot1/pose を subscribe して, ロボットの位置 (position) と向き (orientation) を表示する。",
       "hint": "ros2 topic echo /bot1/pose"
     },
     "s1_plant": {
@@ -354,7 +354,7 @@
     },
     "header_name": {
       "title": "ヘッダーのファイル名が違う",
-      "full": "ヘッダーのファイル名が違う\nmsg のヘッダーは小文字とアンダースコア (例: Twist → twist.hpp, Pose2D → pose2_d.hpp)。"
+      "full": "ヘッダーのファイル名が違う\nmsg のヘッダーは小文字とアンダースコア (例: Twist → twist.hpp, OccupancyGrid → occupancy_grid.hpp)。"
     },
     "semicolon": {
       "title": "セミコロンがない",

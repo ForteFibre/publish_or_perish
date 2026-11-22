@@ -9,7 +9,7 @@ topic
   /robot/cmd_vel     geometry_msgs/msg/Twist   受ける  台車の速度 (機体座標, x 前 / y 左 [m/s], z まわり [rad/s]). 0.5 秒途切れると止まる
   /robot/arm/extend  std_msgs/msg/Float64      受ける  アームの伸び [m] の目標 (0〜0.42). 0.4 m/s で近づく
   /robot/arm/lift    std_msgs/msg/Float64      受ける  リフトの高さ [m] の目標 (0〜0.35). 0.3 m/s で近づく
-  /robot/pose        geometry_msgs/msg/Pose2D  出す    台車の位置 [m] と向き [rad]. 原点はフィールドの中心, x 右 (赤 → 青), y 奥
+  /robot/pose        geometry_msgs/msg/Pose    出す    台車の位置 [m] と向き (z 軸まわりのクォータニオン). 原点はフィールドの中心, x 右 (赤 → 青), y 奥
   /robot/status      std_msgs/msg/String       出す    アーム・リフト・持っているボトル・サイコロの目など (JSON)
   /match/state       std_msgs/msg/String       出す    画面用. 動く物の位置と向き (JSON)
 service (std_srvs/srv/Trigger. 結果は response の message に英語で返す. 文は訳の表 share/publish_or_perish/i18n/en.json)
@@ -31,7 +31,7 @@ import mujoco
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import Pose2D, Twist
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist
 from rclpy.node import Node
 from std_msgs.msg import Float64, String
 from std_srvs.srv import Trigger
@@ -126,7 +126,7 @@ class MatchSim(Node):
         self.create_subscription(Twist, '/robot/cmd_vel', self.on_cmd, 10)
         self.create_subscription(Float64, '/robot/arm/extend', lambda msg: self.set_target('extend', msg.data), 10)
         self.create_subscription(Float64, '/robot/arm/lift', lambda msg: self.set_target('lift', msg.data), 10)
-        self.pose_pub = self.create_publisher(Pose2D, '/robot/pose', 10)
+        self.pose_pub = self.create_publisher(Pose, '/robot/pose', 10)
         self.status_pub = self.create_publisher(String, '/robot/status', 10)
         self.state_pub = self.create_publisher(String, '/match/state', 10)
         for name, fn in (('/robot/grab', self.grab), ('/robot/place', self.place), ('/robot/throw', self.throw),
@@ -348,7 +348,8 @@ class MatchSim(Node):
     def publish(self):
         # スライドの qpos は body の初期位置からのずれなので, 位置は xpos から取る
         rp = self.d.xpos[self.robot_id]
-        self.pose_pub.publish(Pose2D(x=float(rp[0]), y=float(rp[1]), theta=float(self.robot_yaw())))
+        w, _, _, z = yaw_quat(self.robot_yaw())
+        self.pose_pub.publish(Pose(position=Point(x=float(rp[0]), y=float(rp[1])), orientation=Quaternion(z=float(z), w=float(w))))
         status = {'extend': round(float(self.d.qpos[self.ext_adr]), 3), 'lift': round(float(self.d.qpos[self.lift_adr]), 3),
                   'carried': self.carried, 'dice': self.dice_top(), 'signal': self.signal,
                   # last_action は英語の文 (ros2 topic echo で読む人向け). 画面は action (キーと値) を訳す

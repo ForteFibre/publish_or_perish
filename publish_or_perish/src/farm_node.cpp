@@ -14,7 +14,7 @@
 #include "publish_or_perish/doctor.hpp"
 #include "publish_or_perish/progress.hpp"
 #include "publish_or_perish/world.hpp"
-#include "geometry_msgs/msg/pose2_d.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -181,7 +181,7 @@ private:
         p + "cmd_vel", 10, [this, name](const geometry_msgs::msg::Twist & m) {
           world_.command(name, m.linear.x, m.linear.y, m.angular.z, cmd_source(name));
         }));
-    pose_pubs_[name] = create_publisher<geometry_msgs::msg::Pose2D>(p + "pose", 10);
+    pose_pubs_[name] = create_publisher<geometry_msgs::msg::Pose>(p + "pose", 10);
     tank_pubs_[name] = create_publisher<std_msgs::msg::Int32>(p + "tank", 10);
     using Trigger = std_srvs::srv::Trigger;
     auto serve = [this, name, p](const std::string & srv, auto op) {
@@ -512,10 +512,12 @@ private:
   void publish_poses()
   {
     for (const auto & [name, b] : world_.bots) {
-      geometry_msgs::msg::Pose2D p;
-      p.x = b.x;
-      p.y = b.y;
-      p.theta = b.th;
+      // 位置 [m] と向き. 向きは床の上で z 軸まわりに th [rad] 回したクォータニオン (Pose2D は Lyrical で無くなった)
+      geometry_msgs::msg::Pose p;
+      p.position.x = b.x;
+      p.position.y = b.y;
+      p.orientation.z = std::sin(b.th / 2);
+      p.orientation.w = std::cos(b.th / 2);
       pose_pubs_[name]->publish(p);
       std_msgs::msg::Int32 t;
       t.data = b.tank;
@@ -875,7 +877,7 @@ private:
   std::chrono::steady_clock::time_point last_;
 
   std::vector<rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr> cmd_subs_;
-  std::map<std::string, rclcpp::Publisher<geometry_msgs::msg::Pose2D>::SharedPtr> pose_pubs_;
+  std::map<std::string, rclcpp::Publisher<geometry_msgs::msg::Pose>::SharedPtr> pose_pubs_;
   std::map<std::string, rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr> tank_pubs_;
   std::vector<rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr> services_;
   rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr moisture_pub_, crops_pub_;

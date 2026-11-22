@@ -1,5 +1,5 @@
 // ステージ 6・8 の解答例: 畑を見て, 収穫 → 水やり → 種まき を自動で回す.
-//   subscribe: pose (Pose2D), tank (Int32), /field/moisture, /field/crops (OccupancyGrid)
+//   subscribe: pose (Pose), tank (Int32), /field/moisture, /field/crops (OccupancyGrid)
 //   publish  : cmd_vel
 //   service  : plant, water, harvest (std_srvs/Trigger)
 // ロボットの topic は / なしの名前なので, namespace でどのロボットにつなぐかが決まる.
@@ -10,7 +10,7 @@
 #include <cmath>
 #include <limits>
 
-#include "geometry_msgs/msg/pose2_d.hpp"
+#include "geometry_msgs/msg/pose.hpp"
 #include "geometry_msgs/msg/twist.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include "rclcpp/rclcpp.hpp"
@@ -29,8 +29,14 @@ public:
     max_crops_ = declare_parameter("max_crops", 10);  // 同時に育てる数. 多すぎると水やりが追いつかない
     x_min_ = declare_parameter("x_min", 0);
     x_max_ = declare_parameter("x_max", 100);
-    pose_sub_ = create_subscription<geometry_msgs::msg::Pose2D>(
-      "pose", 10, [this](const geometry_msgs::msg::Pose2D & m) {pose_ = m; has_pose_ = true;});
+    pose_sub_ = create_subscription<geometry_msgs::msg::Pose>(
+      "pose", 10, [this](const geometry_msgs::msg::Pose & m) {
+        // 向きはクォータニオン. 床の上で回るだけなので, z と w から角度 [rad] が求まる
+        x_ = m.position.x;
+        y_ = m.position.y;
+        th_ = 2.0 * std::atan2(m.orientation.z, m.orientation.w);
+        has_pose_ = true;
+      });
     tank_sub_ = create_subscription<std_msgs::msg::Int32>(
       "tank", 10, [this](const std_msgs::msg::Int32 & m) {tank_ = m.data;});
     auto qos = rclcpp::QoS(1).transient_local();
@@ -65,7 +71,7 @@ private:
     double best = std::numeric_limits<double>::max();
     job_ = Job::None;
     auto consider = [&](Job j, int x, int y, double penalty) {
-        const double d = std::hypot(x + 0.5 - pose_.x, y + 0.5 - pose_.y) + penalty;
+        const double d = std::hypot(x + 0.5 - x_, y + 0.5 - y_) + penalty;
         if (d < best) {best = d; job_ = j; tx_ = x; ty_ = y;}
       };
     if (tank_ == 0) {
@@ -91,13 +97,13 @@ private:
     if (job_ == Job::None) {choose();}
     if (job_ == Job::None) {return;}
     // マスの中心へ P 制御で近づく (field 座標の誤差を機体座標に回す)
-    const double ex = tx_ + 0.5 - pose_.x, ey = ty_ + 0.5 - pose_.y;
+    const double ex = tx_ + 0.5 - x_, ey = ty_ + 0.5 - y_;
     geometry_msgs::msg::Twist cmd;
     if (std::hypot(ex, ey) > 0.12) {
-      const double c = std::cos(pose_.theta), s = std::sin(pose_.theta);
+      const double c = std::cos(th_), s = std::sin(th_);
       cmd.linear.x = std::clamp(2.0 * (c * ex + s * ey), -1.2, 1.2);
       cmd.linear.y = std::clamp(2.0 * (-s * ex + c * ey), -1.2, 1.2);
-      cmd.angular.z = -2.0 * pose_.theta;
+      cmd.angular.z = -2.0 * th_;
       cmd_pub_->publish(cmd);
       return;
     }
@@ -118,14 +124,14 @@ private:
   }
 
   int max_crops_, x_min_, x_max_;
-  geometry_msgs::msg::Pose2D pose_;
+  double x_ = 0.0, y_ = 0.0, th_ = 0.0;  // 位置 [m] と向き [rad]
   bool has_pose_ = false, busy_ = false, stale_ = false;
   int tank_ = 10;
   nav_msgs::msg::OccupancyGrid moisture_, crops_;
   Job job_ = Job::None;
   int tx_ = 0, ty_ = 0;
 
-  rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
+  rclcpp::Subscription<geometry_msgs::msg::Pose>::SharedPtr pose_sub_;
   rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr tank_sub_;
   rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr moist_sub_, crops_sub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_pub_;
