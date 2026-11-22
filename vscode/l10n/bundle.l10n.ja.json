@@ -1,0 +1,13 @@
+{
+  "Farm": "畑",
+  "No current task. The farm is not running, or every stage is cleared.": "今の課題がない (農場が起動していないか, すべてクリアした)",
+  "This task has no guide yet.": "この課題の説明はまだない",
+  "Fix: {0}": "直し方: {0}",
+  "Farm check": "農場の点検",
+  "Check {0}": "点検 {0}",
+  "Wiring": "配線",
+  "Open the guide (Ctrl+Alt+G)": "説明を開く (Ctrl+Alt+G)",
+  "Lv {0} ・ {1} G ・ Click to open the farm in a small window": "Lv {0} ・ {1} G ・ クリックで畑を小窓で開く",
+  "Farm: not connected": "農場: 未接続",
+  "Start the farm with ros2 launch publish_or_perish farm.launch.xml, and the current task appears here.": "ros2 launch publish_or_perish farm.launch.xml で農場を起動すると, ここに今の課題が出る"
+}

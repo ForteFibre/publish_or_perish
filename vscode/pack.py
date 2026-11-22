@@ -15,7 +15,7 @@ from pathlib import Path
 from xml.sax.saxutils import escape
 
 HERE = Path(__file__).resolve().parent
-FILES = ['package.json', 'extension.js']
+FILES = ['package.json', 'package.nls.json', 'package.nls.ja.json', 'extension.js', 'l10n/bundle.l10n.ja.json']
 
 CONTENT_TYPES = '''<?xml version="1.0" encoding="utf-8"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
@@ -49,6 +49,9 @@ def manifest(pkg):
 
 def main():
     pkg = json.loads((HERE / 'package.json').read_text())
+    # package.json の %キー% は package.nls.json (英語) の文にして manifest に書く (VSCode の中では表示言語で引き直される)
+    nls = json.loads((HERE / 'package.nls.json').read_text())
+    pkg['description'] = nls.get(pkg['description'].strip('%'), pkg['description'])
     out = HERE / f"{pkg['name']}.vsix"
     with zipfile.ZipFile(out, 'w', zipfile.ZIP_DEFLATED) as z:
         z.writestr('[Content_Types].xml', CONTENT_TYPES)

@@ -1,0 +1,9 @@
+{
+  "description": "Open the ROS 2 farm game inside VSCode",
+  "command.open": "Open the farm",
+  "command.pip": "Open the farm in a small window (always on top)",
+  "command.guide": "Open the guide for the current task",
+  "config.title": "Publish or Perish",
+  "config.url": "URL of the game screen",
+  "config.rosbridge": "URL of rosbridge (used by the status bar)"
+}
