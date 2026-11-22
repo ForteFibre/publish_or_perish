@@ -1,11 +1,17 @@
-// rosbridge (ws://<host>:9090) との接続. 切れたら 1.5 秒ごとにつなぎ直す.
+// rosbridge との接続. 切れたら 1.5 秒ごとにつなぎ直す.
 // topic の購読と advertise は, つなぎ直したときに roslib がやり直す (reconnect_on_close).
 import { Ros, Service, Topic } from 'roslib'
 
-/** ?rosbridge=<ポート> で別の農場につなぐ (試験用. 普段は 9090) */
-export function defaultUrl(): string {
-  const port = new URLSearchParams(location.search).get('rosbridge') ?? '9090'
-  return `ws://${location.hostname || 'localhost'}:${port}`
+/**
+ * rosbridge の URL. 普段は画面と同じ口の /rosbridge (画面を配るサーバーが rosbridge (9090) に中継する).
+ * ?rosbridge=<ポート> で同じホストのそのポートに直接, ?rosbridge=<URL> (wss://... など) でその URL につなぐ
+ */
+export function defaultUrl(search = location.search, loc: { host: string; hostname: string; protocol: string } = location): string {
+  const q = new URLSearchParams(search).get('rosbridge')
+  if (q?.includes('://')) return q
+  const scheme = loc.protocol === 'https:' ? 'wss' : 'ws'
+  if (q) return `${scheme}://${loc.hostname || 'localhost'}:${q}`
+  return `${scheme}://${loc.host || 'localhost:8765'}/rosbridge`
 }
 
 export class RosLink {

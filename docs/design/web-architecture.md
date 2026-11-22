@@ -28,6 +28,7 @@
 - 農場の規則と課題の判定は C++ の `farm_node` が持つ。画面は状態を映し、お店と早送りの操作を送るだけである
 - 大会モードの物理は Python の `match_sim.py` (MuJoCo) が計算する。画面には物理を置かない
 - 画面と ROS のあいだは rosbridge (WebSocket, 9090) でつなぐ。状態は `std_msgs/msg/String` の JSON で受ける
+- 画面は、画面を配るサーバー (`web_server.py`) の `/rosbridge` を通して rosbridge につなぐ。画面と rosbridge を同じ口 (ホストとポート) にしておくと、ログインの要るリバースプロキシを通して画面を公開したときも届く。`?rosbridge=<ポート または URL>` で直接つなぐこともできる
 - 画面はオフラインで動く。実行時に CDN からは何も読まない
 - `farm_node` はホストで動かす。点検は受講生の `~/.bashrc`、ワークスペース、`/proc/<pid>` をホストから読むので、コンテナに入れると働かない
 - VSCode 拡張は画面の URL を iframe で開くだけである。拡張そのものを React にはしない

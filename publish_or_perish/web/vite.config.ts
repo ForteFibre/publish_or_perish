@@ -8,6 +8,8 @@ import { defineConfig } from 'vite'
 export default defineConfig({
   plugins: [react()],
   base: './',
+  // 開発用のサーバーでも, 本番の web_server.py と同じく /rosbridge を rosbridge (9090) に中継する
+  server: { proxy: { '/rosbridge': { target: 'ws://localhost:9090', ws: true, rewrite: () => '/' } } },
   build: {
     outDir: 'dist',
     // localhost から配るので, three.js を含む vendor.js が大きくても困らない

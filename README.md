@@ -194,7 +194,7 @@ cd ~/src26_ws && colcon build --symlink-install --merge-install --packages-selec
 ```bash
 cd publish_or_perish/web
 pnpm install
-pnpm dev          # http://localhost:5173 (rosbridge の 9090 に直接つなぐ)。大会モードは /match.html
+pnpm dev          # http://localhost:5173 (/rosbridge を 9090 に中継する)。大会モードは /match.html
 pnpm test         # ガイドの描画, 記録した /farm/state がスキーマに合うか, 訳の表と C++ / match_sim.py / 画面が合っているか
 pnpm typecheck
 ```
@@ -206,7 +206,7 @@ pnpm typecheck
 - `publish_or_perish/src/world.cpp`: 農場の規則 (ROS に依存しない)
 - `publish_or_perish/src/progress.cpp`: 課題・実績・レベル
 - `publish_or_perish/src/farm_node.cpp`: ROS の topic / service、グラフの読み取り、保存、画面用の状態 (`/farm/state`)
-- `publish_or_perish/web/`: 画面 (React, three.js, TypeScript)。rosbridge (9090) で `/farm/state` を読み、`/farm/ui` にお店と早送りの操作を送る。作り方は「画面を作る」、設計は `docs/design/web-architecture.md`
+- `publish_or_perish/web/`: 画面 (React, three.js, TypeScript)。画面を配るサーバー (`scripts/web_server.py`) の `/rosbridge` を通して rosbridge (9090) につなぎ、`/farm/state` を読み、`/farm/ui` にお店と早送りの操作を送る。作り方は「画面を作る」、設計は `docs/design/web-architecture.md`
 - `vscode/`: VSCode 拡張 (畑を小窓で開く、ステータスバーに課題を出す)。colcon は読まない (`COLCON_IGNORE`)
 - `publish_or_perish/web/match.html`: 大会モードの見た目の試作 (動きはまだない)
 - `tools/mjcf_export.py`: MuJoCo のモデル (MJCF) から大会モードの画面用の形を書き出す。出力先 `web/public/scenes/` は git に入れない (春ロボ 2027 のフィールドだけは入れる)
