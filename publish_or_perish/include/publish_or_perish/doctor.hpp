@@ -7,13 +7,18 @@
 #include <string>
 #include <vector>
 
+#include "publish_or_perish/messages.hpp"
+
 namespace publish_or_perish
 {
 
 // 見つけた間違い 1 つ. level は error (このままでは動かない) / warn (動くが意図と違う) / info
+// title と detail は訳の表のキーと値 (doctor.<種類>). fix はコピーして使うコマンドなので文字列のまま
 struct Finding
 {
-  std::string id, level, title, detail, fix;
+  std::string id, level;
+  Msg title, detail;
+  std::string fix;
   std::string file;  // 絶対パス. 行がないときは line = 0
   int line = 0;
 };
@@ -50,6 +55,8 @@ private:
 };
 
 // コンパイラと CMake のエラー 1 行を日本語で説明する (分からないものは空)
-std::string explain_build_error(const std::string & message, const std::set<std::string> & depends);
+// ビルドのエラーの文から原因の種類 (訳の表の build_why.<種類>) を返す. 分からなければ空.
+// 依存の書き忘れ (no_depend) とヘッダー名の違い (header_name) のときは dep にパッケージ名を入れる
+std::string explain_build_error(const std::string & message, const std::set<std::string> & depends, std::string & dep);
 
 }  // namespace publish_or_perish

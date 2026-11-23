@@ -1,0 +1,9 @@
+{
+  "description": "ROS 2 を学ぶ農場ゲームを VSCode の中で開く",
+  "command.open": "畑を開く",
+  "command.pip": "畑を小窓で開く (常に手前)",
+  "command.guide": "今の課題の説明を開く",
+  "config.title": "Publish or Perish",
+  "config.url": "ゲームの画面の URL",
+  "config.rosbridge": "rosbridge の URL (ステータスバーの表示に使う)"
+}

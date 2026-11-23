@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstdarg>
 #include <cstdio>
 
 namespace publish_or_perish
@@ -11,9 +10,9 @@ namespace publish_or_perish
 const std::vector<CropInfo> & crop_list()
 {
   static const std::vector<CropInfo> list = {
-    {"wheat", "小麦", 5, 25, 30.0},
-    {"tomato", "トマト", 15, 70, 50.0},
-    {"pumpkin", "カボチャ", 40, 200, 90.0},
+    {"wheat", 5, 25, 30.0},
+    {"tomato", 15, 70, 50.0},
+    {"pumpkin", 40, 200, 90.0},
   };
   return list;
 }
@@ -38,15 +37,7 @@ const char * to_string(Source s)
 
 namespace
 {
-std::string fmt(const char * f, ...)
-{
-  char buf[256];
-  va_list ap;
-  va_start(ap, f);
-  std::vsnprintf(buf, sizeof(buf), f, ap);
-  va_end(ap);
-  return buf;
-}
+Msg crop_name(const std::string & id) {return Msg{"crop." + id};}
 }  // namespace
 
 World::World(int w, int h)
@@ -179,11 +170,11 @@ Result World::plant(const std::string & bot)
   Bot & b = bots.at(bot);
   int ix, iy;
   Tile * t = tile_at(b.x, b.y, ix, iy);
-  if (!t || t->well) {return {false, "ここには植えられない (井戸)"};}
-  if (t->crop) {return {false, fmt("(%d, %d) にはもう作物がある", ix, iy)};}
+  if (!t || t->well) {return {false, {"srv.plant.well"}};}
+  if (t->crop) {return {false, {"srv.plant.occupied", {{"x", ix}, {"y", iy}}}};}
   const CropInfo * info = find_crop(b.seed);
   if (money < info->cost) {
-    return {false, fmt("お金が足りない (%sの種は %d G)", info->name.c_str(), info->cost)};
+    return {false, {"srv.plant.no_money", {{"crop", crop_name(b.seed)}, {"cost", info->cost}}}};
   }
   money -= info->cost;
   t->crop = Crop{b.seed};
@@ -191,7 +182,7 @@ Result World::plant(const std::string & bot)
   Event e{"plant", bot, ix, iy, b.seed};
   e.value = info->cost;
   emit(e);
-  return {true, fmt("(%d, %d) に%sを植えた (-%d G)", ix, iy, info->name.c_str(), info->cost)};
+  return {true, {"srv.plant.done", {{"x", ix}, {"y", iy}, {"crop", crop_name(b.seed)}, {"cost", info->cost}}}};
 }
 
 Result World::water(const std::string & bot)
@@ -199,8 +190,8 @@ Result World::water(const std::string & bot)
   Bot & b = bots.at(bot);
   int ix, iy;
   Tile * t = tile_at(b.x, b.y, ix, iy);
-  if (!t || t->well) {return {false, "ここは井戸. 立つとタンクが満タンになる"};}
-  if (b.tank <= 0) {return {false, "タンクが空. 井戸 (左下のマス) で補給する"};}
+  if (!t || t->well) {return {false, {"srv.water.well"}};}
+  if (b.tank <= 0) {return {false, {"srv.water.tank_empty"}};}
   const double before = t->moisture;
   b.tank--;
   t->moisture = std::min(100.0, t->moisture + kWaterAmount);
@@ -208,8 +199,8 @@ Result World::water(const std::string & bot)
   Event e{"water", bot, ix, iy};
   e.value = before;
   emit(e);
-  return {true, fmt("(%d, %d) に水をやった (水分 %.0f -> %.0f, タンク %d/%d)",
-      ix, iy, before, t->moisture, b.tank, b.tank_max)};
+  return {true, {"srv.water.done", {{"x", ix}, {"y", iy}, {"before", num(before)}, {"after", num(t->moisture)},
+    {"tank", b.tank}, {"max", b.tank_max}}}};
 }
 
 Result World::harvest(const std::string & bot)
@@ -217,14 +208,14 @@ Result World::harvest(const std::string & bot)
   Bot & b = bots.at(bot);
   int ix, iy;
   Tile * t = tile_at(b.x, b.y, ix, iy);
-  if (!t || !t->crop) {return {false, fmt("(%d, %d) には作物がない", ix, iy)};}
+  if (!t || !t->crop) {return {false, {"srv.harvest.none", {{"x", ix}, {"y", iy}}}};}
   Crop c = *t->crop;
   if (c.dead) {
     t->crop.reset();
     emit(Event{"clear", bot, ix, iy, c.kind});
-    return {true, fmt("(%d, %d) の枯れた作物を片付けた", ix, iy)};
+    return {true, {"srv.harvest.cleared", {{"x", ix}, {"y", iy}}}};
   }
-  if (!c.ripe()) {return {false, fmt("(%d, %d) はまだ実っていない (%.0f%%)", ix, iy, c.growth * 100)};}
+  if (!c.ripe()) {return {false, {"srv.harvest.not_ripe", {{"x", ix}, {"y", iy}, {"pct", num(c.growth * 100)}}}};}
   const CropInfo * info = find_crop(c.kind);
   t->crop.reset();
   money += info->price;
@@ -235,7 +226,7 @@ Result World::harvest(const std::string & bot)
   Event e{"harvest", bot, ix, iy, c.kind};
   e.value = info->price;
   emit(e);
-  return {true, fmt("(%d, %d) の%sを収穫した (+%d G)", ix, iy, info->name.c_str(), info->price)};
+  return {true, {"srv.harvest.done", {{"x", ix}, {"y", iy}, {"crop", crop_name(c.kind)}, {"price", info->price}}}};
 }
 
 bool World::add_column()

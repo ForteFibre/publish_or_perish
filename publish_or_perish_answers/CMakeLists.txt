@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.10)
 project(publish_or_perish_answers)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -12,11 +12,13 @@ find_package(nav_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 
+# ament_target_dependencies は Lyrical で無くなったので, ターゲットを直接つなぐ (Jazzy でも同じに動く)
 add_executable(stage4_patrol src/stage4_patrol.cpp)
-ament_target_dependencies(stage4_patrol rclcpp geometry_msgs)
+target_link_libraries(stage4_patrol rclcpp::rclcpp ${geometry_msgs_TARGETS})
 
 add_executable(stage5_farmer src/stage5_farmer.cpp)
-ament_target_dependencies(stage5_farmer rclcpp geometry_msgs nav_msgs std_msgs std_srvs)
+target_link_libraries(stage5_farmer
+  rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS} ${std_msgs_TARGETS} ${std_srvs_TARGETS})
 
 install(TARGETS stage4_patrol stage5_farmer DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})

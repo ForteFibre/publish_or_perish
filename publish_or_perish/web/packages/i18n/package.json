@@ -1,0 +1,12 @@
+{
+  "name": "@pop/i18n",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "i18next": "27.0.1",
+    "react-i18next": "18.0.1"
+  }
+}

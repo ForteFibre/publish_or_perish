@@ -1,0 +1,5 @@
+packages:
+  - packages/*
+# Storybook が使う esbuild は, 入れるときに自分のバイナリを確かめるスクリプトを動かす
+allowBuilds:
+  esbuild: true

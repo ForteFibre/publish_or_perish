@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "publish_or_perish/messages.hpp"
 #include "publish_or_perish/world.hpp"
 
 namespace publish_or_perish
@@ -31,9 +32,10 @@ struct Graph
   double now = 0.0;
 };
 
+// 題・説明・ヒントは訳の表の mission.<id>. unit は単位の種類 (訳の表の unit.<unit>. 空なら単位なし)
 struct Mission
 {
-  std::string id, title, desc, hint, unit;
+  std::string id, unit;
   double goal = 1.0;
   int reward = 50, xp = 40;
   double value = 0.0;
@@ -44,15 +46,17 @@ struct Mission
   std::deque<std::pair<double, double>> window;    // (時刻, 金額)
 };
 
+// 題と講習は訳の表の stage.<id>
 struct Stage
 {
-  std::string title, lesson;
+  std::string id;
   std::vector<Mission> missions;
 };
 
+// 名前と説明は訳の表の achievement.<id>
 struct Achievement
 {
-  std::string id, name, desc;
+  std::string id;
   int xp = 30;
   bool hidden = false;
   bool done = false;
@@ -62,7 +66,8 @@ struct Achievement
 // 画面に出す通知. kind は mission / stage / achievement / level
 struct Notice
 {
-  std::string kind, title, body;
+  std::string kind;
+  Msg title, body;
 };
 
 class Progress
@@ -70,20 +75,15 @@ class Progress
 public:
   Progress();
 
-  // 課題の文とコマンドに書いた講習のワークスペース (~/src26_ws) とパッケージ (tutorial_nodes) を差し替える.
-  // ws はホームからの書き方 (例: "~/pop_ws")
-  void set_workspace(const std::string & ws, const std::string & pkg);
-
   void update(const std::vector<Event> & events, const Graph & g, World & w);
   std::vector<Notice> take_notices();
 
   size_t stage_index() const;
-  int level() const;
-  const std::string & title() const;
+  int level() const;  // 0 始まり. 称号は訳の表の title.<level() + 1>
   long level_xp(int lv) const;
 
   std::vector<Stage> stages;
-  std::vector<std::string> upcoming;
+  std::vector<std::string> upcoming;  // 準備中のステージ. 名前は訳の表の upcoming.<id>
   std::vector<Achievement> achievements;
   long xp = 0;
 

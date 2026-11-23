@@ -5,9 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Publish or Perish 大会モード</title>
 <link rel="icon" href="data:,">
-<script type="importmap">
-{ "imports": { "three": "./vendor/three.module.min.js", "three/addons/": "./vendor/" } }
-</script>
 <style>
 :root { --ink: #1f2a1f; --sub: #5d6b5a; --card: rgba(255, 252, 243, 0.94); --line: #e3d9bf; --gold: #e8a923; --green: #4caf50; --red: #e05244; }
 * { box-sizing: border-box; }
@@ -70,6 +67,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd8f5;
   <div class="st"><div id="pose">-</div><div id="arm">-</div><div id="action"></div><div id="conn">シミュレーターにつないでいる</div></div>
 </div>
 <div id="note" class="card">見た目の試作: SRC2026 のフィールドとロボットを MJCF から読み込んで描いている (動きはまだない)</div>
-<script type="module" src="./match.js"></script>
+<script type="module" src="/src/match/main.ts"></script>
 </body>
 </html>

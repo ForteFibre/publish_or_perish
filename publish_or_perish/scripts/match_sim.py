@@ -9,10 +9,10 @@ topic
   /robot/cmd_vel     geometry_msgs/msg/Twist   受ける  台車の速度 (機体座標, x 前 / y 左 [m/s], z まわり [rad/s]). 0.5 秒途切れると止まる
   /robot/arm/extend  std_msgs/msg/Float64      受ける  アームの伸び [m] の目標 (0〜0.42). 0.4 m/s で近づく
   /robot/arm/lift    std_msgs/msg/Float64      受ける  リフトの高さ [m] の目標 (0〜0.35). 0.3 m/s で近づく
-  /robot/pose        geometry_msgs/msg/Pose2D  出す    台車の位置 [m] と向き [rad]. 原点はフィールドの中心, x 右 (赤 → 青), y 奥
+  /robot/pose        geometry_msgs/msg/Pose    出す    台車の位置 [m] と向き (z 軸まわりのクォータニオン). 原点はフィールドの中心, x 右 (赤 → 青), y 奥
   /robot/status      std_msgs/msg/String       出す    アーム・リフト・持っているボトル・サイコロの目など (JSON)
   /match/state       std_msgs/msg/String       出す    画面用. 動く物の位置と向き (JSON)
-service (std_srvs/srv/Trigger. 結果は response の message に日本語で返す)
+service (std_srvs/srv/Trigger. 結果は response の message に英語で返す. 文は訳の表 share/publish_or_perish/i18n/en.json)
   /robot/grab    ハンドの前のボトル (自チームの桜ボトルと除草剤ボトル) をつかむ. 持てるのはサイコロの目の数まで (5.4)
   /robot/place   ハンドの真ん中のボトルを, 今の高さで離す (下ろしてから離すと倒れにくい)
   /robot/throw   持っている除草剤ボトルを 1 本, 前へ投げる
@@ -31,10 +31,43 @@ import mujoco
 import numpy as np
 import rclpy
 from ament_index_python.packages import get_package_share_directory
-from geometry_msgs.msg import Pose2D, Twist
+from geometry_msgs.msg import Point, Pose, Quaternion, Twist
 from rclpy.node import Node
 from std_msgs.msg import Float64, String
 from std_srvs.srv import Trigger
+
+
+
+def load_messages():
+    """英語の訳の表を, . でつないだキー → 文 の辞書にする."""
+    path = os.path.join(get_package_share_directory('publish_or_perish'), 'i18n', 'en.json')
+    with open(path, encoding='utf-8') as f:
+        tree = json.load(f)
+    flat = {}
+
+    def walk(prefix, node):
+        for k, v in node.items():
+            key = f'{prefix}.{k}' if prefix else k
+            walk(key, v) if isinstance(v, dict) else flat.__setitem__(key, v)
+    walk('', tree)
+    return flat
+
+
+EN = load_messages()
+
+
+def msg(key, **args):
+    """文言をキーと値で表す (画面に送る形). 値は文字列にしておく. msg の形の値は, それ自体を訳す文."""
+    return {'key': key, 'args': {k: v if isinstance(v, dict) else str(v) for k, v in args.items()}}
+
+
+def render_en(m):
+    """英語の文にする. 表にないキーはキーのまま. {{名前}} を値で置き換える (i18next と同じ書き方)."""
+    text = EN.get(m['key'], m['key'])
+    for k, v in m['args'].items():
+        text = text.replace('{{' + k + '}}', render_en(v) if isinstance(v, dict) else v)
+    return text
+
 
 MAX_LINEAR = 2.0         # [m/s]
 MAX_ANGULAR = 3.0        # [rad/s]
@@ -93,7 +126,7 @@ class MatchSim(Node):
         self.create_subscription(Twist, '/robot/cmd_vel', self.on_cmd, 10)
         self.create_subscription(Float64, '/robot/arm/extend', lambda msg: self.set_target('extend', msg.data), 10)
         self.create_subscription(Float64, '/robot/arm/lift', lambda msg: self.set_target('lift', msg.data), 10)
-        self.pose_pub = self.create_publisher(Pose2D, '/robot/pose', 10)
+        self.pose_pub = self.create_publisher(Pose, '/robot/pose', 10)
         self.status_pub = self.create_publisher(String, '/robot/status', 10)
         self.state_pub = self.create_publisher(String, '/match/state', 10)
         for name, fn in (('/robot/grab', self.grab), ('/robot/place', self.place), ('/robot/throw', self.throw),
@@ -101,7 +134,7 @@ class MatchSim(Node):
             self.create_service(Trigger, name, self.service(name, fn))
         self.create_timer(0.01, self.step)        # 物理を進める
         self.create_timer(1 / 30, self.publish)   # 画面・/robot/pose・/robot/status は 30 Hz
-        self.get_logger().info(f'{path} を読んだ. 物体 {m.nbody}, 形 {m.ngeom}')
+        self.get_logger().info(render_en(msg('match.loaded', path=path, bodies=m.nbody, geoms=m.ngeom)))
 
     # ------------------------------------------------------------ 状態
     def reset(self):
@@ -114,7 +147,8 @@ class MatchSim(Node):
         self.ctrl = {'extend': 0.0, 'lift': 0.0}
         self.carried = []       # 持っているボトルの名前 (並び = SLOTS の順)
         self.signal = False
-        self.last_action = ''
+        self.last_action = None   # 最後の操作の結果 (msg の形). 画面が訳す
+        self.last_ok = True       # その操作がうまくいったか
         self.t0 = time.monotonic()
 
     def set_target(self, key, value):
@@ -199,7 +233,8 @@ class MatchSim(Node):
             pos, quat = self.hold_pose(self.carried.index(name))
             if pos[2] < TIMBER_H and any(abs(pos[0] - c[0]) < h[0] + 0.034 and abs(pos[1] - c[1]) < h[1] + 0.034 for c, h in self.timbers):
                 self.release(name)
-                self.last_action = f'{name} が木枠に当たって落ちた (リフトを {TIMBER_H} m 以上にして越える)'
+                self.last_action = msg('match.dropped', name=name, height=TIMBER_H)
+                self.last_ok = False
                 continue
             qa, va = self.free_adr(name)
             self.d.qpos[qa:qa + 3] = pos
@@ -216,20 +251,21 @@ class MatchSim(Node):
     # ------------------------------------------------------------ service
     def service(self, name, fn):
         def handle(_req, res):
-            res.success, res.message = fn()
-            self.last_action = res.message
+            res.success, m = fn()
+            res.message = render_en(m)
+            self.last_action, self.last_ok = m, res.success
             self.get_logger().info(f'{name}: {res.message}')
             return res
         return handle
 
     def on_reset(self):
         self.reset()
-        return True, '最初の位置に戻した'
+        return True, msg('match.reset')
 
     def grab(self):
         lift = self.d.qpos[self.lift_adr]
         if lift > GRAB_LIFT:
-            return False, f'リフトが高い ({lift:.2f} m). {GRAB_LIFT} m 以下に下ろしてからつかむ'
+            return False, msg('match.grab.lift_high', lift=f'{lift:.2f}', max=GRAB_LIFT)
         limit = self.dice_top()
         cands = []
         for name in self.grabbable:
@@ -241,7 +277,7 @@ class MatchSim(Node):
             if GRAB_DX[0] <= fx <= GRAB_DX[1] and abs(ly) <= GRAB_DY and up > 0.9 and self.d.xpos[b][2] < 0.02:
                 cands.append((abs(ly), name))
         if not cands:
-            return False, f'ハンドの前に立っているボトルがない (ハンドの中心から前後 {GRAB_DX[0]}〜{GRAB_DX[1]} m, 左右 {GRAB_DY} m 以内)'
+            return False, msg('match.grab.none', front=GRAB_DX[0], back=GRAB_DX[1], side=GRAB_DY)
         got = []
         for _, name in sorted(cands):
             if len(self.carried) >= limit:
@@ -250,35 +286,36 @@ class MatchSim(Node):
             self.set_collide(name, False)
             got.append(name)
         if not got:
-            return False, f'サイコロの目が {limit} なので, これ以上は持てない (持っているのは {len(self.carried)} 本. ルール 5.4)'
+            return False, msg('match.grab.full', limit=limit, held=len(self.carried))
         rest = len(cands) - len(got)
-        note = f'. サイコロの目が {limit} なので残り {rest} 本は持てない' if rest else ''
-        return True, f'{len(got)} 本つかんだ ({", ".join(got)}). 持っているのは {len(self.carried)} 本{note}'
+        if rest:
+            return True, msg('match.grab.done_rest', n=len(got), names=', '.join(got), held=len(self.carried), limit=limit, rest=rest)
+        return True, msg('match.grab.done', n=len(got), names=', '.join(got), held=len(self.carried))
 
     def place(self):
         if not self.carried:
-            return False, 'ボトルを持っていない'
+            return False, msg('match.place.none')
         name = self.carried[0]
         pos, _ = self.hold_pose(0)
         self.release(name)   # 残りは次の step で SLOTS の順に詰める
         where = self.zone_of(pos)
-        return True, f'{name} を離した (底の高さ {pos[2]:.3f} m, 場所: {where})'
+        return True, msg('match.place.done', name=name, z=f'{pos[2]:.3f}', zone=where)
 
     def throw(self):
         herb = [n for n in self.carried if 'herbicide' in n]
         if not herb:
-            return False, '除草剤ボトルを持っていない'
+            return False, msg('match.throw.none')
         y = self.robot_yaw()
         vel = np.array([math.cos(y) * THROW_V[0], math.sin(y) * THROW_V[0], THROW_V[1]])
         self.release(herb[0], vel)
-        return True, f'{herb[0]} を投げた (前へ {THROW_V[0]} m/s, 上へ {THROW_V[1]} m/s)'
+        return True, msg('match.throw.done', name=herb[0], fwd=THROW_V[0], up=THROW_V[1])
 
     def roll_dice(self):
         b = self.free[f'{self.side}_dice']
         h = self.d.site_xpos[self.hand_site]
         p = self.d.xpos[b]
         if math.hypot(p[0] - h[0], p[1] - h[1]) > DICE_REACH:
-            return False, f'サイコロが遠い (ハンドの中心から {math.hypot(p[0] - h[0], p[1] - h[1]):.2f} m. {DICE_REACH} m 以内に寄せる)'
+            return False, msg('match.dice.far', dist=f'{math.hypot(p[0] - h[0], p[1] - h[1]):.2f}', reach=DICE_REACH)
         before = self.dice_top()
         # 機体の左右の軸まわりに 90 度回す (前へ 1 面転がす)
         y = self.robot_yaw()
@@ -292,11 +329,11 @@ class MatchSim(Node):
         self.d.qpos[qa + 2] = 0.0755
         self.d.qvel[va:va + 6] = 0
         mujoco.mj_forward(self.m, self.d)
-        return True, f'サイコロを転がした ({before} → {self.dice_top()})'
+        return True, msg('match.dice.done', before=before, after=self.dice_top())
 
     def toggle_signal(self):
         self.signal = not self.signal
-        return True, '合図を付けた' if self.signal else '合図を消した'
+        return True, msg('match.signal.on' if self.signal else 'match.signal.off')
 
     def zone_of(self, p):
         for i in range(self.m.nsite):
@@ -305,15 +342,19 @@ class MatchSim(Node):
                 c, h = self.m.site_pos[i][:2], self.m.site_size[i][:2]
                 if abs(p[0] - c[0]) <= h[0] and abs(p[1] - c[1]) <= h[1] and not name.endswith(('area1', 'area2')):
                     return name
-        return 'ゾーンの外'
+        return msg('match.place.outside')
 
     # ------------------------------------------------------------ 出力
     def publish(self):
         # スライドの qpos は body の初期位置からのずれなので, 位置は xpos から取る
         rp = self.d.xpos[self.robot_id]
-        self.pose_pub.publish(Pose2D(x=float(rp[0]), y=float(rp[1]), theta=float(self.robot_yaw())))
+        w, _, _, z = yaw_quat(self.robot_yaw())
+        self.pose_pub.publish(Pose(position=Point(x=float(rp[0]), y=float(rp[1])), orientation=Quaternion(z=float(z), w=float(w))))
         status = {'extend': round(float(self.d.qpos[self.ext_adr]), 3), 'lift': round(float(self.d.qpos[self.lift_adr]), 3),
-                  'carried': self.carried, 'dice': self.dice_top(), 'signal': self.signal, 'last_action': self.last_action}
+                  'carried': self.carried, 'dice': self.dice_top(), 'signal': self.signal,
+                  # last_action は英語の文 (ros2 topic echo で読む人向け). 画面は action (キーと値) を訳す
+                  'last_action': render_en(self.last_action) if self.last_action else '', 'action': self.last_action,
+                  'action_ok': self.last_ok}
         self.status_pub.publish(String(data=json.dumps(status, ensure_ascii=False)))
         bodies = {self.m.body(b).name: [round(float(v), 4) for v in (*self.d.xpos[b], *self.d.xquat[b])] for b in self.moving}
         self.state_pub.publish(String(data=json.dumps({'t': round(self.d.time, 3), 'bodies': bodies, 'robot': status},
