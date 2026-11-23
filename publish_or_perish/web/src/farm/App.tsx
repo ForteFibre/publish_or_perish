@@ -1,6 +1,6 @@
 // 農場の画面の全体. 畑の面 (3D の畑と, その上の札) と, 説明を開いたときの説明の面.
 // 説明は畑に重ねず, 画面を分けて畑の隣に出す (畑は縮むが, 隠れない).
-//   幅 860px 以上: 左右に分ける (左が説明, 右が畑). 境は分割の持ち手で動かせる
+//   幅 860px 以上: 左右に分ける (左が畑, 右が説明). 境は分割の持ち手で動かせる
 //   幅 860px 未満: 上下に分ける (上が畑, 下が説明)
 //   小さい窓 (幅 560px 未満か高さ 420px 未満): 説明を全面に出し, 上の 1 行の「畑を見る」で畑と入れ替える
 // 札の畳み方 (narrow:, mini:) は, 窓ではなく畑の面の大きさで決まる (field-container).
@@ -9,7 +9,7 @@ import { Splitter, ToastRegion, TooltipProvider } from '@pop/ui'
 import { type CSSProperties, useEffect, useState } from 'react'
 import { GuideView } from './hud/GuideView'
 import { Modals } from './hud/Modals'
-import { Banner, Buttons, Connect, Floats, Log, Mini, RosCard, Status, TipBox } from './hud/Panels'
+import { Banner, Buttons, Connect, Floats, Log, Mini, Status, TipBox } from './hud/Panels'
 import { Quest } from './hud/Quest'
 import { SceneView } from './SceneView'
 import { useUi } from './ui'
@@ -67,7 +67,6 @@ export function Field({
     <div style={style} className={`field-container relative min-h-0 min-w-0 overflow-hidden ${className ?? ''}`}>
       {scene && <SceneView />}
       <Status />
-      <RosCard />
       {questShown && <Quest />}
       <Log questShown={questShown} />
       <Mini />
@@ -123,19 +122,21 @@ export function Screen({ scene = true }: { scene?: boolean }) {
   const max = w - FIELD_MIN - SPLITTER
   const initial = Math.min(720, Math.round(w * 0.62))
   const gw = Math.min(max, Math.max(GUIDE_MIN, guideW ?? initial))
+  // 持ち手の値は先の面 (左の畑) の幅. 覚えるのは説明の面の幅にする (窓の幅が変わっても説明の幅を保つ)
+  const rest = w - SPLITTER
   return (
     <div className="flex h-dvh w-screen">
-      {guideId && <GuideView id={guideId} className="shrink-0 animate-fade-in" style={{ width: gw }} />}
+      <Field scene={scene} questShown={false} className="flex-1" />
       <Splitter
         orientation="vertical"
-        value={gw}
-        min={GUIDE_MIN}
-        max={max}
-        onChange={setGuideW}
+        value={rest - gw}
+        min={rest - max}
+        max={rest - GUIDE_MIN}
+        onChange={v => setGuideW(rest - v)}
         onReset={() => setGuideW(null)}
         label={tr('ui.guide.resize')}
       />
-      <Field scene={scene} questShown={false} className="flex-1" />
+      {guideId && <GuideView id={guideId} className="shrink-0 animate-fade-in" style={{ width: gw }} />}
     </div>
   )
 }

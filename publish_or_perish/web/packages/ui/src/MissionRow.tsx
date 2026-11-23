@@ -10,13 +10,15 @@ export type MissionRowProps = {
   done: boolean
   /** メーター. 目標が 1 で単位もない課題には出さない */
   progress?: { value: number; goal: number; caption: string }
+  /** 今の課題 (まだ終わっていない最初の課題) */
+  current?: boolean
   /** 開いた行に出す説明, ヒント, ボタン */
   children?: ReactNode
 }
 
-export function MissionRow({ title, reward, done, progress, children }: MissionRowProps) {
+export function MissionRow({ title, reward, done, progress, current, children }: MissionRowProps) {
   return (
-    <div className="border-t border-dashed border-line py-3 first:border-t-0">
+    <div aria-current={current ? 'step' : undefined} className="border-t border-dashed border-line py-3 first:border-t-0">
       <div className="flex items-start gap-2">
         <span
           role="img"

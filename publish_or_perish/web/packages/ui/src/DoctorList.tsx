@@ -1,9 +1,9 @@
-// 点検の札. 受講生のワークスペースの間違いを, 課題の札のいちばん上に出す.
-// まとめの行 (見出しと件数) を出し, エラー, 注意, 情報の順に並べて 1 件だけを開く (残りは題の 1 行に畳む).
-// 開いているのは常に 1 件にする. 新しい点検が出ても札は揺らさない.
+// 点検の札. 受講生のワークスペースの間違いを, 課題の札の課題の一覧の下に出す.
+// まとめの行 (見出しと件数) を出し, エラー, 注意, 情報の順に並べる. 最初はすべて題の 1 行に畳み,
+// 押した 1 件ずつを開閉する (いくつ開いてもよい). 新しい点検が出ても札は揺らさない.
 import { Accordion } from '@base-ui/react/accordion'
 import { useTr } from '@pop/i18n'
-import { type ReactNode, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Button } from './Button'
 import { CodeBlock } from './CodeBlock'
 import { tv } from './cn'
@@ -29,14 +29,15 @@ const ORDER: Record<DoctorLevel, number> = { error: 0, warn: 1, info: 2 }
 
 const item = tv({
   slots: {
-    root: 'rounded-md border-l-4',
+    // 左の帯は枠線ではなく, 角丸で切り抜いた内側の棒にする (枠線だと帯の内側の縁まで丸くなる)
+    root: 'relative overflow-hidden rounded-md pl-1 before:absolute before:inset-y-0 before:left-0 before:w-1',
     icon: 'mt-0.5 shrink-0',
   },
   variants: {
     level: {
-      error: { root: 'border-danger bg-danger-soft', icon: 'text-danger-ink' },
-      warn: { root: 'border-warning bg-warning-soft', icon: 'text-warning-ink' },
-      info: { root: 'border-info bg-info-soft', icon: 'text-info-ink' },
+      error: { root: 'bg-danger-soft before:bg-danger', icon: 'text-danger-ink' },
+      warn: { root: 'bg-warning-soft before:bg-warning', icon: 'text-warning-ink' },
+      info: { root: 'bg-info-soft before:bg-info', icon: 'text-info-ink' },
     },
   },
 })
@@ -55,9 +56,6 @@ export type DoctorListProps = {
 export function DoctorList({ items, onOpen, bump = 0, className }: DoctorListProps) {
   const { tr } = useTr()
   const sorted = [...items].sort((a, b) => ORDER[a.level] - ORDER[b.level])
-  const [open, setOpen] = useState<string | null>(null)
-  // 開いていたものが消えたら, いちばん上を開く
-  const value = sorted.some(i => i.key === open) ? open : (sorted[0]?.key ?? null)
   if (!sorted.length) return null
   const errors = items.filter(i => i.level === 'error').length
   const warns = items.filter(i => i.level === 'warn').length
@@ -71,15 +69,7 @@ export function DoctorList({ items, onOpen, bump = 0, className }: DoctorListPro
           {warns > 0 && <Pill tone="warning">{tr('ui.doctor.warns', { n: String(warns) })}</Pill>}
         </span>
       </div>
-      <Accordion.Root
-        value={value ? [value] : []}
-        onValueChange={v => {
-          // 開いているものを押しても閉じない (常に 1 件は開いている)
-          const next = v[0] as string | undefined
-          if (next) setOpen(next)
-        }}
-        className="flex min-h-0 flex-col gap-1.5 overflow-y-auto"
-      >
+      <Accordion.Root multiple defaultValue={[]} className="flex min-h-0 flex-col gap-1.5 overflow-y-auto">
         {sorted.map(it => (
           <DoctorRow key={it.key} it={it} onOpen={onOpen} />
         ))}

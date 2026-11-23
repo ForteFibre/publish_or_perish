@@ -82,20 +82,21 @@ describe('DoctorList', () => {
     { key: 'e', level: 'error' as const, title: 'エラーの題', detail: 'エラーの説明' },
   ]
 
-  it('エラーを先に並べ, いちばん上の 1 件だけを開く', () => {
+  it('エラーを先に並べ, 最初はすべて畳む', () => {
     render(<DoctorList items={items} />)
     const triggers = screen.getAllByRole('button')
     expect(triggers.map(t => t.textContent)).toEqual(['エラー: エラーの題', '注意: 注意の題'])
-    expect(triggers.map(t => t.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
+    expect(triggers.map(t => t.getAttribute('aria-expanded'))).toEqual(['false', 'false'])
   })
 
-  it('別の 1 件を押すとそれだけが開き, 開いているものを押しても閉じない', () => {
+  it('押した 1 件ずつを開閉し, いくつ開いてもよい', () => {
     render(<DoctorList items={items} />)
     const [err, warn] = screen.getAllByRole('button') as [HTMLElement, HTMLElement]
     fireEvent.click(warn)
-    expect([err, warn].map(t => t.getAttribute('aria-expanded'))).toEqual(['false', 'true'])
+    fireEvent.click(err)
+    expect([err, warn].map(t => t.getAttribute('aria-expanded'))).toEqual(['true', 'true'])
     fireEvent.click(warn)
-    expect(warn.getAttribute('aria-expanded')).toBe('true')
+    expect([err, warn].map(t => t.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
   })
 
   it('まとめの行に件数を出す', () => {

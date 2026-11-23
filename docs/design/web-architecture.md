@@ -401,7 +401,7 @@ VSCode 拡張の URL の設定を dev server に向ければ、拡張の中で�
 | ガイドの描画と置き換え | Vitest で、Markdown から HTML への変換と `{{msg:...}}` の展開を確かめる |
 | 訳の表 | `en.json` のキーがすべて `ja.json` にあるか、埋め込みの名前が一致するか。C++、`match_sim.py`、画面、ガイドが使うキーが表にあり、渡す値の名前が埋め込みと同じか (Vitest) |
 | C++ のメッセージ | GTest (`test/test_messages.cpp`) で、`World` の操作が返す文と、ターミナルに出すそのほかの文が英語の表から作れるかを確かめる |
-| 部品 | Testing Library と happy-dom で、押せないボタン、コピーの「済」が戻ること、点検を 1 件だけ開くこと、ログのまとめ方、分割の持ち手のキー操作を確かめる (`packages/ui/src/components.test.tsx`) |
+| 部品 | Testing Library と happy-dom で、押せないボタン、コピーの「済」が戻ること、点検を 1 件ずつ開閉できること、ログのまとめ方、分割の持ち手のキー操作を確かめる (`packages/ui/src/components.test.tsx`) |
 | HUD の全体 | E2E は見送る。見た目は Storybook の、記録した状態を流し込んだ見本で確かめる |
 
 ## 移行の順序

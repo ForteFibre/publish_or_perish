@@ -37,75 +37,67 @@ export function useBump(value: unknown, ready: boolean): number {
   return bump
 }
 
-/** 左上: レベル, 称号, XP, お金 */
+/** 左上: レベル, 称号, XP, お金と, ROS の状態 (接続, 運転, 自分のノード, ロボット). 進みと「なぜ進まないか」を 1 枚にまとめる */
 export function Status() {
   const { tr } = useTr()
   const s = useFarm(st => st.state)
+  const connected = useFarm(st => st.connected)
   const money = s?.money ?? 0
   const bump = useBump(money, !!s)
   const level = s?.level ?? 1
   const span = s ? Math.max(1, s.next_xp - s.lv_xp) : 1
   const xp = s ? s.xp - s.lv_xp : 0
-  return (
-    <Card className="absolute top-4 left-4 flex items-center gap-4 px-4 py-3 narrow:top-3 narrow:left-3 narrow:gap-3 narrow:px-3 narrow:py-2 mini:hidden">
-      <LevelMedal level={level} label={tr('ui.status.lv')} />
-      <div className="w-45 narrow:w-28">
-        <div className="font-display text-lg font-bold narrow:text-sm">{tr(`title.${level}`)}</div>
-        <Meter
-          tone="xp"
-          size="xp"
-          value={Math.min(xp, span)}
-          max={span}
-          label="XP"
-          className="mt-1"
-          caption={<span className="text-2xs">{!s ? '0 / 100 XP' : s.next_xp > s.lv_xp ? `${s.xp} / ${s.next_xp} XP` : `${s.xp} XP`}</span>}
-        />
-      </div>
-      <div className="border-l-2 border-line pl-3">
-        <Money value={money} bump={bump} />
-      </div>
-    </Card>
-  )
-}
-
-/** 右上: ROS の状態. 課題の札のすぐ上に置き,「なぜ進まないか」を上から順に読めるようにする */
-export function RosCard() {
-  const { tr } = useTr()
-  const s = useFarm(st => st.state)
-  const connected = useFarm(st => st.connected)
   const m = s ? mode(s) : null
   const conn = connected
     ? { tone: 'player' as const, icon: <Icon.Plug size={12} aria-hidden />, text: tr('ui.ros.connected') }
     : connected === null
       ? { tone: 'neutral' as const, icon: <Icon.Unplug size={12} aria-hidden />, text: tr('ui.ros.never') }
       : { tone: 'danger' as const, icon: <Icon.Unplug size={12} aria-hidden />, text: tr('ui.ros.disconnected') }
-  const row = 'flex items-center justify-between gap-3 py-0.5'
+  const label = 'text-ink-sub'
   return (
-    <Card className="absolute top-4 right-4 min-w-[250px] px-4 py-2.5 text-sm narrow:top-3 narrow:right-3 narrow:min-w-0 narrow:px-3 narrow:py-2 narrow:text-xs mini:hidden">
-      <div className={row}>
-        <span className="text-ink-sub">{tr('ui.ros.conn')}</span>
-        <Pill tone={conn.tone}>
-          {conn.icon}
-          {conn.text}
-        </Pill>
+    <Card className="absolute top-4 left-4 flex max-w-[calc(100%-416px)] flex-col gap-2.5 px-4 py-3 narrow:top-3 narrow:left-3 narrow:max-w-[calc(100%-312px)] narrow:gap-2 narrow:px-3 narrow:py-2 mini:hidden">
+      <div className="flex items-center gap-4 narrow:gap-3">
+        <LevelMedal level={level} label={tr('ui.status.lv')} />
+        <div className="w-45 narrow:w-28">
+          <div className="font-display text-lg font-bold narrow:text-sm">{tr(`title.${level}`)}</div>
+          <Meter
+            tone="xp"
+            size="xp"
+            value={Math.min(xp, span)}
+            max={span}
+            label="XP"
+            className="mt-1"
+            caption={
+              <span className="text-2xs">{!s ? '0 / 100 XP' : s.next_xp > s.lv_xp ? `${s.xp} / ${s.next_xp} XP` : `${s.xp} XP`}</span>
+            }
+          />
+        </div>
+        <div className="border-l-2 border-line pl-3">
+          <Money value={money} bump={bump} />
+        </div>
       </div>
-      <div className={row}>
-        <span className="text-ink-sub">{tr('ui.ros.mode')}</span>
-        <Pill tone={m?.tone ?? 'neutral'} live={m?.live}>
-          {m?.tone === 'cli' && <Icon.SquareTerminal size={12} aria-hidden />}
-          {m?.text ?? tr('ui.mode.off')}
-        </Pill>
-      </div>
-      <div className={row}>
-        <span className="text-ink-sub">{tr('ui.ros.players')}</span>
+      <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1 border-t-2 border-dashed border-line pt-2 text-sm narrow:text-xs">
+        <span className={label}>{tr('ui.ros.conn')}</span>
+        <span>
+          <Pill tone={conn.tone}>
+            {conn.icon}
+            {conn.text}
+          </Pill>
+        </span>
+        <span className={label}>{tr('ui.ros.mode')}</span>
+        <span>
+          <Pill tone={m?.tone ?? 'neutral'} live={m?.live}>
+            {m?.tone === 'cli' && <Icon.SquareTerminal size={12} aria-hidden />}
+            {m?.text ?? tr('ui.mode.off')}
+          </Pill>
+        </span>
+        <span className={label}>{tr('ui.ros.players')}</span>
         <span className="truncate font-mono text-xs">{s?.graph.players.length ? s.graph.players.join(', ') : tr('ui.ros.none')}</span>
-      </div>
-      <div className={`${row} narrow:hidden`}>
-        <span className="flex items-center gap-1 text-ink-sub">
+        <span className={`${label} flex items-center gap-1 narrow:hidden`}>
           <Icon.Bot size={16} aria-hidden />
           {tr('ui.ros.robots')}
         </span>
-        <span>
+        <span className="narrow:hidden">
           {s
             ? s.bots
                 .map(b => tr('ui.ros.bot', { name: b.name, tank: String(b.tank), max: String(b.tank_max), seed: cropName(b.seed) }))

@@ -1,9 +1,9 @@
-// 右: 課題の札 (ステージの帯, 点検, 課題の一覧, 準備中のステージ).
+// 右: 課題の札 (ステージの帯, 課題の一覧, 準備中のステージ, 点検).
 // 開いているのは, まだ終わっていない最初の課題だけ (説明, ヒント, 説明を読むボタンを出す).
 import { useTr } from '@pop/i18n'
 import { type FarmState, type Finding, type Mission, useFarm } from '@pop/ros'
 import { Button, Card, CardTitle, CodeBlock, type DoctorItem, DoctorList, Icon, MissionRow, StageBar } from '@pop/ui'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { inVSCode } from '../ui'
 import { openGuide, useHasGuide } from './guide'
 import { useBump } from './Panels'
@@ -49,8 +49,17 @@ export function Quest() {
   const { tr } = useTr()
   const s = useFarm(st => st.state)
   const [collapsed, setCollapsed] = useState(false)
+  const list = useRef<HTMLDivElement>(null)
+  const openId = s?.stage?.missions.find(m => !m.done)?.id
+  // 課題の一覧が札に入りきらないときは, 今の課題が見えるところまで一覧を送る (下の点検に押されて隠れないように)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: 今の課題が替わったときと, 札を開き直したときに送る
+  useEffect(() => {
+    const el = list.current
+    const cur = el?.querySelector<HTMLElement>('[aria-current="step"]')
+    if (el && cur) el.scrollTop = Math.max(0, cur.offsetTop - el.offsetTop - 8)
+  }, [openId, collapsed])
   const box =
-    'absolute top-[128px] right-4 bottom-[68px] flex w-[368px] flex-col narrow:top-[104px] narrow:right-3 narrow:bottom-[60px] narrow:w-[288px] mini:hidden'
+    'absolute top-4 right-4 bottom-[68px] flex w-[368px] flex-col narrow:top-3 narrow:right-3 narrow:bottom-[60px] narrow:w-[288px] mini:hidden'
   if (!s)
     return (
       <Card className={`${box} bottom-auto`}>
@@ -58,7 +67,6 @@ export function Quest() {
       </Card>
     )
   const total = s.stage_count + s.upcoming.length
-  const openId = s.stage?.missions.find(m => !m.done)?.id
   return (
     // 中身が少なければ札は縮む (下の端は, ボタンの列の上 8px まで)
     <div className={`${box} pointer-events-none`}>
@@ -86,13 +94,18 @@ export function Quest() {
             {s.stage ? tr('ui.quest.lesson', { lesson: tr(`stage.${s.stage.id}.lesson`) }) : tr('ui.quest.preparing')}
           </div>
         )}
-        {/* 点検は課題の札の高さの半分まで. 越える分は点検の中で送る */}
-        <Doctor className="max-h-[50%] shrink-0" />
-        <div className="min-h-0 overflow-y-auto">
+        <div ref={list} className="relative min-h-0 overflow-y-auto">
           {s.stage?.missions
             .filter(m => !collapsed || m.id === openId)
             .map(m => (
-              <MissionRow key={m.id} title={missionText(m, s).title} reward={m.reward} done={!!m.done} progress={missionProgress(m, s)}>
+              <MissionRow
+                key={m.id}
+                current={m.id === openId}
+                title={missionText(m, s).title}
+                reward={m.reward}
+                done={!!m.done}
+                progress={missionProgress(m, s)}
+              >
                 {m.id === openId && !collapsed && <MissionDetail m={m} s={s} />}
               </MissionRow>
             ))}
@@ -104,6 +117,8 @@ export function Quest() {
             </div>
           )}
         </div>
+        {/* 点検は課題の一覧の下. 札の高さの半分まで使い, 越える分は点検の中で送る */}
+        <Doctor className="max-h-[50%] shrink-0" />
       </Card>
     </div>
   )

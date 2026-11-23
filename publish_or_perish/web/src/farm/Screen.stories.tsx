@@ -32,5 +32,5 @@ export const Playing: Story = { name: '進めている途中', parameters: { fix
 /** 点検が 4 件ある */
 export const Mistakes: Story = { name: '点検が 4 件', parameters: { fixture: 'farm-mistakes' } }
 
-/** 説明を開いた. 左に説明の面, 右に畑の面 (課題の札は説明の面の頭に移る) */
+/** 説明を開いた. 左に畑の面, 右に説明の面 (課題の札は説明の面の頭に移る) */
 export const GuideOpen: Story = { name: '説明を開いた', parameters: { fixture: 'farm-playing' }, decorators: [guide('s1_harvest')] }
