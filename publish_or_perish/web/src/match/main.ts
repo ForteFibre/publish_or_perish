@@ -1,15 +1,17 @@
 // 大会モードの画面. tools/mjcf_export.py が書き出した scenes/<名前>/ を読み, 農場と同じ光と色づかいで描く.
 // MuJoCo は Z 上なので, 全体を X 軸まわりに -90 度回して three.js の Y 上に合わせる.
 // シミュレーター (match_sim.py) が動いていれば, rosbridge で /match/state を読んで物を動かし,
-// キー (W A S D / Q E) で /robot/cmd_vel を送る (自由走行). ?scene=scenes/src2026 は SRC2026 の見た目の試作 (動かない).
+// キーの操作を /match/ui に送る (キーと自分のノードの操作を, シミュレーターが分けて判定するため).
+// モードは 自由走行 / 練習 (課題) / 試合. ?scene=scenes/src2026 は SRC2026 の見た目の試作 (動かない).
 // React Three Fiber での作り直しは docs/design/web-architecture.md の移行の段階 4 で行う. ここでは書き方を変えずに型だけ付けた.
 
-import { initI18n, type Msg, tm } from '@pop/i18n'
+import { esc, expandMessages, render as renderGuide } from '@pop/guide'
+import { currentLang, initI18n, type Msg, tm, tr } from '@pop/i18n'
 import { defaultUrl, RosLink } from '@pop/ros'
 import * as THREE from 'three'
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 
-// 操作の結果 (/match/state の action) を訳すので, 訳の表を先に読む
+// 操作の結果・知らせ・課題の題 (/match/state のキーと値) を訳すので, 訳の表を先に読む
 await initI18n()
 
 const params = new URLSearchParams(location.search)
@@ -35,14 +37,40 @@ type SceneDesc = {
   meshes: { vert_offset: number; nvert: number; face_offset: number; nface: number }[]
   bodies: { name: string; pos: Vec3; quat: Quat; geoms: Geom[] }[]
 }
+type Mode = 'free' | 'course' | 'match'
+type Phase = 'ready' | 'setting' | 'match' | 'finished'
+/** 練習の課題 (段階 manual / semi / auto ごと). 題は訳の表の match.task.<id>, 段階の名前は match.level.<id> */
+type Course = {
+  levels: { id: string; tasks: { id: string; done: boolean }[] }[]
+  current: string | null
+  /** いまの課題が済まない理由 */
+  note: Msg | null
+  /** この回に台車 (drive) と機構 (mech) を動かした送り手 (keyboard / cli / player) */
+  run: { drive: string[]; mech: string[] }
+  elapsed: number
+}
+/** 試合と練習の状態 (match_sim.py の publish) */
+type MatchStatus = {
+  mode: Mode
+  phase: Phase
+  remaining: number | null
+  score: number
+  /** 得点の項目 A〜F. 名前は訳の表の match.item.<記号> */
+  items: Record<string, { points: number; count?: number }>
+  stopped: Msg | null
+  message: Msg | null
+  result: { score: number; declared: boolean; time: number } | null
+  best: { score?: number; declared?: boolean; time?: number }
+  course: Course | null
+}
 /** /match/state: 物の位置 [x, y, z, qw, qx, qy, qz] と, ロボットの状態 */
 type MatchState = {
   t: number
   bodies: Record<string, [number, number, number, number, number, number, number]>
   /** action は最後の操作の結果 (キーと値. 訳の表の match.*), action_ok はそれがうまくいったか */
   robot?: { extend: number; lift: number; carried: string[]; dice: number; signal: boolean; action: Msg | null; action_ok: boolean }
+  match?: MatchStatus
 }
-type Trigger = { success: boolean; message: string }
 
 // ---------------------------------------------------------------- rosbridge
 function setConn(text: string) {
@@ -55,23 +83,16 @@ function setAction(text: string, ok: boolean) {
   e.textContent = text
   e.className = ok ? 'ok' : 'ng'
 }
-let link: RosLink | null = null
-let pubCmd: ((m: object) => void) | null = null
-const pubArm: Record<string, (m: { data: number }) => void> = {}
+let pubUi: ((m: { data: string }) => void) | null = null
+/** キーの操作をシミュレーターへ送る ("drive 0.6 0 0", "act grab", "mode course" など) */
+const ui = (text: string) => pubUi?.({ data: text })
 
 function connect(onState: (s: MatchState) => void) {
-  link = new RosLink(defaultUrl(), ok => {
+  const link = new RosLink(defaultUrl(), ok => {
     if (!ok) setConn('シミュレーターにつながっていない')
   })
   link.subscribe<{ data: string }>('/match/state', 'std_msgs/msg/String', m => onState(JSON.parse(m.data) as MatchState), 30)
-  pubCmd = link.publisher('/robot/cmd_vel', 'geometry_msgs/msg/Twist')
-  for (const k of ['extend', 'lift']) pubArm[k] = link.publisher(`/robot/arm/${k}`, 'std_msgs/msg/Float64')
-}
-
-// 結果は /match/state の action を訳して出す (ほかのノードや CLI が呼んだ結果も出る). ここでは失敗 (service がない) だけを出す
-function callTrigger(name: string) {
-  if (!link) return
-  link.call<object, Trigger>(name, 'std_srvs/srv/Trigger', {}).catch((err: unknown) => setAction(String(err), false))
+  pubUi = link.publisher('/match/ui', 'std_msgs/msg/String')
 }
 
 // ---------------------------------------------------------------- 3D
@@ -253,7 +274,7 @@ function resize() {
 addEventListener('resize', resize)
 resize()
 
-// ---------------------------------------------------------------- 自由走行
+// ---------------------------------------------------------------- キーの操作
 // 台車は機体の向きで動かす: W 前 / S 後 / A 左 / D 右 / Q 左回り / E 右回り. Shift で速く
 const KEYS: Record<string, Vec3> = {
   KeyW: [1, 0, 0],
@@ -277,33 +298,43 @@ const ARM_KEYS: Record<string, [ArmKey, number]> = {
 }
 const ARM_MAX: Record<ArmKey, number> = { extend: 0.42, lift: 0.35 }
 const armTarget: Record<ArmKey, number> = { extend: 0, lift: 0 }
-// 作業の service
-const ACTIONS: Record<string, string> = {
-  KeyG: '/robot/grab',
-  KeyP: '/robot/place',
-  KeyT: '/robot/throw',
-  KeyX: '/robot/dice',
-  KeyZ: '/robot/signal',
-  KeyR: '/match/reset',
+// 1 回押すと 1 回送る操作
+const ONCE: Record<string, string> = {
+  KeyG: 'act grab',
+  KeyP: 'act place',
+  KeyT: 'act throw',
+  KeyX: 'act dice',
+  KeyZ: 'act signal',
+  KeyR: 'reset',
+  Enter: 'start',
+  KeyY: 'retry',
+  Digit1: 'button 1',
+  Digit2: 'button 2',
+  Digit3: 'button 3',
+  Digit4: 'button 4',
 }
 const held = new Set<string>()
 let fast = false,
   follow = false,
-  sending = false
+  sending = false,
+  mode: Mode = 'free'
 addEventListener('keydown', e => {
+  // 説明を読んでいる間はロボットを動かさない
+  if (e.code === 'Escape') {
+    closeGuide()
+    return
+  }
+  if ($('guide').classList.contains('open')) return
   fast = e.shiftKey
   if (KEYS[e.code] || ARM_KEYS[e.code]) {
     held.add(e.code)
     e.preventDefault()
   }
   if (e.code === 'KeyF') follow = !follow
-  const action = ACTIONS[e.code]
-  if (action && !e.repeat) {
-    callTrigger(action)
-    if (e.code === 'KeyR') {
-      armTarget.extend = 0
-      armTarget.lift = 0
-    }
+  const once = ONCE[e.code]
+  if (once && !e.repeat) {
+    if (e.code === 'Enter' && mode !== 'match') return
+    ui(once)
   }
 })
 addEventListener('keyup', e => {
@@ -317,10 +348,10 @@ setInterval(() => {
     if (!a) continue
     const [joint, speed] = a
     armTarget[joint] = Math.max(0, Math.min(ARM_MAX[joint], armTarget[joint] + speed * 0.05))
-    pubArm[joint]?.({ data: armTarget[joint] })
+    ui(`arm ${joint} ${armTarget[joint].toFixed(3)}`)
   }
 }, 50)
-// 押している間は 20 Hz で送る. 離したら 1 回だけ 0 を送る (ほかのノードの指令を邪魔しないよう, 押していないときは送らない)
+// 押している間は 20 Hz で送る. 離したら 1 回だけ 0 を送る (押していないときは送らない)
 setInterval(() => {
   const v: Vec3 = [0, 0, 0]
   const drive = [...held].filter(k => KEYS[k])
@@ -332,15 +363,149 @@ setInterval(() => {
   sending = drive.length > 0
   const lin = fast ? 1.5 : 0.6,
     ang = fast ? 2.5 : 1.2
-  pubCmd?.({ linear: { x: v[0] * lin, y: v[1] * lin, z: 0 }, angular: { x: 0, y: 0, z: v[2] * ang } })
+  ui(`drive ${(v[0] * lin).toFixed(2)} ${(v[1] * lin).toFixed(2)} ${(v[2] * ang).toFixed(2)}`)
 }, 50)
 
+// ---------------------------------------------------------------- 説明 (public/guide/<言語>/<id>.md)
+const guides = new Map<string, Promise<string | null>>()
+const fetchText = (path: string) =>
+  fetch(path, { cache: 'no-cache' })
+    .then(r => (r.ok ? r.text() : null))
+    .catch(() => null)
+function loadGuide(id: string): Promise<string | null> {
+  const lang = currentLang()
+  let p = guides.get(`${lang}/${id}`)
+  if (!p) {
+    p = fetchText(`guide/${lang}/${id}.md`).then(t => t ?? (lang === 'ja' ? null : fetchText(`guide/ja/${id}.md`)))
+    guides.set(`${lang}/${id}`, p)
+  }
+  return p
+}
+async function openGuide(id: string) {
+  const text = await loadGuide(id)
+  const lang = currentLang()
+  const label = tr('guide.translation')
+  // ターミナルに出る文 ({{msg:...}}) は英語の原文と訳にしてから描く
+  const md = text
+    ? expandMessages(text, {
+        original: (key, args) => tr(key, args, 'en'),
+        translated: lang === 'en' ? null : (key, args) => tr(key, args, lang),
+        label,
+      })
+    : null
+  const body = $('guidebody')
+  body.innerHTML = md ? renderGuide(md, { copy: tr('ui.copy'), translation: label }) : '<p>この課題の説明はまだない。</p>'
+  for (const b of body.querySelectorAll<HTMLButtonElement>('.code button')) {
+    b.onclick = () => {
+      void navigator.clipboard?.writeText(b.nextElementSibling?.textContent ?? '')
+      b.textContent = tr('ui.copied')
+    }
+  }
+  $('guide').classList.add('open')
+  body.scrollTop = 0
+  held.clear()
+}
+function closeGuide() {
+  $('guide').classList.remove('open')
+}
+
+// ---------------------------------------------------------------- モードごとの表示
+const PHASE: Record<Phase, string> = { ready: '始める前', setting: 'セッティング', match: '試合', finished: '終了' }
+const MODE_NOTE: Record<Mode, string> = {
+  free: '自由走行: 時間も課題もない。キーで好きに動かす',
+  course: '練習: 右の課題を上から順に済ませる。「説明を読む」に手順がある',
+  match: '試合: Enter でセッティング 60 秒 → 試合 3 分。得点は右',
+}
+let lastMessage = '',
+  bannerUntil = 0
+
+function showBanner(m: MatchStatus) {
+  // 知らせは変わってから 4 秒出す. 止められているあいだと試合が終わったあとは出したまま
+  const key = JSON.stringify(m.message)
+  if (m.message && key !== lastMessage) {
+    lastMessage = key
+    bannerUntil = performance.now() + 4000
+  }
+  const shown = m.stopped ?? (m.mode === 'match' && m.phase === 'finished' ? m.message : performance.now() < bannerUntil ? m.message : null)
+  $('banner').textContent = shown ? tm(shown) : ''
+  $('banner').className = `card${m.stopped ? ' ng' : ''}${shown ? '' : ' hide'}`
+}
+
+function showScore(m: MatchStatus) {
+  const r = m.remaining
+  $('phase').textContent = PHASE[m.phase] ?? m.phase
+  $('clock').textContent =
+    r == null
+      ? m.phase === 'finished' && m.result
+        ? `${m.result.time.toFixed(1)}s`
+        : '--:--'
+      : `${Math.floor(r / 60)}:${String(Math.floor(r % 60)).padStart(2, '0')}`
+  $('timer').dataset.phase = m.phase
+  const items = Object.entries(m.items)
+    .map(([k, it]) => {
+      const cnt = it.count != null ? ` × ${it.count}` : ''
+      const cls = it.points > 0 ? 'ok' : it.points < 0 ? 'ng' : 'wait'
+      return `<div class="${cls}"><i>${esc(k)}</i><span>${esc(tr(`match.item.${k}`))}${cnt}</span><b>${it.points}</b></div>`
+    })
+    .join('')
+  const b = m.best
+  const best = b.score != null ? `自己ベスト ${b.score} 点${b.declared ? ` (満開宣言 ${b.time} 秒)` : ''}` : '自己ベスト なし'
+  $('side').innerHTML = `<h3>得点 <b>${m.score}</b></h3><div class="items">${items}</div><div class="sub">${best}</div>
+  <div class="sub"><button class="link" data-guide="match_rules">得点とルールの説明</button></div>`
+}
+
+function showCourse(c: Course) {
+  const cur = c.current
+  const who = (list: string[]) => list.map(s => tr(`match.src.${s}`)).join('・') || 'なし'
+  // いまの課題を上に出し, その下に全部の課題を並べる
+  let html = ''
+  if (cur) {
+    html += `<div class="current"><div class="k">いまの課題</div><div class="t">${esc(tr(`match.task.${cur}`))}</div>
+      <button class="go" data-guide="${esc(cur)}">説明を読む</button>
+      ${c.note ? `<div class="note">${esc(tm(c.note))}</div>` : ''}
+      <div class="sub">この回の操作 (R で最初に戻すと消える): 台車 ${esc(who(c.run.drive))} / 機構 ${esc(who(c.run.mech))}</div></div>`
+  } else {
+    html += '<div class="current"><div class="t">全部済んだ。試合に挑戦する</div></div>'
+  }
+  html += '<h3 style="margin-top:12px">練習の課題</h3>'
+  for (const lv of c.levels) {
+    const done = lv.tasks.filter(t => t.done).length
+    html += `<div class="level"><b>${esc(tr(`match.level.${lv.id}.name`))}</b> <span>${esc(tr(`match.level.${lv.id}.desc`))}</span> <em>${done} / ${lv.tasks.length}</em></div>`
+    for (const t of lv.tasks) {
+      const cls = t.done ? 'ok' : t.id === cur ? 'now' : 'wait'
+      const mark = t.done ? '✓' : t.id === cur ? '▶' : ''
+      const link = t.done || t.id === cur ? ` <button class="link" data-guide="${esc(t.id)}">説明</button>` : ''
+      html += `<div class="${cls}"><i>${mark}</i><span>${esc(tr(`match.task.${t.id}`))}</span>${link}</div>`
+    }
+  }
+  $('side').innerHTML = html
+}
+
+function showMode(m: MatchStatus) {
+  if (m.mode === mode && $('side').dataset.filled) return
+  mode = m.mode
+  document.body.dataset.mode = mode
+  for (const b of document.querySelectorAll<HTMLElement>('#modes button[data-mode]')) b.classList.toggle('on', b.dataset.mode === mode)
+  $('note').textContent = MODE_NOTE[mode]
+  $('side').dataset.filled = '1'
+}
+
 function startFree(bodies: Record<string, THREE.Group>) {
-  for (const id of ['score', 'timer', 'checks']) $(id).style.display = 'none'
+  // シミュレーターにつながる前から, モードの切り替えと「はじめに」を出しておく
+  document.body.dataset.mode = 'free'
+  $('note').textContent = MODE_NOTE.free
+  $('score').style.display = 'none'
+  $('checks').style.display = 'none'
   $('drive').style.display = ''
-  $('note').textContent = '自分のノードからも動かせる: /robot/cmd_vel, /robot/arm/extend, /robot/arm/lift, /robot/grab など (README)'
+  $('timer').innerHTML =
+    '<span class="phase" id="phase">始める前</span><b id="clock">--:--</b><div class="hint"><kbd>Enter</kbd> 試合を始める</div>'
+  for (const b of document.querySelectorAll<HTMLElement>('#modes button[data-mode]')) b.onclick = () => ui(`mode ${b.dataset.mode}`)
+  document.addEventListener('click', e => {
+    const g = (e.target as HTMLElement).closest<HTMLElement>('[data-guide]')
+    if (g?.dataset.guide) void openGuide(g.dataset.guide)
+  })
+  $('guideclose').onclick = closeGuide
   let shown = 0,
-    synced = false,
     actionKey = ''
   const beacon = scene.getObjectByName('robot_beacon') as THREE.Mesh | undefined
   const beaconOff = beacon?.material
@@ -357,14 +522,17 @@ function startFree(bodies: Record<string, THREE.Group>) {
       const yaw = (2 * Math.atan2(r[6], r[3]) * 180) / Math.PI
       $('pose').textContent = `x ${r[0].toFixed(2)} m, y ${r[1].toFixed(2)} m, 向き ${(((yaw + 540) % 360) - 180).toFixed(0)}°`
     }
+    const m = st.match
+    if (m) {
+      showMode(m)
+      if (m.mode === 'match') showScore(m)
+      else if (m.mode === 'course' && m.course) showCourse(m.course)
+      showBanner(m)
+    }
     const rs = st.robot
     if (rs) {
-      // 最初の 1 回だけ, キーで動かす目標を今のアームとリフトに合わせる (ほかのノードが動かしていたとき用)
-      if (!synced) {
-        armTarget.extend = rs.extend
-        armTarget.lift = rs.lift
-        synced = true
-      }
+      // キーを押していないあいだは, キーで動かす目標を今のアームとリフトに合わせる (自分のノードが動かしたあと用)
+      for (const k of ['extend', 'lift'] as const) if (![...held].some(h => ARM_KEYS[h]?.[0] === k)) armTarget[k] = rs[k]
       $('arm').textContent =
         `アーム ${rs.extend.toFixed(2)} m, リフト ${rs.lift.toFixed(2)} m, 持っている ${rs.carried.length} 本, サイコロの目 ${rs.dice}`
       if (beacon && beaconOff) beacon.material = rs.signal ? beaconOn : beaconOff

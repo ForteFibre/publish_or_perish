@@ -4,7 +4,10 @@
 
 水分が 30 未満のマスに、自分のノードから 10 回水をやる。水やりは service `/bot1/water` で、ステージ 1 では `ros2 service call` で呼んだ。これをノードの中から呼ぶ。
 
-動かすのと水をやるのを 2 つのノードに分ける。動かすのはステージ 5 の `patrol_node` をそのまま使い、水をやる `water_node` (`~/src26_ws/src/tutorial_nodes/src/water_node.cpp`) を新しく作る。
+このステージは **半自動** から始める。ロボットを動かすのはキー (W A S D)、水をやるのは自分のノード `water_node`。人が畑を走らせ、乾いたマスに乗ったところで `water_node` が水をやる。動かすのも自動にするのは、この後の課題「無人農場」。
+
+- 書くのは `water_node` (`~/src26_ws/src/tutorial_nodes/src/water_node.cpp`)。動かす部分は書かない。
+- キーの代わりに、ステージ 5 の `patrol_node` で動かしてもよい。
 
 package.xml に `std_srvs` を足し、CMakeLists.txt に 1 行足す。
 
@@ -16,16 +19,15 @@ package.xml に `std_srvs` を足し、CMakeLists.txt に 1 行足す。
 ament_auto_add_executable(water_node src/water_node.cpp)
 ```
 
-ビルドしたら、ターミナルを 2 つ使って両方を起動する。`patrol_node` を先に起動し、数秒たってから `water_node` を起動する (農場が自分のノードを見つけるまで約 1 秒かかり、その前の水やりは数えない。同時に起動すると最初の 1 回が数えられないことがある)。
+ビルドして起動したら、畑の画面をクリックし、キーで畑の上を走らせる。
 
 ```bash
 cd ~/src26_ws
 colcon build --symlink-install --merge-install --packages-select tutorial_nodes
-ros2 run tutorial_nodes patrol_node      # 1 つ目のターミナル
-ros2 run tutorial_nodes water_node       # 2 つ目のターミナル
+ros2 run tutorial_nodes water_node
 ```
 
-タンクは 10 回分なので、満タンから始めれば 10 回やれる。
+タンクは 10 回分なので、満タンから始めれば 10 回やれる。空になったら、キーで井戸 (左下のマス (0, 0)) に乗る。
 
 ## 使うもの
 
@@ -77,7 +79,7 @@ water_->async_send_request(
 
 ## うまくいかないとき
 
-- **数が増えない:** 数えるのは「自分のノードだけが動いている」とき (右上の「運転」が「無人運転中」) だけ。`ros2 topic pub` や `ros2 service call` は止める。
-- **{{msg:srv.water.tank_empty}} と出る:** 井戸 (左下のマス (0, 0)) に立つと満タンになる。`patrol_node` は畑を往復するうちに井戸を通るので、そのまま待てば補給される (試したときは起動から 80 秒ほどで通った)。タンクの残りは `ros2 topic echo /bot1/tank` で見られる。
+- **数が増えない:** 数えるのは自分のノードが呼んだ水やりだけ。キーの X や `ros2 service call` で水をやっても数えない。
+- **{{msg:srv.water.tank_empty}} と出る:** 井戸 (左下のマス (0, 0)) にキーで乗ると満タンになる。タンクの残りは `ros2 topic echo /bot1/tank` で見られる。
 - **ずっと同じマスで水をやり続ける:** 返事待ちの間に次を呼んでいるか、水をやったマスを覚えていない。
 - **`async_send_request` のところでビルドエラー:** 2 つ目の引数の関数は `rclcpp::Client<Trigger>::SharedFuture` を受け取る形にする。

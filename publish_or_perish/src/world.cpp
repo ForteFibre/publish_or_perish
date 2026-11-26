@@ -31,6 +31,7 @@ const char * to_string(Source s)
     case Source::Cli: return "cli";
     case Source::Player: return "player";
     case Source::Mixed: return "mixed";
+    case Source::Key: return "key";
     default: return "";
   }
 }
@@ -60,6 +61,7 @@ long World::stat(const std::string & key) const
 void World::emit(Event e)
 {
   e.t = time;
+  if (e.src == Source::None) {e.src = action_src;}
   events_.push_back(std::move(e));
 }
 

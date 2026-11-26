@@ -22,6 +22,8 @@ type Ui = {
   banner: { title: Msg; body: Msg } | null
   tip: Tip | null
   floats: Float[]
+  /** キーで動かすロボット (Tab で替える) */
+  keyBot: string
   open: (m: Modal) => void
   close: () => void
 }
@@ -35,6 +37,7 @@ export const useUi = create<Ui>()(
       banner: null,
       tip: null,
       floats: [],
+      keyBot: 'bot1',
       open: modal => set({ modal }),
       close: () => set({ modal: null }),
     }),

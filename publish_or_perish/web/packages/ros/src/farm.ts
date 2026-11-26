@@ -26,8 +26,8 @@ export const Bot = z.object({
   tank_max: z.number(),
   seed: z.string(),
   moving: flag,
-  /** 最後に cmd_vel を送ってきたのが誰か */
-  src: z.enum(['', 'cli', 'player', 'mixed']),
+  /** 最後に cmd_vel を送ってきたのが誰か. key は画面のキー (/farm/ui) */
+  src: z.enum(['', 'cli', 'player', 'mixed', 'key']),
 })
 
 /** 題・説明・ヒントは訳の表の mission.<id>. unit は単位の種類 (unit.<unit>. 空なら単位なし) */
@@ -179,7 +179,14 @@ export function parseFarmState(json: string, check: boolean): FarmState {
 }
 
 /** /farm/ui に送る操作 */
-export type UiCommand = { kind: 'buy'; id: string } | { kind: 'speed'; value: number } | { kind: 'diag'; text: string }
+export type UiCommand =
+  | { kind: 'buy'; id: string }
+  | { kind: 'speed'; value: number }
+  | { kind: 'diag'; text: string }
+  /** キーで動かす (押している間 20 Hz で送る). 速度は機体の向き (x 前 / y 左 [m/s], z まわり [rad/s]) */
+  | { kind: 'drive'; bot: string; vx: number; vy: number; wz: number }
+  /** キーで足元のマスを操作する */
+  | { kind: 'act'; bot: string; what: 'plant' | 'water' | 'harvest' }
 
 export function encodeUi(c: UiCommand): string {
   switch (c.kind) {
@@ -189,5 +196,9 @@ export function encodeUi(c: UiCommand): string {
       return `speed ${c.value}`
     case 'diag':
       return `diag ${c.text}`
+    case 'drive':
+      return `drive ${c.bot} ${c.vx.toFixed(2)} ${c.vy.toFixed(2)} ${c.wz.toFixed(2)}`
+    case 'act':
+      return `act ${c.bot} ${c.what}`
   }
 }

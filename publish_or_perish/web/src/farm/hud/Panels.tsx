@@ -9,6 +9,7 @@ import {
   CodeBlock,
   FloatingCard,
   Icon,
+  KeyCap,
   LevelMedal,
   type LogEntry,
   LogPanel,
@@ -48,6 +49,7 @@ export function Status() {
   const span = s ? Math.max(1, s.next_xp - s.lv_xp) : 1
   const xp = s ? s.xp - s.lv_xp : 0
   const m = s ? mode(s) : null
+  const keyBot = useUi(u => u.keyBot)
   const conn = connected
     ? { tone: 'player' as const, icon: <Icon.Plug size={12} aria-hidden />, text: tr('ui.ros.connected') }
     : connected === null
@@ -103,6 +105,34 @@ export function Status() {
                 .map(b => tr('ui.ros.bot', { name: b.name, tank: String(b.tank), max: String(b.tank_max), seed: cropName(b.seed) }))
                 .join(' / ')
             : '-'}
+        </span>
+        <span className={`${label} narrow:hidden`}>{tr('ui.ros.keys')}</span>
+        <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs narrow:hidden">
+          <b className="font-mono">{keyBot}</b>
+          {(s?.bots.length ?? 1) > 1 && (
+            <span>
+              (<KeyCap>Tab</KeyCap> {tr('ui.keys.switch')})
+            </span>
+          )}
+          <span>
+            <KeyCap>W</KeyCap>
+            <KeyCap>A</KeyCap>
+            <KeyCap>S</KeyCap>
+            <KeyCap>D</KeyCap> {tr('ui.keys.move')}
+          </span>
+          <span>
+            <KeyCap>Q</KeyCap>
+            <KeyCap>E</KeyCap> {tr('ui.keys.turn')}
+          </span>
+          <span>
+            <KeyCap>Z</KeyCap> {tr('ui.keys.plant')}
+          </span>
+          <span>
+            <KeyCap>X</KeyCap> {tr('ui.keys.water')}
+          </span>
+          <span>
+            <KeyCap>C</KeyCap> {tr('ui.keys.harvest')}
+          </span>
         </span>
       </div>
     </Card>

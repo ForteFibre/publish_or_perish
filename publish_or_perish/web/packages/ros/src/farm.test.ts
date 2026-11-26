@@ -33,5 +33,7 @@ describe('encodeUi', () => {
     expect(encodeUi({ kind: 'buy', id: 'col' })).toBe('buy col')
     expect(encodeUi({ kind: 'speed', value: 4 })).toBe('speed 4')
     expect(encodeUi({ kind: 'diag', text: 'browser fps:60' })).toBe('diag browser fps:60')
+    expect(encodeUi({ kind: 'drive', bot: 'bot1', vx: 0.5, vy: -0.5, wz: 1.2 })).toBe('drive bot1 0.50 -0.50 1.20')
+    expect(encodeUi({ kind: 'act', bot: 'bot2', what: 'water' })).toBe('act bot2 water')
   })
 })

@@ -22,7 +22,7 @@ ros2 launch publish_or_perish farm.launch.xml
 画面 (`publish_or_perish/web/dist`) がまだなければ, colcon build の前に作る (下の「画面を作る」)。
 進み具合は `~/.publish_or_perish/save.txt` に保存される。最初からにするときは `reset:=true`、別の保存先は `save_path:=<path>` を付ける。
 
-途中のステージから試すときは `start_stage:=<番号>` を付ける (前のステージは済みになる)。今の記録を残すため、保存先も分ける。
+途中のステージから試すときは `start_stage:=<番号>` を付ける (前のステージは済みになる。番号はステージの番号で, 0 から)。今の記録を残すため、保存先も分ける。
 ステージ 3 を、もう遊んだワークスペースで試し直す例 (別の名前のパッケージを使うので、遊んだ `tutorial_nodes` は変わらない):
 
 ```bash
@@ -47,9 +47,9 @@ ln -s ~/src26_ws/src/publish_or_perish/vscode ~/.vscode/extensions/fortefibre.pu
 - **ステータスバー**: 今のステージ、課題、進み具合、配線の警告を出す。カーソルを乗せると課題の説明とヒントが出る
 - **今の課題の説明を開く** (Ctrl+Alt+G、ステータスバーのツールチップ、または畑の「説明を読む」): 課題の説明をエディタの横に Markdown のプレビューで開く
 
-## 大会モード (作成中)
+## 大会モード
 
-関西春ロボコン 2027 "SAKURA AVENUE" のフィールドで、大会のタスクができるロボット (赤コート) を自由に動かせる。物理は MuJoCo で計算する。得点の判定と試合の進行はまだない。
+関西春ロボコン 2027 "SAKURA AVENUE" のフィールドで、大会のタスクができるロボット (赤コート) を動かす (1 チームで遊ぶ。相手はいない)。物理は MuJoCo で計算する。
 
 ```bash
 pip install --user --break-system-packages mujoco   # MuJoCo の Python 版 (Ubuntu 24.04 は --break-system-packages が要る)
@@ -58,7 +58,38 @@ colcon build --symlink-install --merge-install --packages-select publish_or_peri
 ros2 launch publish_or_perish match.launch.xml
 ```
 
-ブラウザで http://localhost:8765/match.html を開く。キーで動かせる (画面の左上に一覧)。
+ブラウザで http://localhost:8765/match.html を開く。農場 (`farm.launch.xml`) と同じポートを使うので、同時には起動できない。
+画面の上の「はじめに」に、フィールド・ロボット・ルールの説明がある。
+
+| モード | 中身 |
+|---|---|
+| 自由走行 | 時間も課題もない。キーで動かす |
+| 練習 | 課題を順に済ませる。手動 (キー) → 半自動 (走るのはキー, 機構は自分のノード) → 自動 (全部自分のノード)。課題ごとに手順の説明 (`web/public/guide/ja/m_*.md` `s_*.md` `a_*.md`) が画面の中で読める。進み具合は `~/.publish_or_perish/match_course.json` |
+| 試合 | Enter でセッティング 60 秒 → 試合 180 秒。得点 A〜F を数える。自己ベストは `~/.publish_or_perish/match_best.json` |
+
+練習の課題:
+
+| 段階 | 課題 |
+|---|---|
+| 手動 | エリア 2 に入る / サイコロを 6 に / 桜ボトルをつかむ / 共通ゾーン 1 に置く / 五分咲き / 満開宣言 |
+| 半自動 | ボタン 1 でリフトを上げる / ボタン 1 でつかむ / ボタン 2 で置く / ボタン 3 でサイコロ / 半自動で満開宣言 |
+| 自動 | エリア 2 に入る / サイコロを 6 に / 共通ゾーン 1 に置く / 3 分以内に満開宣言 |
+
+半自動と自動の課題は、キー・CLI・自分のノードのどれで動かしたかを見る。キーの操作は画面から `/match/ui` で届き、topic と service は ROS のグラフで送り手 (client) を調べる (農場と同じ)。
+
+得点 (ルールブック ver.1.0.1 の 3.6):
+
+| | 内容 | 点 |
+|---|---|---|
+| A | エリア 2 に初めて進入 | 10 |
+| B | サイコロの目を初めて変える | 20 |
+| C | 共通ゾーンに完全に接地した桜ボトル | 1 本 30 |
+| D | 雑草ゾーンに完全に接地していない雑草ボトル | 1 本 -15 |
+| E | 五分咲き (桜ボトルのある共通ゾーンが 5 つ以上) | 90 |
+| F | 満開 (五分咲きのあとで共通ゾーン 12 に置いた) | 180 |
+
+- 桜ボトルは, 置いたときに「下の番号の共通ゾーンが全部埋まっている」「自分の雑草ボトルが全部立っている」「(12 番は) 五分咲き」のときだけ数える。数えないときは画面に理由が出る。あとから条件がそろっても, 置き直すまで数えない
+- 試合中に, ロボットの正射影 (ハンドを含む) が相手のコートに入ると強制リトライ (止まる)。Y (または `/match/retry`) でスタートゾーンに戻り, 持っていたボトルは最初の位置に戻る
 
 ロボット: 450 x 450 mm の全方向に動ける台車, マストを上下するリフト (0〜0.35 m), 前へ伸びるアーム (0〜0.42 m), ボトルを横 3 x 奥 2 に並べてつかむハンド。
 アームを縮めると 0.57 x 0.45 x 0.66 m (初期制限 700 mm 角に入る), 伸ばしきると前後 0.99 m (展開制限 1000 mm 角に入る)。重さは 12 kg。
@@ -66,32 +97,37 @@ ros2 launch publish_or_perish match.launch.xml
 | 名前 | 型 | 向き | 内容 |
 |---|---|---|---|
 | `/robot/cmd_vel` | `geometry_msgs/msg/Twist` | 送る | 台車の速度 (機体座標, x 前 / y 左)。0.5 秒途切れると止まる。最大 2 m/s, 3 rad/s |
-| `/robot/arm/extend` | `std_msgs/msg/Float64` | 送る | アームの伸びの目標 [m] (0〜0.42)。0.4 m/s で動く |
-| `/robot/arm/lift` | `std_msgs/msg/Float64` | 送る | リフトの高さの目標 [m] (0〜0.35)。0.3 m/s で動く |
+| `/robot/arm/extend` `/robot/arm/lift` | `std_msgs/msg/Float64` | 送る | アームの伸び (0〜0.42 m)・リフトの高さ (0〜0.35 m) の目標。0.4 m/s・0.3 m/s で動く |
+| `/robot/arm/extend_now` `/robot/arm/lift_now` | `std_msgs/msg/Float64` | 受ける | 今の伸び・高さ [m] |
 | `/robot/pose` | `geometry_msgs/msg/Pose` | 受ける | 台車の位置 [m] と向き (z 軸まわりのクォータニオン)。原点はフィールドの中心, x は赤コートから青コートへ, y はスタートゾーンから奥へ |
-| `/robot/status` | `std_msgs/msg/String` | 受ける | アーム・リフト・持っているボトル・サイコロの目・合図・最後の操作の結果 (JSON。`last_action` は英語の文, `action` はキーと値) |
+| `/robot/dice_top` `/robot/carrying` | `std_msgs/msg/Int32` | 受ける | サイコロの上の目 (サイコロゾーンの外なら 0)・持っている本数 |
+| `/operator/button` | `std_msgs/msg/Int32` | 受ける | 画面で押した数字キー (1〜4)。半自動で使う |
+| `/robot/status` | `std_msgs/msg/String` | 受ける | 上のまとめと最後の操作の結果 (JSON。`last_action` は英語の文, `action` はキーと値) |
 | `/robot/grab` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの前に立っているボトル (自チームの桜ボトルと除草剤ボトル) をつかむ。リフトを 0.03 m 以下に下ろしておく。持てるのはサイコロの目の数まで (ルール 5.4) |
 | `/robot/place` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドの真ん中のボトルを今の高さで離す (下ろしてから離す) |
 | `/robot/throw` | `std_srvs/srv/Trigger` | 呼ぶ | 持っている除草剤ボトルを 1 本, 前へ投げる (前 3.5 m/s, 上 2.5 m/s) |
 | `/robot/dice` | `std_srvs/srv/Trigger` | 呼ぶ | ハンドから 0.2 m 以内のサイコロを前へ 1 面転がす |
 | `/robot/signal` | `std_srvs/srv/Trigger` | 呼ぶ | 合図 (満開宣言) の灯りを付ける / 消す |
-| `/match/reset` | `std_srvs/srv/Trigger` | 呼ぶ | ロボットとオブジェクトを最初の位置に戻す |
+| `/match/start` `/match/retry` `/match/reset` | `std_srvs/srv/Trigger` | 呼ぶ | 試合を始める (セッティング中は飛ばす)・リトライ・最初の位置に戻す |
+| `/match/status` | `std_msgs/msg/String` | 受ける | モード・試合の段階・残り時間・得点の内訳・練習の課題 (JSON) |
 
 - service の結果は response の `message` に英語で返る (できなかった理由も)。画面には日本語の訳が出る
 - 台車は木枠 (高さ 89 mm) を越えられない。スタートゾーンは外周と木枠に囲まれていて, 右 (+x) から出る。アームとハンドは何にも当たらない
-- 持っているボトルの底は, リフトの高さ + 5 mm。底が 89 mm より低いまま木枠に重なると, そのボトルはその場に落ちる。共通ゾーンへ運ぶときはリフトを上げて木枠を越え, ゾーンの上で下ろしてから置く
+- 持っているボトルの底は, リフトの高さ + 5 mm。底が 89 mm より低いまま木枠に重なると, そのボトルはその場に落ちる
+- 解答例 (講師用): `ros2 run publish_or_perish_answers match_semi` (半自動。台車はキー, 機構はボタン 1〜4) / `ros2 run publish_or_perish_answers match_auto` (自動。満開宣言まで)
 - フィールドは `tools/harurobo2027_field.py` が `publish_or_perish/models/harurobo2027/harurobo2027.xml` に書き出す。寸法は運営委員会のフィールド CAD から取った (取り方はスクリプトの先頭)。直したら書き出し直し, `python3 tools/mjcf_export.py publish_or_perish/models/harurobo2027/harurobo2027.xml publish_or_perish/web/public/scenes/harurobo2027` で画面用の形も作り直す
 
 ## ステージ
 
 | ステージ | 内容 | 講習 |
 |---|---|---|
+| 0 キーで動かしてみよう | 画面のキー (W A S D で移動, Z 種まき, X 水やり, C 収穫) で遊び方を覚える | なし |
 | 1 手で動かしてみよう | `ros2 topic pub` / `ros2 topic echo` / `ros2 service call` | 入門 第8・9回 |
 | 2 ワークスペースを作ろう | `mkdir -p ~/src26_ws/src`、`ros2 pkg create`、`colcon build`、`~/.bashrc` | 実践 第1回 |
 | 3 最初のノードを動かそう | `hello_node` を書き、package.xml と CMakeLists.txt を ament_cmake_auto にし、ビルドして `ros2 run` | 実践 第2・3・4回 |
 | 4 ノードで topic と service を使おう | 畑の横の看板を相手に、Publisher・Subscriber・受けて送る・service の client を 1 つずつ書く (畑とロボットは使わない) | 実践 第2・5・6・7回・入門 第9回 |
 | 5 自分のノードでロボットを動かそう | ステージ 4 と同じ書き方で `/bot1/cmd_vel` を送り、畑を巡回する | 実践 第6回 |
-| 6 畑を見て判断しよう | Subscriber と service の client で無人農場 | 実践 第7回 |
+| 6 畑を見て判断しよう | Subscriber と service の client。移動はキーで作業は自分のノード (半自動) から始め, 最後に移動も自分のノードにする (無人農場) | 実践 第7回 |
 | 7 パラメータで作物を選ぼう | `ros2 param set /farm bot1.seed tomato` | 入門 第10回・実践 第12回 |
 | 8 ロボットを 2 台にしよう | namespace と launch で同じノードを 2 つ動かす | 実践 第11回 |
 
@@ -99,7 +135,8 @@ ros2 launch publish_or_perish match.launch.xml
 
 ## 画面の機能
 
-- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker と listener、受けて送る `/counter`、service の client など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/public/guide/ja/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。ターミナルに出る文は `{{msg:キー|名前=値}}` と書くと、英語の原文と訳になる (下の「ターミナルの文と訳」)。すべての課題に付けている。ステージ 1 と 2 はコマンドの意味と、うまくいかないとき (点検の欄の見方) を書いている
+- **キーで動かす** (左上の一覧): W A S D で移動, Q E で回る, Shift で速く, Z 種まき, X 水やり, C 収穫, Tab で操作するロボットを替える。キーの操作は `/farm/ui` で農場に届き, 課題では CLI や自分のノードと分けて数える (ステージ 0 はキー, ステージ 1 は CLI だけ, 半自動の課題は作業が自分のノード)
+- **説明** (課題の「説明を読む」): その課題でやること、使う関数やコマンドの意味、うまくいかないときの見方を出す。ステージ 4 は課題とは別の例 (`/chatter` の talker と listener、受けて送る `/counter`、service の client など) で書き方を説明し、ステージ 5〜8 は完成したコードを載せず、考え方と要の数行を畳んだヒント (`<details><summary>題</summary>` 〜 `</details>`) にしている (解答例は講師用の `publish_or_perish_answers`)。ステージ 3 は決まった形なので全文を載せる。講習の資料を開かなくても進められるようにするためのもの。中身は `publish_or_perish/web/public/guide/ja/<課題の id>.md` で、文中の `~/src26_ws` と `tutorial_nodes` は起動引数の `workspace:=` と `package:=` の値に置き換えて出す。ターミナルに出る文は `{{msg:キー|名前=値}}` と書くと、英語の原文と訳になる (下の「ターミナルの文と訳」)。すべての課題に付けている。ステージ 0〜2 は操作やコマンドの意味と、うまくいかないとき (点検の欄の見方) を書いている
 - **点検** (課題パネルの上、VSCode では「問題」パネル): ターミナルにはエラーが出ないか、出ても原因が分かりにくい間違いを、ファイル・`~/.bashrc`・動いているプロセスを外から見て見つける。ファイルは読むだけで書き換えない
 
   | 見つける間違い | 調べ方 |
@@ -129,6 +166,7 @@ ros2 launch publish_or_perish match.launch.xml
 ```bash
 ros2 run publish_or_perish_answers stage4_patrol                          # ステージ 5 (名前は番号を 1 つ足す前のまま)
 ros2 run publish_or_perish_answers stage5_farmer --ros-args -r __ns:=/bot1  # ステージ 6・7
+ros2 run publish_or_perish_answers semi_farmer                            # ステージ 6 の半自動 (移動はキー)
 ros2 launch publish_or_perish_answers stage7_two_bots.launch.xml           # ステージ 8
 ```
 

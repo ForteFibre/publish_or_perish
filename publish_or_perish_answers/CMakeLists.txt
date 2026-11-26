@@ -20,7 +20,17 @@ add_executable(stage5_farmer src/stage5_farmer.cpp)
 target_link_libraries(stage5_farmer
   rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS} ${std_msgs_TARGETS} ${std_srvs_TARGETS})
 
-install(TARGETS stage4_patrol stage5_farmer DESTINATION lib/${PROJECT_NAME})
+add_executable(semi_farmer src/semi_farmer.cpp)
+target_link_libraries(semi_farmer
+  rclcpp::rclcpp ${geometry_msgs_TARGETS} ${nav_msgs_TARGETS} ${std_srvs_TARGETS})
+
+add_executable(match_semi src/match_semi.cpp)
+target_link_libraries(match_semi rclcpp::rclcpp ${std_msgs_TARGETS} ${std_srvs_TARGETS})
+
+add_executable(match_auto src/match_auto.cpp)
+target_link_libraries(match_auto rclcpp::rclcpp ${geometry_msgs_TARGETS} ${std_msgs_TARGETS} ${std_srvs_TARGETS})
+
+install(TARGETS stage4_patrol stage5_farmer semi_farmer match_semi match_auto DESTINATION lib/${PROJECT_NAME})
 install(DIRECTORY launch DESTINATION share/${PROJECT_NAME})
 
 ament_package()

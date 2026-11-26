@@ -60,6 +60,92 @@
     "signal": {
       "on": "Signal on.",
       "off": "Signal off."
+    },
+    "by": "{{text}} [{{src}}]",
+    "ui_bad": "/match/ui has the wrong form: {{text}}",
+    "src": {
+      "keyboard": "keys",
+      "cli": "CLI",
+      "player": "your node",
+      "both": "keys and CLI"
+    },
+    "frozen": {
+      "setting": "Setting time. The robot can't move until the match starts.",
+      "finished": "The match is over."
+    },
+    "start": {
+      "skip": "Skipped the setting time and started the match.",
+      "setting": "Setting time: {{sec}} s. Call again to skip it and start the match."
+    },
+    "retry": {
+      "not_now": "You can retry only during the match.",
+      "done": "Retry: moved the robot back to the start zone."
+    },
+    "reason": {
+      "order": "common zones up to {{below}} are not all filled",
+      "weed": "one of your weed bottles is down",
+      "early": "zone 12 was used before half bloom"
+    },
+    "notice": {
+      "start": "Match started",
+      "setting": "Setting time: {{sec}} s",
+      "placed": "Placed in common zone {{zone}}",
+      "placed_skip": "Placed in common zone {{zone}} (not counted: {{reason}})",
+      "declared": "Full bloom declared ({{time}} s). Score: {{score}}",
+      "declared_best": "Full bloom declared ({{time}} s). Score: {{score}} (personal best)",
+      "time_up": "Match over (3 min). Score: {{score}}",
+      "time_up_best": "Match over (3 min). Score: {{score}} (personal best)",
+      "declared_free": "Full bloom declared ({{time}} s)",
+      "opponent_stop": "Entered the opponent's court. Forced retry (press Y or call /match/retry to go back. Rule 5.3)",
+      "opponent": "Entered the opponent's court (in a match this is a forced retry. Rule 5.3)",
+      "task_done": "Task cleared: {{task}}"
+    },
+    "note": {
+      "other_drive": "In this run the base was also moved with {{who}}. Press R to start over.",
+      "other_mech": "In this run the mechanism was also moved with {{who}}. Press R to start over.",
+      "none_drive": "Your node has not moved the base.",
+      "none_mech": "Your node has not moved the mechanism.",
+      "button": "A button was pressed. In auto, nobody touches anything.",
+      "lift_other": "The lift was moved with keys or CLI. Move it with your node."
+    },
+    "item": {
+      "A": "First entry into area 2",
+      "B": "First change of the dice",
+      "C": "Sakura bottles in the common zones",
+      "D": "Fallen weed bottles",
+      "E": "Half bloom",
+      "F": "Full bloom"
+    },
+    "level": {
+      "manual": {
+        "name": "Manual",
+        "desc": "Move with keys"
+      },
+      "semi": {
+        "name": "Semi-auto",
+        "desc": "Keys drive, your node runs the mechanism"
+      },
+      "auto": {
+        "name": "Auto",
+        "desc": "Everything by your node"
+      }
+    },
+    "task": {
+      "m_exit": "Leave the start zone and enter area 2",
+      "m_dice": "Make the dice show 6",
+      "m_grab": "Grab a sakura bottle",
+      "m_place": "Place a sakura bottle in common zone 1",
+      "m_half": "Reach half bloom",
+      "m_bloom": "Declare full bloom",
+      "s_button": "With button 1, your node raises the lift",
+      "s_grab": "With button 1, your node grabs bottles",
+      "s_place": "With button 2, your node places a bottle",
+      "s_dice": "With button 3, your node rolls the dice",
+      "s_bloom": "Declare full bloom in semi-auto",
+      "a_exit": "Enter area 2 with your node only",
+      "a_dice": "Make the dice show 6 with your node only",
+      "a_place": "Place in common zone 1 with your node only",
+      "a_bloom": "Declare full bloom within 3 min with your node only"
     }
   },
   "guide": {

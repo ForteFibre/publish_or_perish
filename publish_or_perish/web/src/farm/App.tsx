@@ -11,6 +11,7 @@ import { GuideView } from './hud/GuideView'
 import { Modals } from './hud/Modals'
 import { Banner, Buttons, Connect, Floats, Log, Mini, Status, TipBox } from './hud/Panels'
 import { Quest } from './hud/Quest'
+import { useFarmKeys } from './keys'
 import { SceneView } from './SceneView'
 import { useUi } from './ui'
 
@@ -155,6 +156,7 @@ export function Overlays() {
 }
 
 export function App({ scene = true }: { scene?: boolean }) {
+  useFarmKeys()
   return (
     <TooltipProvider>
       <ToastRegion>

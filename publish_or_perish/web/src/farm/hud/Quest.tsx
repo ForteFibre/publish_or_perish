@@ -131,7 +131,8 @@ function MissionDetail({ m, s }: { m: Mission; s: FarmState }) {
   return (
     <>
       <p className="text-sm whitespace-pre-wrap">{text.desc}</p>
-      <CodeBlock code={text.hint} />
+      {/* ステージ 0 (キー) の課題はヒントがない (キーは説明の文と左上の札にある) */}
+      {text.hint && <CodeBlock code={text.hint} />}
       {hasGuide && (
         <Button size="sm" className="self-start" icon={<Icon.BookOpen size={16} aria-hidden />} onClick={() => openGuide(m.id)}>
           {tr('ui.quest.read_guide')}

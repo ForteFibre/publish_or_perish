@@ -50,8 +50,8 @@ struct Tile
   bool well = false;
 };
 
-// 最後の cmd_vel を誰が出したか
-enum class Source { None, Cli, Player, Mixed };
+// 最後の cmd_vel・操作を誰が出したか. Key は画面のキー (/farm/ui)
+enum class Source { None, Cli, Player, Mixed, Key };
 const char * to_string(Source s);
 
 struct Bot
@@ -80,6 +80,7 @@ struct Event
   std::string crop;
   double value = 0.0;  // move: 距離, water: 水やり前の水分, harvest: 売値
   double t = 0.0;
+  Source src = Source::None;  // plant / water / harvest / clear: 操作したのは誰か
 };
 
 // 操作の結果. msg は service の返事 (英語にして返す) と, 画面のログ (画面が訳す) に使う
@@ -96,6 +97,8 @@ public:
 
   void step(double dt);
   void command(const std::string & bot, double vx, double vy, double wz, Source src);
+  // plant / water / harvest を呼ぶ前に, 誰の操作かを入れておく (その間に出たイベントに付く)
+  Source action_src = Source::None;
 
   // ロボットの足元のマスへの操作
   Result plant(const std::string & bot);

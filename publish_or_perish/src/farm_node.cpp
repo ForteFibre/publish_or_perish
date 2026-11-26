@@ -122,9 +122,20 @@ public:
     save_path_ = declare_parameter("save_path", std::string(""));
     if (save_path_.empty()) {save_path_ = std::string(home ? home : ".") + "/.publish_or_perish/save.txt";}
     if (!declare_parameter("reset", false)) {load();}
+    // ステージ 0 (キーで動かす) ができる前の保存: ステージ 1 から先を始めていれば, ステージ 0 は済みにする
+    {
+      bool later = false;
+      for (size_t i = 1; i < progress_.stages.size(); ++i) {
+        for (const auto & m : progress_.stages[i].missions) {later = later || m.done;}
+      }
+      if (later) {
+        for (auto & m : progress_.stages[0].missions) {m.done = true; m.value = m.goal;}
+      }
+    }
     // 試すとき用: このステージより前の課題を済みにして, ここから始める (遊んだ記録とは別の save_path と一緒に使う)
     const long start = declare_parameter("start_stage", 0L);
-    for (long i = 0; i + 1 < start && i < static_cast<long>(progress_.stages.size()); ++i) {
+    // ステージの番号は 0 から (ステージ 0 = キーで動かす). start_stage:=N でステージ N から始める
+    for (long i = 0; i < start && i < static_cast<long>(progress_.stages.size()); ++i) {
       for (auto & m : progress_.stages[i].missions) {m.done = true; m.value = m.goal;}
     }
     port_ = declare_parameter("web_port", 8765);
@@ -187,7 +198,9 @@ private:
     auto serve = [this, name, p](const std::string & srv, auto op) {
         services_.push_back(create_service<Trigger>(
             p + srv, [this, name, p, srv, op](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+              world_.action_src = service_client_source(p + srv);
               auto r = (world_.*op)(name);
+              world_.action_src = Source::None;
               res->success = r.ok;
               res->message = render_en(r.msg);
               log_cli("service " + p + srv, r.msg, res->message, r.ok);
@@ -580,6 +593,28 @@ private:
   {
     if (cmd.rfind("diag ", 0) == 0) {
       RCLCPP_INFO(get_logger(), "%s", render_en({"console.diag", {{"text", cmd.substr(5)}}}).c_str());
+      return;
+    }
+    // 画面のキー: "drive <bot> vx vy wz" (押している間 20 Hz で届く), "act <bot> plant|water|harvest"
+    if (cmd.rfind("drive ", 0) == 0) {
+      std::istringstream s(cmd.substr(6));
+      std::string bot;
+      double vx = 0, vy = 0, wz = 0;
+      if (s >> bot >> vx >> vy >> wz) {world_.command(bot, vx, vy, wz, Source::Key);}
+      return;
+    }
+    if (cmd.rfind("act ", 0) == 0) {
+      std::istringstream s(cmd.substr(4));
+      std::string bot, what;
+      if (!(s >> bot >> what) || !world_.bots.count(bot)) {return;}
+      auto op = what == "plant" ? &publish_or_perish::World::plant :
+        what == "water" ? &publish_or_perish::World::water :
+        what == "harvest" ? &publish_or_perish::World::harvest : nullptr;
+      if (!op) {return;}
+      world_.action_src = Source::Key;
+      auto r = (world_.*op)(bot);
+      world_.action_src = Source::None;
+      log({"log.key", {{"bot", bot}, {"text", r.msg}}}, r.ok);
       return;
     }
     if (cmd.rfind("speed ", 0) == 0) {
