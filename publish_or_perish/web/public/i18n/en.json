@@ -98,7 +98,14 @@
       "declared_free": "Full bloom declared ({{time}} s)",
       "opponent_stop": "Entered the opponent's court. Forced retry (press Y or call /match/retry to go back. Rule 5.3)",
       "opponent": "Entered the opponent's court (in a match this is a forced retry. Rule 5.3)",
-      "task_done": "Task cleared: {{task}}"
+      "task_done": "Task cleared: {{task}}",
+      "trial": "Trial: starting from \"{{task}}\". Your progress is not saved.",
+      "trial_end": "Trial ended. Back to your progress.",
+      "skip_trial_only": "You can mark a task done only during a trial.",
+      "demo_missing": "Can't run the example: publish_or_perish_answers is not built.",
+      "demo_start": "Running the example (not counted): {{cmd}}",
+      "demo_stop": "Stopped the example.",
+      "demo_end": "The example finished (output: ~/.publish_or_perish/demo.log)."
     },
     "note": {
       "other_drive": "In this run the base was also moved with {{who}}. Press R to start over.",
@@ -106,7 +113,8 @@
       "none_drive": "Your node has not moved the base.",
       "none_mech": "Your node has not moved the mechanism.",
       "button": "A button was pressed. In auto, nobody touches anything.",
-      "lift_other": "The lift was moved with keys or CLI. Move it with your node."
+      "lift_other": "The lift was moved with keys or CLI. Move it with your node.",
+      "demo": "This run used the example node, so it is not counted. Stop the example and press R to start over."
     },
     "item": {
       "A": "First entry into area 2",

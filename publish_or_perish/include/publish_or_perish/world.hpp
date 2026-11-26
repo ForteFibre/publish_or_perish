@@ -50,8 +50,8 @@ struct Tile
   bool well = false;
 };
 
-// 最後の cmd_vel・操作を誰が出したか. Key は画面のキー (/farm/ui)
-enum class Source { None, Cli, Player, Mixed, Key };
+// 最後の cmd_vel・操作を誰が出したか. Key は画面のキー (/farm/ui), Demo はお手本 (画面から起動した解答例. 課題に数えない)
+enum class Source { None, Cli, Player, Mixed, Key, Demo };
 const char * to_string(Source s);
 
 struct Bot

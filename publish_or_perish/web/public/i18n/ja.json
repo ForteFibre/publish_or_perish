@@ -42,7 +42,14 @@
     "speed": "作物の時間を {{n}} 倍速にした",
     "no_money": "お金が足りない: {{item}}",
     "bought": "買った: {{item}} (-{{price}} G)",
-    "key": "キー: {{bot}} {{text}}"
+    "key": "キー: {{bot}} {{text}}",
+    "trial_start": "試し: 「{{stage}}」から始めた. 遊んだ記録は変わらない (所持金 {{money}} G)",
+    "trial_end": "試しを終えて, 遊んだ記録に戻った",
+    "skip_trial_only": "済みにできるのは試しの間だけ",
+    "demo_missing": "お手本を動かせない: publish_or_perish_answers がビルドされていない",
+    "demo_start": "お手本を動かした (課題には数えない): {{cmd}}",
+    "demo_stop": "お手本を止めた",
+    "demo_exit": "お手本が終わった (出力は ~/.publish_or_perish/demo.log)"
   },
   "notice": {
     "mission": { "title": "課題クリア: {{mission}}", "body": "+{{reward}} G  +{{xp}} XP" },
@@ -477,7 +484,14 @@
       "declared_free": "満開宣言 ({{time}} 秒)",
       "opponent_stop": "相手のコートに入った. 強制リトライ (Y か /match/retry で戻る. ルール 5.3)",
       "opponent": "相手のコートに入った (試合なら強制リトライ. ルール 5.3)",
-      "task_done": "課題クリア: {{task}}"
+      "task_done": "課題クリア: {{task}}",
+      "trial": "試し: 「{{task}}」から始めた. 進み具合は保存しない",
+      "trial_end": "試しを終えて, 遊んだ記録に戻った",
+      "skip_trial_only": "済みにできるのは試しの間だけ",
+      "demo_missing": "お手本を動かせない: publish_or_perish_answers がビルドされていない",
+      "demo_start": "お手本を動かした (数えない): {{cmd}}",
+      "demo_stop": "お手本を止めた",
+      "demo_end": "お手本が終わった (出力は ~/.publish_or_perish/demo.log)"
     },
     "note": {
       "other_drive": "この回は台車を {{who}} でも動かした. R で最初からやり直す",
@@ -485,7 +499,8 @@
       "none_drive": "自分のノードが台車を動かしていない",
       "none_mech": "自分のノードが機構を動かしていない",
       "button": "ボタンを押した. 自動は人が何もしない",
-      "lift_other": "リフトをキーか CLI で動かした. 自分のノードで動かす"
+      "lift_other": "リフトをキーか CLI で動かした. 自分のノードで動かす",
+      "demo": "この回はお手本を動かしたので数えない. お手本を止めて R で最初に戻す"
     },
     "item": {
       "A": "エリア 2 に初めて進入",
@@ -574,6 +589,18 @@
       "upcoming": "準備中: {{name}}",
       "read_guide": "説明を読む",
       "stage_of": "ステージ {{n}} / {{total}}"
+    },
+    "trial": {
+      "on": "試し中 (遊んだ記録は変わらない)",
+      "pick": "ステージを選んで試す",
+      "off": "記録に戻る",
+      "skip": "済みにする"
+    },
+    "demo": {
+      "start": "お手本を見る",
+      "stop": "お手本を止める",
+      "running": "解答例のノードが動いている。お手本が動かした分は課題に数えない",
+      "running_keys": "解答例のノードが作業だけをする。移動はキーで。お手本が動かした分は課題に数えない"
     },
     "doctor": {
       "error": "エラー: {{title}}",

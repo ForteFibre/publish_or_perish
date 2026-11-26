@@ -32,6 +32,7 @@
 
 画面とのやりとり (自分のノードからは使わない)
   /match/ui     std_msgs/msg/String  受ける  キーの操作 ("drive vx vy wz", "arm extend 0.3", "act grab", "button 1", "mode course" など)
+                                             試し ("trial <課題の id>" / "trial off" / "skip"), お手本 ("demo auto" / "demo semi" / "demo stop")
   /match/state  std_msgs/msg/String  出す    動く物の位置と向き, 状態 (JSON). 文言はキーと値 (訳の表の match.*) で送り, 画面が訳す
 キーの操作は /match/ui で受けるので, 判定では「キー」と「CLI (ros2 topic pub など)」と「自分のノード」を分けられる.
 
@@ -41,17 +42,23 @@
   桜ボトルは, 置いたときに 下の番号の共通ゾーンが全部埋まっている・自分の雑草ボトルが全部立っている・(12 番は) 五分咲き
   のときだけ数える. 満開の状態で合図をすると満開宣言. 相手のコートに入ると強制リトライ (試合では止まる).
 
+試し: 練習の課題を選ぶと, その課題から始める. 進み具合は保存しない (遊んだ記録は変わらない). 試しの間は課題を済みにできる.
+お手本: 解答例 (publish_or_perish_answers の match_auto / match_semi) をノード名 demo_ で動かす. お手本を動かした回は,
+  練習の課題にも自己ベストにも数えない (R で最初の位置に戻すまで).
+
 物理は実時間に合わせて進める (重くて追いつかないときは遅れる). MuJoCo は Python 版 (pip の mujoco) を使う.
 """
 import json
 import math
 import os
+import signal
+import subprocess
 import time
 
 import mujoco
 import numpy as np
 import rclpy
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import PackageNotFoundError, get_package_prefix, get_package_share_directory
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
@@ -113,7 +120,12 @@ COURSE = [
 # 送り手の名前は訳の表の match.src.<送り手> (keyboard / cli / player)
 SOURCES = ('keyboard', 'cli', 'player')
 # 判定で「自分のノード」に数えないノード (画面の中継, ツール, このシミュレーター)
-TOOL_PREFIXES = ('match_sim', 'rosbridge', 'rosapi', 'rviz', 'rqt', 'rosbag2', 'launch_ros_', 'transform_listener_impl', '_ros2cli_daemon')
+# demo_ はお手本 (画面から起動した解答例)
+TOOL_PREFIXES = ('match_sim', 'rosbridge', 'rosapi', 'rviz', 'rqt', 'rosbag2', 'launch_ros_', 'transform_listener_impl', '_ros2cli_daemon',
+                 'demo_')
+# お手本: 種類 -> 解答例の実行ファイル
+DEMOS = {'auto': 'match_auto', 'semi': 'match_semi'}
+DEMO_LOG = os.path.expanduser('~/.publish_or_perish/demo.log')
 
 HOLD_DROP = 0.195        # ハンドの原点 (ボトルの首) からボトルの底まで [m]
 # ハンドの中で並べる位置 (ハンドの中心から 前, 左) [m]. 横 3 x 奥 2. 6 本で 0.22 x 0.15 m (共通ゾーン 1 つに収まる)
@@ -167,6 +179,9 @@ class MatchSim(Node):
         self.phase_t = 0.0
         self.best = self.load_json(BEST_PATH)
         self.course = self.load_json(COURSE_PATH)   # 済んだ課題の id -> 済んだ日時
+        self.trial = False        # 試し (練習の課題を選んで始めた. 進み具合を保存しない)
+        self.demo = None          # 動かしているお手本 (subprocess.Popen) と種類
+        self.demo_kind = ''
         self.ui_cmd, self.ui_time = (0.0, 0.0, 0.0), -1.0
         self.reset()
 
@@ -216,7 +231,8 @@ class MatchSim(Node):
         self.result = None
         self.declared = False     # 満開宣言をした (練習で使う)
         # この回 (最後に最初の位置に戻してから) の操作. 練習の自動・半自動の判定に使う
-        self.run = {'drive': set(), 'mech': set(), 't0': self.d.time}
+        # demo: この回にお手本を動かしたか (動かしている間に R で戻しても, お手本は動き続けるので数えない)
+        self.run = {'drive': set(), 'mech': set(), 't0': self.d.time, 'demo': getattr(self, 'demo', None) is not None}
         self.events = []          # (時刻, 種類, 送り手, 中身)
         self.course_note = None   # いまの課題が済まない理由 (msg の形)
 
@@ -344,6 +360,15 @@ class MatchSim(Node):
         elif w[0] == 'mode' and len(w) == 2 and w[1] in ('free', 'course', 'match'):
             self.mode, self.phase = w[1], 'ready'
             self.reset()
+        elif w[0] == 'trial' and len(w) == 2:
+            self.end_trial() if w[1] == 'off' else self.start_trial(w[1])
+        elif w[0] == 'skip':
+            self.skip_task()
+        elif w[0] == 'demo' and len(w) == 2:
+            if w[1] == 'stop':
+                self.stop_demo()
+            elif w[1] in DEMOS:
+                self.start_demo(w[1])
         elif w[0] in ('reset', 'retry', 'start'):
             ok, m = {'reset': self.on_reset, 'retry': self.retry, 'start': self.start}[w[0]]()
             self.last_action, self.last_ok = m, ok
@@ -490,8 +515,10 @@ class MatchSim(Node):
         t = self.d.time - self.phase_t
         self.result = {'score': score, 'declared': declared, 'time': round(t, 1)}
         best = self.best
-        better = (declared and (not best.get('declared') or t < best.get('time', 1e9))) or \
-                 (not best.get('declared') and score > best.get('score', -1e9))
+        # お手本を動かした回と試しの間は, 自己ベストにしない
+        better = not self.run['demo'] and not self.trial and (
+            (declared and (not best.get('declared') or t < best.get('time', 1e9))) or
+            (not best.get('declared') and score > best.get('score', -1e9)))
         if better:
             self.best = dict(self.result)
             self.save_json(BEST_PATH, self.best)
@@ -625,6 +652,9 @@ class MatchSim(Node):
         task = self.current_task()
         if task is None:
             return
+        if self.run['demo']:
+            self.course_note = msg('match.note.demo')
+            return
         zones = {z for z, ok in self.placed.values() if ok}
         carrying = any(n.startswith(f'{self.side}_sakura') for n in self.carried)
         need, note = False, None
@@ -663,15 +693,79 @@ class MatchSim(Node):
         self.course_note = note
         if need:
             self.course[task] = time.strftime('%Y-%m-%d %H:%M')
-            self.save_json(COURSE_PATH, self.course)
+            if not self.trial:
+                self.save_json(COURSE_PATH, self.course)
             self.message = msg('match.notice.task_done', task=msg(f'match.task.{task}'))
             self.get_logger().info(render_en(self.message))
+
+    # ------------------------------------------------------------ 試しとお手本
+    def start_trial(self, task):
+        """練習の課題 task から始める. それより前の課題は済みにし, 進み具合は保存しない."""
+        ids = [t for _, t in self.course_tasks()]
+        if task not in ids:
+            return
+        self.trial = True
+        self.course = {t: 'trial' for t in ids[:ids.index(task)]}
+        self.mode, self.phase = 'course', 'ready'
+        self.reset()
+        self.message = msg('match.notice.trial', task=msg(f'match.task.{task}'))
+
+    def end_trial(self):
+        self.trial = False
+        self.course = self.load_json(COURSE_PATH)
+        self.reset()
+        self.message = msg('match.notice.trial_end')
+
+    def skip_task(self):
+        task = self.current_task()
+        if not self.trial:
+            self.message = msg('match.notice.skip_trial_only')
+        elif task:
+            self.course[task] = 'skip'
+            self.message = msg('match.notice.task_done', task=msg(f'match.task.{task}'))
+
+    def start_demo(self, kind):
+        """お手本を動かす. 解答例は最初の位置から動く前提なので, 先に最初の位置に戻す."""
+        self.stop_demo(quiet=True)
+        try:
+            get_package_prefix('publish_or_perish_answers')
+        except PackageNotFoundError:
+            self.message = msg('match.notice.demo_missing')
+            return
+        if self.mode == 'match':
+            self.phase = 'ready'
+        self.reset()
+        exe = DEMOS[kind]
+        cmd = ['ros2', 'run', 'publish_or_perish_answers', exe, '--ros-args', '-r', f'__node:=demo_{exe}']
+        os.makedirs(os.path.dirname(DEMO_LOG), exist_ok=True)
+        with open(DEMO_LOG, 'a') as out:
+            # 自分のプロセスグループにして, ros2 run の子までまとめて止められるようにする
+            self.demo = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        self.demo_kind = kind
+        self.run['demo'] = True
+        self.message = msg('match.notice.demo_start', cmd=' '.join(cmd))
+        self.get_logger().info(render_en(self.message))
+
+    def stop_demo(self, quiet=False):
+        if self.demo is None:
+            return
+        p, self.demo = self.demo, None
+        try:
+            os.killpg(p.pid, signal.SIGINT)
+            p.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGKILL)
+            p.wait()
+        except ProcessLookupError:
+            pass
+        if not quiet:
+            self.message = msg('match.notice.demo_stop')
 
     def course_status(self):
         cur = self.current_task()
         levels = [{'id': lv, 'tasks': [{'id': t, 'done': t in self.course} for t in tasks]} for lv, tasks in COURSE]
         # run は, この回に台車と機構を動かした送り手 (keyboard / cli / player)
-        return {'levels': levels, 'current': cur, 'note': self.course_note,
+        return {'levels': levels, 'current': cur, 'note': self.course_note, 'trial': self.trial,
                 'run': {k: sorted(self.run[k]) for k in ('drive', 'mech')},
                 'elapsed': round(self.d.time - self.run['t0'], 1)}
 
@@ -769,6 +863,9 @@ class MatchSim(Node):
 
     # ------------------------------------------------------------ 出力
     def publish(self):
+        if self.demo is not None and self.demo.poll() is not None:
+            self.demo = None   # お手本が自分で終わった (match_auto は全部やると終わる)
+            self.message = msg('match.notice.demo_end')
         # スライドの qpos は body の初期位置からのずれなので, 位置は xpos から取る
         rp = self.d.xpos[self.robot_id]
         w, _, _, z = yaw_quat(self.robot_yaw())
@@ -789,7 +886,8 @@ class MatchSim(Node):
         match = {'mode': self.mode, 'phase': self.phase, 'remaining': None if rem is None else round(rem, 1), 'score': total, 'items': items,
                  'stopped': self.stopped, 'message': self.message, 'result': self.result, 'best': self.best,
                  'placed': {n: {'zone': z, 'counted': ok} for n, (z, ok) in self.placed.items()},
-                 'course': self.course_status() if self.mode == 'course' else None}
+                 'course': self.course_status() if self.mode == 'course' else None,
+                 'demo': self.demo_kind if self.demo is not None else None, 'demo_run': self.run['demo'], 'trial': self.trial}
         self.match_pub.publish(String(data=json.dumps(match, ensure_ascii=False)))
         bodies = {self.m.body(b).name: [round(float(v), 4) for v in (*self.d.xpos[b], *self.d.xquat[b])] for b in self.moving}
         self.state_pub.publish(String(data=json.dumps({'t': round(self.d.time, 3), 'bodies': bodies, 'robot': status, 'match': match},
@@ -803,6 +901,8 @@ def main():
         rclpy.spin(node)
     except (KeyboardInterrupt, ExternalShutdownException):
         pass   # Ctrl+C (launch を止めたとき). rclpy が先に終わっているので, ノードは消さずに抜ける
+    finally:
+        node.stop_demo(quiet=True)   # お手本のプロセスを残さない
     rclpy.try_shutdown()
 
 

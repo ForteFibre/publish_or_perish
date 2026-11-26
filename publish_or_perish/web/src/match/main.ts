@@ -48,6 +48,8 @@ type Course = {
   /** この回に台車 (drive) と機構 (mech) を動かした送り手 (keyboard / cli / player) */
   run: { drive: string[]; mech: string[] }
   elapsed: number
+  /** 試し (課題を選んで始めた. 進み具合を保存しない) か */
+  trial: boolean
 }
 /** 試合と練習の状態 (match_sim.py の publish) */
 type MatchStatus = {
@@ -62,6 +64,11 @@ type MatchStatus = {
   result: { score: number; declared: boolean; time: number } | null
   best: { score?: number; declared?: boolean; time?: number }
   course: Course | null
+  /** 動かしているお手本の種類 (auto / semi) */
+  demo: string | null
+  /** この回にお手本を動かしたか (数えない) */
+  demo_run: boolean
+  trial: boolean
 }
 /** /match/state: 物の位置 [x, y, z, qw, qx, qy, qz] と, ロボットの状態 */
 type MatchState = {
@@ -431,6 +438,14 @@ function showBanner(m: MatchStatus) {
   $('banner').className = `card${m.stopped ? ' ng' : ''}${shown ? '' : ' hide'}`
 }
 
+/** 札の中身は, 変わったときだけ描き直す (毎回描き直すと, 押している途中のボタンが入れ替わって押せない) */
+function setSide(html: string) {
+  const side = $('side')
+  if (side.dataset.html === html) return
+  side.dataset.html = html
+  side.innerHTML = html
+}
+
 function showScore(m: MatchStatus) {
   const r = m.remaining
   $('phase').textContent = PHASE[m.phase] ?? m.phase
@@ -450,18 +465,30 @@ function showScore(m: MatchStatus) {
     .join('')
   const b = m.best
   const best = b.score != null ? `自己ベスト ${b.score} 点${b.declared ? ` (満開宣言 ${b.time} 秒)` : ''}` : '自己ベスト なし'
-  $('side').innerHTML = `<h3>得点 <b>${m.score}</b></h3><div class="items">${items}</div><div class="sub">${best}</div>
-  <div class="sub"><button class="link" data-guide="match_rules">得点とルールの説明</button></div>`
+  const demo = m.demo_run ? '<div class="sub">この回はお手本を動かしたので, 自己ベストにしない</div>' : ''
+  setSide(`<h3>得点 <b>${m.score}</b></h3><div class="items">${items}</div><div class="sub">${best}</div>${demo}
+  <div class="sub"><button class="link" data-guide="match_rules">得点とルールの説明</button></div>`)
 }
 
-function showCourse(c: Course) {
+function showCourse(c: Course, m: MatchStatus) {
   const cur = c.current
+  // お手本の種類: 半自動の課題は match_semi (走るのはキー), ほかは match_auto
+  const kind = c.levels.find(l => l.tasks.some(t => t.id === cur))?.id === 'semi' ? 'semi' : 'auto'
   const who = (list: string[]) => list.map(s => tr(`match.src.${s}`)).join('・') || 'なし'
   // いまの課題を上に出し, その下に全部の課題を並べる
-  let html = ''
+  let html = c.trial
+    ? '<div class="trial">試し中 (進み具合は保存しない) <button class="link" data-ui="trial off">記録に戻る</button></div>'
+    : ''
   if (cur) {
+    const demo = m.demo
+      ? '<button class="go2" data-ui="demo stop">お手本を止める</button>'
+      : `<button class="go2" data-ui="demo ${kind}">お手本を見る</button>`
+    const skip = c.trial ? '<button class="go2" data-ui="skip">済みにする</button>' : ''
+    const demoNote = m.demo
+      ? `<div class="sub">お手本: ${kind === 'semi' ? 'match_semi が機構を動かす。走るのはキー、ボタン 1〜4 で動きを選ぶ' : 'match_auto が全部を動かす'}。お手本の回は数えない</div>`
+      : ''
     html += `<div class="current"><div class="k">いまの課題</div><div class="t">${esc(tr(`match.task.${cur}`))}</div>
-      <button class="go" data-guide="${esc(cur)}">説明を読む</button>
+      <button class="go" data-guide="${esc(cur)}">説明を読む</button> ${demo} ${skip}${demoNote}
       ${c.note ? `<div class="note">${esc(tm(c.note))}</div>` : ''}
       <div class="sub">この回の操作 (R で最初に戻すと消える): 台車 ${esc(who(c.run.drive))} / 機構 ${esc(who(c.run.mech))}</div></div>`
   } else {
@@ -475,10 +502,12 @@ function showCourse(c: Course) {
       const cls = t.done ? 'ok' : t.id === cur ? 'now' : 'wait'
       const mark = t.done ? '✓' : t.id === cur ? '▶' : ''
       const link = t.done || t.id === cur ? ` <button class="link" data-guide="${esc(t.id)}">説明</button>` : ''
-      html += `<div class="${cls}"><i>${mark}</i><span>${esc(tr(`match.task.${t.id}`))}</span>${link}</div>`
+      // 試す: この課題から, 進み具合を保存せずに始める
+      const tryIt = ` <button class="link" data-ui="trial ${esc(t.id)}" title="この課題から試す (進み具合は保存しない)">試す</button>`
+      html += `<div class="${cls}"><i>${mark}</i><span>${esc(tr(`match.task.${t.id}`))}</span>${link}${tryIt}</div>`
     }
   }
-  $('side').innerHTML = html
+  setSide(html)
 }
 
 function showMode(m: MatchStatus) {
@@ -503,6 +532,9 @@ function startFree(bodies: Record<string, THREE.Group>) {
   document.addEventListener('click', e => {
     const g = (e.target as HTMLElement).closest<HTMLElement>('[data-guide]')
     if (g?.dataset.guide) void openGuide(g.dataset.guide)
+    // 試し・お手本・済みにする のボタンは, 書いてある操作をそのまま送る
+    const u = (e.target as HTMLElement).closest<HTMLElement>('[data-ui]')
+    if (u?.dataset.ui) ui(u.dataset.ui)
   })
   $('guideclose').onclick = closeGuide
   let shown = 0,
@@ -526,7 +558,7 @@ function startFree(bodies: Record<string, THREE.Group>) {
     if (m) {
       showMode(m)
       if (m.mode === 'match') showScore(m)
-      else if (m.mode === 'course' && m.course) showCourse(m.course)
+      else if (m.mode === 'course' && m.course) showCourse(m.course, m)
       showBanner(m)
     }
     const rs = st.robot
