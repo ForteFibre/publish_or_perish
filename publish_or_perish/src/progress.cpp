@@ -25,6 +25,15 @@ auto count(
          };
 }
 
+// 操作 (plant / water / harvest) をしたのが src か
+auto done_by(Source src)
+{
+  return [src](const Event & e, const Graph &, const World &) {return e.src == src;};
+}
+
+// キー以外 (CLI か自分のノード) の操作か
+bool not_key(const Event & e, const Graph &, const World &) {return e.src != Source::Key;}
+
 // そのロボットの最後の cmd_vel を出したのが src か
 auto moved_by(Source src)
 {
@@ -57,6 +66,30 @@ Mission mission(std::string id, double goal = 1, std::string unit = "", int rewa
 
 Progress::Progress()
 {
+  // ---- ステージ 0: 画面のキーで操作する ----
+  Stage s0{"keys", {}};
+  {
+    auto m = mission("k_move", 2, "m", 30, 30);
+    m.on_event = count("move", moved_by(Source::Key), true);
+    s0.missions.push_back(m);
+  }
+  {
+    auto m = mission("k_plant", 1, "", 30, 30);
+    m.on_event = count("plant", done_by(Source::Key));
+    s0.missions.push_back(m);
+  }
+  {
+    auto m = mission("k_water", 1, "", 30, 30);
+    m.on_event = count("water", done_by(Source::Key));
+    s0.missions.push_back(m);
+  }
+  {
+    auto m = mission("k_harvest", 1, "", 50, 40);
+    m.on_event = count("harvest", done_by(Source::Key));
+    s0.missions.push_back(m);
+  }
+  stages.push_back(s0);
+
   // ---- ステージ 1: CLI で操作する ----
   Stage s1{"s1", {}};
   {
@@ -73,17 +106,17 @@ Progress::Progress()
   }
   {
     auto m = mission("s1_plant");
-    m.on_event = count("plant");
+    m.on_event = count("plant", not_key);  // ステージ 1 は CLI を覚える段なので, キーの操作は数えない
     s1.missions.push_back(m);
   }
   {
     auto m = mission("s1_water");
-    m.on_event = count("water");
+    m.on_event = count("water", not_key);
     s1.missions.push_back(m);
   }
   {
     auto m = mission("s1_harvest", 1, "", 80, 60);
-    m.on_event = count("harvest");
+    m.on_event = count("harvest", not_key);
     s1.missions.push_back(m);
   }
   stages.push_back(s1);
@@ -215,16 +248,28 @@ Progress::Progress()
     s3.missions.push_back(m);
   }
   {
+    // 半自動: 移動はキーで, 水やりは自分のノード
     auto m = mission("s3_dry", 10, "times", 150, 120);
-    m.on_event = count("water", [](const Event & e, const Graph & g, const World &) {
-          return g.automated && e.value < 30.0;
+    m.on_event = count("water", [](const Event & e, const Graph &, const World &) {
+          return e.src == Source::Player && e.value < 30.0;
         });
     s3.missions.push_back(m);
   }
   {
+    auto m = mission("s3_semi", 5, "crops", 200, 150);
+    m.on_event = count("harvest", done_by(Source::Player));
+    s3.missions.push_back(m);
+  }
+  {
     auto m = mission("s3_auto", 100, "G", 300, 200);
-    m.on_event = [](Mission & m, const Event & e, const Graph & g, const World &) {
-        if (e.kind == "harvest" && g.automated) {m.window.emplace_back(e.t, e.value);}
+    m.on_event = [](Mission & m, const Event & e, const Graph & g, const World & w) {
+        // キーで動かしたら, それまでの分は数えない
+        if (e.kind == "move" && w.bots.at(e.bot).cmd_src == Source::Key) {m.window.clear();}
+        if (e.kind == "harvest" && g.automated && e.src == Source::Player &&
+          w.bots.at(e.bot).cmd_src == Source::Player)
+        {
+          m.window.emplace_back(e.t, e.value);
+        }
       };
     m.on_tick = [](Mission & m, const Graph & g, const World & w) {
         if (!g.automated) {m.window.clear();}

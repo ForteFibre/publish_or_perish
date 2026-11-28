@@ -11,6 +11,11 @@
 #include <set>
 #include <sstream>
 
+#include <fcntl.h>
+#include <signal.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
 #include "publish_or_perish/doctor.hpp"
 #include "publish_or_perish/progress.hpp"
 #include "publish_or_perish/world.hpp"
@@ -66,8 +71,9 @@ std::string num(double v)
 bool is_tool(const std::string & n)
 {
   if (n == "farm") {return true;}
+  // demo_ はお手本 (画面から起動した解答例)
   for (const char * p : {"rosbridge", "rosapi", "rviz", "rqt", "rosbag2", "launch_ros_",
-      "transform_listener_impl", "_ros2cli_daemon"})
+      "transform_listener_impl", "_ros2cli_daemon", "demo_"})
   {
     if (n.rfind(p, 0) == 0) {return true;}
   }
@@ -110,6 +116,35 @@ struct ShopItem
   long price;
 };
 
+// お手本: 課題ごとに動かす解答例 (publish_or_perish_answers). ノードの名前は demo_ で始め, 課題に数えない.
+// keys が true のものは作業だけをするので, 移動はキーでする (半自動の課題)
+struct Demo
+{
+  std::vector<std::vector<std::string>> procs;  // ros2 run の後ろの引数. 1 つ = 1 プロセス
+  bool keys = false;
+};
+
+const std::map<std::string, Demo> & demos()
+{
+  static const std::vector<std::string> farmer1 = {"stage5_farmer", "--ros-args", "-r", "__node:=demo_farmer", "-r", "__ns:=/bot1"};
+  static const std::map<std::string, Demo> d = {
+    {"s2_node", {{{"stage4_patrol", "--ros-args", "-r", "__node:=demo_patrol"}}}},
+    {"s2_patrol", {{{"stage4_patrol", "--ros-args", "-r", "__node:=demo_patrol"}}}},
+    {"s3_sub", {{{"semi_farmer", "--ros-args", "-r", "__node:=demo_semi_farmer"}}, true}},
+    {"s3_dry", {{{"semi_farmer", "--ros-args", "-r", "__node:=demo_semi_farmer"}}, true}},
+    {"s3_semi", {{{"semi_farmer", "--ros-args", "-r", "__node:=demo_semi_farmer"}}, true}},
+    {"s3_auto", {{farmer1}}},
+    {"s4_harvest", {{farmer1}}},
+    {"s5_ns", {{{"stage5_farmer", "--ros-args", "-r", "__node:=demo_farmer", "-r", "__ns:=/bot1", "-p", "x_min:=0", "-p", "x_max:=4"},
+      {"stage5_farmer", "--ros-args", "-r", "__node:=demo_farmer", "-r", "__ns:=/bot2", "-p", "x_min:=4"}}}},
+    {"s5_auto", {{{"stage5_farmer", "--ros-args", "-r", "__node:=demo_farmer", "-r", "__ns:=/bot1", "-p", "x_min:=0", "-p", "x_max:=4"},
+      {"stage5_farmer", "--ros-args", "-r", "__node:=demo_farmer", "-r", "__ns:=/bot2", "-p", "x_min:=4"}}}},
+  };
+  return d;
+}
+
+constexpr long kTrialMoney = 1000;  // 試しで始めるときの所持金 (お店で買う課題があるので多めにする)
+
 }  // namespace
 
 class FarmNode : public rclcpp::Node
@@ -121,10 +156,13 @@ public:
     const char * home = std::getenv("HOME");
     save_path_ = declare_parameter("save_path", std::string(""));
     if (save_path_.empty()) {save_path_ = std::string(home ? home : ".") + "/.publish_or_perish/save.txt";}
+    real_path_ = save_path_;
     if (!declare_parameter("reset", false)) {load();}
+    migrate_stage0();
     // 試すとき用: このステージより前の課題を済みにして, ここから始める (遊んだ記録とは別の save_path と一緒に使う)
     const long start = declare_parameter("start_stage", 0L);
-    for (long i = 0; i + 1 < start && i < static_cast<long>(progress_.stages.size()); ++i) {
+    // ステージの番号は 0 から (ステージ 0 = キーで動かす). start_stage:=N でステージ N から始める
+    for (long i = 0; i < start && i < static_cast<long>(progress_.stages.size()); ++i) {
       for (auto & m : progress_.stages[i].missions) {m.done = true; m.value = m.goal;}
     }
     port_ = declare_parameter("web_port", 8765);
@@ -146,11 +184,9 @@ public:
       ws_shown_ = under_home ? "~" + ws.substr(h.size()) : ws;
       pkg_ = pkg;
     }
-    for (auto & [name, b] : world_.bots) {declare_parameter(name + ".seed", b.seed);}
     param_cb_ = add_on_set_parameters_callback(
       [this](const std::vector<rclcpp::Parameter> & ps) {return on_param(ps);});
-
-    for (auto & [name, b] : world_.bots) {setup_bot(name);}
+    ensure_bots();
     auto latched = rclcpp::QoS(1).transient_local();
     moisture_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("/field/moisture", latched);
     crops_pub_ = create_publisher<nav_msgs::msg::OccupancyGrid>("/field/crops", latched);
@@ -167,12 +203,188 @@ public:
     state_timer_ = create_wall_timer(66ms, [this] {publish_state();});
     graph_timer_ = create_wall_timer(1s, [this] {scan_graph();});
     save_timer_ = create_wall_timer(20s, [this] {save();});
+    demo_timer_ = create_wall_timer(500ms, [this] {reap_demo();});
     RCLCPP_INFO(get_logger(), "%s", render_en({"console.opened", {{"port", port_}}}).c_str());
   }
 
-  ~FarmNode() override {save();}
+  ~FarmNode() override
+  {
+    save();
+    // お手本のプロセスを残さない. SIGINT で 2 秒待ち, 残っていれば SIGKILL
+    stop_demo(false);
+    for (int i = 0; i < 20 && !stopping_.empty(); ++i) {
+      usleep(100000);
+      reap_demo();
+    }
+    for (const auto & [pid, t] : stopping_) {kill(-pid, SIGKILL);}
+  }
 
 private:
+  // ステージ 0 (キーで動かす) ができる前の保存: ステージ 1 から先を始めていれば, ステージ 0 は済みにする
+  void migrate_stage0()
+  {
+    bool later = false;
+    for (size_t i = 1; i < progress_.stages.size(); ++i) {
+      for (const auto & m : progress_.stages[i].missions) {later = later || m.done;}
+    }
+    if (later) {
+      for (auto & m : progress_.stages[0].missions) {m.done = true; m.value = m.goal;}
+    }
+  }
+
+  // world_ にいるロボットの topic / service とパラメータを用意する (2 台目を買ったときや, 試しと記録を替えたとき)
+  void ensure_bots()
+  {
+    for (auto & [name, b] : world_.bots) {
+      if (!has_parameter(name + ".seed")) {declare_parameter(name + ".seed", b.seed);}
+      if (ready_bots_.insert(name).second) {setup_bot(name);}
+    }
+  }
+
+  // ---- 試し: 選んだステージから, 記録とは別の保存で始める ----
+  void start_trial(long stage)
+  {
+    if (stage < 0 || stage >= static_cast<long>(progress_.stages.size())) {return;}
+    if (!trial_) {save();}   // 記録を保存してから替える
+    stop_demo(false);
+    world_ = publish_or_perish::World();
+    progress_ = publish_or_perish::Progress();
+    for (long i = 0; i < stage; ++i) {
+      for (auto & m : progress_.stages[i].missions) {m.done = true; m.value = m.goal;}
+    }
+    world_.money = kTrialMoney;
+    trial_ = true;
+    save_path_ = (std::filesystem::path(real_path_).parent_path() / "trial.txt").string();
+    clear_screen();
+    ensure_bots();
+    log({"log.trial_start", {{"stage", Msg{"stage." + progress_.stages[stage].id + ".title"}}, {"money", kTrialMoney}}}, true);
+  }
+
+  void end_trial()
+  {
+    if (!trial_) {return;}
+    stop_demo(false);
+    world_ = publish_or_perish::World();
+    progress_ = publish_or_perish::Progress();
+    trial_ = false;
+    save_path_ = real_path_;
+    load();
+    migrate_stage0();
+    clear_screen();
+    ensure_bots();
+    log({"log.trial_end"}, true);
+  }
+
+  void clear_screen()
+  {
+    logs_.clear();
+    fx_.clear();
+    notices_.clear();
+    board_ = Board{};
+  }
+
+  // 試しの間だけ: 今のステージの課題を済みにする (次の更新で, 報酬と知らせも出る)
+  void skip(const std::string & id)
+  {
+    if (!trial_) {
+      log({"log.skip_trial_only"}, false);
+      return;
+    }
+    const size_t si = progress_.stage_index();
+    if (si >= progress_.stages.size()) {return;}
+    for (auto & m : progress_.stages[si].missions) {
+      if (m.id == id && !m.done) {m.value = m.goal;}
+    }
+  }
+
+  // ---- お手本: 解答例を子プロセスで動かす ----
+  static bool answers_installed()
+  {
+    std::istringstream ps(std::getenv("AMENT_PREFIX_PATH") ? std::getenv("AMENT_PREFIX_PATH") : "");
+    for (std::string p; std::getline(ps, p, ':'); ) {
+      if (std::filesystem::exists(p + "/share/ament_index/resource_index/packages/publish_or_perish_answers")) {return true;}
+    }
+    return false;
+  }
+
+  void start_demo(const std::string & id)
+  {
+    stop_demo(false);
+    auto it = demos().find(id);
+    if (it == demos().end()) {return;}
+    if (!answers_installed()) {
+      log({"log.demo_missing"}, false);
+      return;
+    }
+    // 出力は保存と同じ場所の demo.log に書く (画面には出さない)
+    const std::string out = (std::filesystem::path(real_path_).parent_path() / "demo.log").string();
+    std::string shown;
+    for (const auto & args : it->second.procs) {
+      std::vector<std::string> argv = {"ros2", "run", "publish_or_perish_answers"};
+      argv.insert(argv.end(), args.begin(), args.end());
+      // 子プロセスではメモリを確保しない (ほかのスレッドが持っていた鍵で止まることがある) ので, 先に作っておく
+      std::vector<char *> c;
+      for (auto & x : argv) {c.push_back(x.data());}
+      c.push_back(nullptr);
+      const pid_t pid = fork();
+      if (pid == 0) {
+        setsid();  // 自分のプロセスグループにして, ros2 run の子までまとめて止められるようにする
+        const int fd = open(out.c_str(), O_WRONLY | O_CREAT | O_APPEND, 0644);
+        if (fd >= 0) {dup2(fd, 1); dup2(fd, 2);}
+        execvp("ros2", c.data());
+        _exit(127);
+      }
+      if (pid > 0) {demo_pids_.push_back(pid);}
+      std::string cmd;
+      for (const auto & x : argv) {cmd += (cmd.empty() ? "" : " ") + x;}
+      shown += (shown.empty() ? "" : " / ") + cmd;
+    }
+    demo_mission_ = id;
+    log({"log.demo_start", {{"cmd", shown}}}, true);
+  }
+
+  // お手本を止める. said が true なら画面のログに出す
+  void stop_demo(bool said)
+  {
+    if (demo_pids_.empty()) {return;}
+    const auto now = std::chrono::steady_clock::now();
+    for (const pid_t pid : demo_pids_) {
+      kill(-pid, SIGINT);
+      stopping_[pid] = now;
+    }
+    demo_pids_.clear();
+    demo_mission_.clear();
+    if (said) {log({"log.demo_stop"}, true);}
+  }
+
+  // 終わったお手本のプロセスを片付ける. 止めてから 3 秒たっても残っていれば SIGKILL
+  void reap_demo()
+  {
+    const auto now = std::chrono::steady_clock::now();
+    for (auto it = stopping_.begin(); it != stopping_.end(); ) {
+      if (waitpid(it->first, nullptr, WNOHANG) != 0) {
+        it = stopping_.erase(it);
+        continue;
+      }
+      if (now - it->second > 3s) {kill(-it->first, SIGKILL);}
+      ++it;
+    }
+    // 動かしている途中で, 自分で終わったもの (起動に失敗したときなど)
+    bool ended = false;
+    for (auto it = demo_pids_.begin(); it != demo_pids_.end(); ) {
+      if (waitpid(*it, nullptr, WNOHANG) != 0) {
+        it = demo_pids_.erase(it);
+        ended = true;
+      } else {
+        ++it;
+      }
+    }
+    if (ended && demo_pids_.empty()) {
+      demo_mission_.clear();
+      log({"log.demo_exit"}, false);
+    }
+  }
+
   // ---- ロボットごとの topic / service ----
   void setup_bot(const std::string & name)
   {
@@ -187,7 +399,9 @@ private:
     auto serve = [this, name, p](const std::string & srv, auto op) {
         services_.push_back(create_service<Trigger>(
             p + srv, [this, name, p, srv, op](const Trigger::Request::SharedPtr, Trigger::Response::SharedPtr res) {
+              world_.action_src = service_client_source(p + srv);
               auto r = (world_.*op)(name);
+              world_.action_src = Source::None;
               res->success = r.ok;
               res->message = render_en(r.msg);
               log_cli("service " + p + srv, r.msg, res->message, r.ok);
@@ -204,32 +418,33 @@ private:
   // topic を publish しているノードが CLI かプレイヤーか (受け取ったときに呼ぶ)
   Source topic_source(const std::string & topic)
   {
-    bool cli = false, player = false;
+    bool cli = false, player = false, demo = false;
     for (const auto & e : get_publishers_info_by_topic(topic)) {
       const auto & n = e.node_name();
-      if (n.rfind("_ros2cli_", 0) == 0) {cli = true;} else if (!is_tool(n)) {player = true;}
+      if (n.rfind("_ros2cli_", 0) == 0) {cli = true;} else if (n.rfind("demo_", 0) == 0) {demo = true;} else if (!is_tool(n)) {player = true;}
     }
     if (cli && player) {return Source::Mixed;}
-    return cli ? Source::Cli : player ? Source::Player : Source::None;
+    return cli ? Source::Cli : player ? Source::Player : demo ? Source::Demo : Source::None;
   }
 
   // service の client を持っているノードが CLI かプレイヤーか (呼ばれたときに呼ぶ).
   // service の server は呼んだノードを知らないので, グラフから client を探す
   Source service_client_source(const std::string & service)
   {
-    bool cli = false, player = false;
+    bool cli = false, player = false, demo = false;
     auto graph = get_node_graph_interface();
     for (const auto & [name, ns] : graph->get_node_names_and_namespaces()) {
-      if (name == "farm" || (is_tool(name) && name.rfind("_ros2cli_", 0) != 0)) {continue;}
+      const bool is_demo = name.rfind("demo_", 0) == 0;
+      if (name == "farm" || (is_tool(name) && name.rfind("_ros2cli_", 0) != 0 && !is_demo)) {continue;}
       try {
         if (!graph->get_client_names_and_types_by_node(name, ns).count(service)) {continue;}
       } catch (const std::exception &) {
         continue;  // 調べている間にノードが終わった
       }
-      if (name.rfind("_ros2cli_", 0) == 0) {cli = true;} else {player = true;}
+      if (name.rfind("_ros2cli_", 0) == 0) {cli = true;} else if (is_demo) {demo = true;} else {player = true;}
     }
     if (cli && player) {return Source::Mixed;}
-    return cli ? Source::Cli : player ? Source::Player : Source::None;
+    return cli ? Source::Cli : player ? Source::Player : demo ? Source::Demo : Source::None;
   }
 
   // ---- 看板 (ステージ 4) ----
@@ -332,7 +547,14 @@ private:
     world_.step(dt);
     auto events = world_.take_events();
     graph_.now = world_.time;
-    progress_.update(events, graph_, world_);
+    // お手本がした操作と動きは課題に数えない (画面の動きには出す)
+    std::vector<publish_or_perish::Event> counted;
+    for (const auto & e : events) {
+      const auto b = world_.bots.find(e.bot);
+      const bool demo_move = (e.kind == "move" || e.kind == "enter") && b != world_.bots.end() && b->second.cmd_src == Source::Demo;
+      if (e.src != Source::Demo && !demo_move) {counted.push_back(e);}
+    }
+    progress_.update(counted, graph_, world_);
     for (const auto & e : events) {
       if (e.kind == "move" || e.kind == "enter" || e.kind == "board_text") {continue;}
       fx_.push_back({++fx_id_, e});
@@ -578,8 +800,52 @@ private:
 
   void on_ui(const std::string & cmd)
   {
+    // 試し: "trial <ステージの番号>" で始め, "trial off" で記録に戻る. "skip <課題の id>" は試しの間だけ
+    if (cmd == "trial off") {
+      end_trial();
+      return;
+    }
+    if (cmd.rfind("trial ", 0) == 0) {
+      start_trial(std::atol(cmd.c_str() + 6));
+      return;
+    }
+    if (cmd.rfind("skip ", 0) == 0) {
+      skip(cmd.substr(5));
+      return;
+    }
+    // お手本: "demo <課題の id>" で動かし, "demo stop" で止める
+    if (cmd == "demo stop") {
+      stop_demo(true);
+      return;
+    }
+    if (cmd.rfind("demo ", 0) == 0) {
+      start_demo(cmd.substr(5));
+      return;
+    }
     if (cmd.rfind("diag ", 0) == 0) {
       RCLCPP_INFO(get_logger(), "%s", render_en({"console.diag", {{"text", cmd.substr(5)}}}).c_str());
+      return;
+    }
+    // 画面のキー: "drive <bot> vx vy wz" (押している間 20 Hz で届く), "act <bot> plant|water|harvest"
+    if (cmd.rfind("drive ", 0) == 0) {
+      std::istringstream s(cmd.substr(6));
+      std::string bot;
+      double vx = 0, vy = 0, wz = 0;
+      if (s >> bot >> vx >> vy >> wz) {world_.command(bot, vx, vy, wz, Source::Key);}
+      return;
+    }
+    if (cmd.rfind("act ", 0) == 0) {
+      std::istringstream s(cmd.substr(4));
+      std::string bot, what;
+      if (!(s >> bot >> what) || !world_.bots.count(bot)) {return;}
+      auto op = what == "plant" ? &publish_or_perish::World::plant :
+        what == "water" ? &publish_or_perish::World::water :
+        what == "harvest" ? &publish_or_perish::World::harvest : nullptr;
+      if (!op) {return;}
+      world_.action_src = Source::Key;
+      auto r = (world_.*op)(bot);
+      world_.action_src = Source::None;
+      log({"log.key", {{"bot", bot}, {"text", r.msg}}}, r.ok);
       return;
     }
     if (cmd.rfind("speed ", 0) == 0) {
@@ -607,8 +873,7 @@ private:
       }
       if (id == "bot2") {
         world_.add_bot("bot2", 1.5, 2.5);
-        declare_parameter("bot2.seed", world_.bots["bot2"].seed);
-        setup_bot("bot2");
+        ensure_bots();
       }
       log({"log.bought", {{"item", Msg{"shop." + id + ".name"}}, {"price", it.price}}}, true);
       world_.emit(publish_or_perish::Event{"buy", "", -1, -1, id});
@@ -646,7 +911,11 @@ private:
     }
     const size_t si = progress_.stage_index();
     o << "],\"stage_index\":" << si << ",\"stage_count\":" << progress_.stages.size()
-      << ",\"workspace\":" << q(ws_shown_) << ",\"package\":" << q(pkg_);
+      << ",\"workspace\":" << q(ws_shown_) << ",\"package\":" << q(pkg_)
+      << ",\"trial\":" << (trial_ ? 1 : 0) << ",\"demo\":" << (demo_mission_.empty() ? "null" : q(demo_mission_))
+      << ",\"stages\":[";
+    for (size_t i = 0; i < progress_.stages.size(); ++i) {o << (i ? "," : "") << q(progress_.stages[i].id);}
+    o << "]";
     if (si < progress_.stages.size()) {
       const auto & s = progress_.stages[si];
       o << ",\"stage\":{\"id\":" << q(s.id) << ",\"missions\":[";
@@ -654,7 +923,10 @@ private:
       for (const auto & m : s.missions) {
         o << (first ? "" : ",") << "{\"id\":" << q(m.id) << ",\"unit\":" << q(m.unit) << ",\"goal\":" << num(m.goal)
           << ",\"value\":" << num(m.value) << ",\"done\":" << (m.done ? 1 : 0)
-          << ",\"reward\":" << m.reward << "}";
+          << ",\"reward\":" << m.reward;
+        // お手本があるか (0: ない, 1: ある, 2: ある. 移動はキーで)
+        const auto d = demos().find(m.id);
+        o << ",\"demo\":" << (d == demos().end() ? 0 : d->second.keys ? 2 : 1) << "}";
         first = false;
       }
       o << "]}";
@@ -867,7 +1139,12 @@ private:
   std::unique_ptr<publish_or_perish::Doctor> doctor_;
   publish_or_perish::DoctorReport report_;
   std::set<std::string> shown_findings_;
-  std::string save_path_;
+  std::string save_path_, real_path_;   // 今の保存先と, 遊んだ記録の保存先 (試しの間は別になる)
+  bool trial_ = false;
+  std::set<std::string> ready_bots_;   // topic / service を用意したロボット
+  std::vector<pid_t> demo_pids_;       // 動かしているお手本 (プロセスグループの番号)
+  std::map<pid_t, std::chrono::steady_clock::time_point> stopping_;   // 止めている途中のお手本と, 止め始めた時刻
+  std::string demo_mission_;           // お手本を動かしている課題
   std::string ws_shown_, pkg_;   // 画面に出すワークスペース (~ 始まり) とパッケージの名前
   long port_;
   std::deque<Log> logs_;
@@ -888,7 +1165,7 @@ private:
   rclcpp::Subscription<std_msgs::msg::Int32>::SharedPtr board_answer_sub_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr board_bell_srv_;
   rclcpp::TimerBase::SharedPtr step_timer_, pose_timer_, field_timer_, state_timer_, graph_timer_, save_timer_,
-    board_timer_;
+    board_timer_, demo_timer_;
   rclcpp::node_interfaces::OnSetParametersCallbackHandle::SharedPtr param_cb_;
 };
 

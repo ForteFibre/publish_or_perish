@@ -1,41 +1,69 @@
 #!/usr/bin/env python3
-"""大会モードのシミュレーター. MuJoCo でフィールド・オブジェクト・ロボットを動かす.
+"""大会モードのシミュレーター. MuJoCo でフィールド・オブジェクト・ロボットを動かし, 練習の課題と試合を判定する.
 
   ros2 run publish_or_perish match_sim.py --ros-args -p model:=<MJCF>
 
-ロボット (赤コート): 台車 + マストを上下するリフト + 前へ伸びるアーム + ボトルを横に並べてつかむハンド.
+ロボット (赤コート): 台車 + マストを上下するリフト + 前へ伸びるアーム + ボトルを横 3 x 奥 2 に並べてつかむハンド.
 
-topic
-  /robot/cmd_vel     geometry_msgs/msg/Twist   受ける  台車の速度 (機体座標, x 前 / y 左 [m/s], z まわり [rad/s]). 0.5 秒途切れると止まる
-  /robot/arm/extend  std_msgs/msg/Float64      受ける  アームの伸び [m] の目標 (0〜0.42). 0.4 m/s で近づく
-  /robot/arm/lift    std_msgs/msg/Float64      受ける  リフトの高さ [m] の目標 (0〜0.35). 0.3 m/s で近づく
-  /robot/pose        geometry_msgs/msg/Pose    出す    台車の位置 [m] と向き (z 軸まわりのクォータニオン). 原点はフィールドの中心, x 右 (赤 → 青), y 奥
-  /robot/status      std_msgs/msg/String       出す    アーム・リフト・持っているボトル・サイコロの目など (JSON)
-  /match/state       std_msgs/msg/String       出す    画面用. 動く物の位置と向き (JSON)
-service (std_srvs/srv/Trigger. 結果は response の message に英語で返す. 文は訳の表 share/publish_or_perish/i18n/en.json)
-  /robot/grab    ハンドの前のボトル (自チームの桜ボトルと除草剤ボトル) をつかむ. 持てるのはサイコロの目の数まで (5.4)
-  /robot/place   ハンドの真ん中のボトルを, 今の高さで離す (下ろしてから離すと倒れにくい)
-  /robot/throw   持っている除草剤ボトルを 1 本, 前へ投げる
-  /robot/dice    ハンドの前のサイコロを前へ 1 面転がす
-  /robot/signal  合図 (満開宣言) の灯りを付ける / 消す
-  /match/reset   ロボットとオブジェクトを最初の位置に戻す
+モード (画面で選ぶ)
+  free    自由走行. 時間も課題もない
+  course  練習. 手動 → 半自動 → 自動 の順に課題を済ませる. 進み具合は ~/.publish_or_perish/match_course.json
+  match   試合. セッティング 60 秒 → 試合 180 秒. 得点を数える
+
+自分のノードから使うもの
+  /robot/cmd_vel        geometry_msgs/msg/Twist   受ける  台車の速度 (機体座標, x 前 / y 左 [m/s], z まわり [rad/s]). 0.5 秒途切れると止まる
+  /robot/arm/extend     std_msgs/msg/Float64      受ける  アームの伸びの目標 [m] (0〜0.42). 0.4 m/s で近づく
+  /robot/arm/lift       std_msgs/msg/Float64      受ける  リフトの高さの目標 [m] (0〜0.35). 0.3 m/s で近づく
+  /robot/arm/extend_now std_msgs/msg/Float64      出す    今のアームの伸び [m]
+  /robot/arm/lift_now   std_msgs/msg/Float64      出す    今のリフトの高さ [m]
+  /robot/pose           geometry_msgs/msg/Pose    出す    台車の位置 [m] と向き (z 軸まわりのクォータニオン). 原点はフィールドの中心, x 右 (赤 → 青), y 奥
+  /robot/carrying       std_msgs/msg/Int32        出す    持っているボトルの本数
+  /robot/dice_top       std_msgs/msg/Int32        出す    自チームのサイコロの上の目 (サイコロゾーンの外なら 0)
+  /operator/button      std_msgs/msg/Int32        出す    画面で数字キー (1〜4) を押したときにその数 (半自動で使う)
+  /robot/status         std_msgs/msg/String       出す    上のまとめ (JSON)
+  service (std_srvs/srv/Trigger. 結果は response の message に英語で返す. 文は訳の表 share/publish_or_perish/i18n/en.json)
+    /robot/grab    ハンドの前のボトル (自チームの桜ボトルと除草剤ボトル) をつかむ. 持てるのはサイコロの目の数まで (5.4)
+    /robot/place   ハンドの真ん中のボトルを, 今の高さで離す (下ろしてから離すと倒れにくい)
+    /robot/throw   持っている除草剤ボトルを 1 本, 前へ投げる
+    /robot/dice    ハンドの前のサイコロを前へ 1 面転がす
+    /robot/signal  合図 (満開宣言) の灯りを付ける / 消す
+    /match/start   試合を始める (セッティング中に呼ぶと飛ばす) / /match/retry リトライ / /match/reset 最初の位置に戻す
+  /match/status         std_msgs/msg/String       出す    モード・残り時間・得点の内訳・練習の課題 (JSON)
+
+画面とのやりとり (自分のノードからは使わない)
+  /match/ui     std_msgs/msg/String  受ける  キーの操作 ("drive vx vy wz", "arm extend 0.3", "act grab", "button 1", "mode course" など)
+                                             試し ("trial <課題の id>" / "trial off" / "skip"), お手本 ("demo auto" / "demo semi" / "demo stop")
+  /match/state  std_msgs/msg/String  出す    動く物の位置と向き, 状態 (JSON). 文言はキーと値 (訳の表の match.*) で送り, 画面が訳す
+キーの操作は /match/ui で受けるので, 判定では「キー」と「CLI (ros2 topic pub など)」と「自分のノード」を分けられる.
+
+判定 (赤コートの 1 チームで遊ぶ. ルールブック ver.1.0.1 の 3.6〜3.8, 5)
+  A エリア 2 に初めて進入 10 点 / B サイコロの目を初めて変える 20 点 / C 共通ゾーンに完全に接地した桜ボトル 1 本 30 点
+  D 雑草ゾーンに完全に接地していない雑草ボトル 1 本 -15 点 / E 五分咲き 90 点 / F 満開 180 点
+  桜ボトルは, 置いたときに 下の番号の共通ゾーンが全部埋まっている・自分の雑草ボトルが全部立っている・(12 番は) 五分咲き
+  のときだけ数える. 満開の状態で合図をすると満開宣言. 相手のコートに入ると強制リトライ (試合では止まる).
+
+試し: 練習の課題を選ぶと, その課題から始める. 進み具合は保存しない (遊んだ記録は変わらない). 試しの間は課題を済みにできる.
+お手本: 解答例 (publish_or_perish_answers の match_auto / match_semi) をノード名 demo_ で動かす. お手本を動かした回は,
+  練習の課題にも自己ベストにも数えない (R で最初の位置に戻すまで).
 
 物理は実時間に合わせて進める (重くて追いつかないときは遅れる). MuJoCo は Python 版 (pip の mujoco) を使う.
 """
 import json
 import math
 import os
+import signal
+import subprocess
 import time
 
 import mujoco
 import numpy as np
 import rclpy
-from ament_index_python.packages import get_package_share_directory
+from ament_index_python.packages import PackageNotFoundError, get_package_prefix, get_package_share_directory
 from geometry_msgs.msg import Point, Pose, Quaternion, Twist
+from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
-from std_msgs.msg import Float64, String
+from std_msgs.msg import Float64, Int32, String
 from std_srvs.srv import Trigger
-
 
 
 def load_messages():
@@ -75,6 +103,29 @@ CMD_TIMEOUT = 0.5        # [s]
 START_YAW = math.pi / 2  # スタートゾーンで奥 (+y) を向く
 EXTEND_MAX, LIFT_MAX = 0.42, 0.35
 EXTEND_SPEED, LIFT_SPEED = 0.4, 0.3   # [m/s]
+SETTING_SEC, MATCH_SEC = 60.0, 180.0  # 3.2.1, 1 試合 3 分
+POINTS = {'A': 10, 'B': 20, 'C': 30, 'D': -15, 'E': 90, 'F': 180}   # 項目の名前は訳の表の match.item.<記号>
+BEST_PATH = os.path.expanduser('~/.publish_or_perish/match_best.json')
+COURSE_PATH = os.path.expanduser('~/.publish_or_perish/match_course.json')
+UI_TIMEOUT = 0.3         # キーの走行指令が途切れたら止める [s]
+BUTTON_WINDOW = 6.0      # ボタンを押してから, この秒数の間の動きを「ボタンで動いた」とみなす
+
+# 練習の課題. 段階ごとに順番に済ませる. 説明は web/public/guide/<言語>/<id>.md,
+# 段階の名前は訳の表の match.level.<段階>, 課題の題は match.task.<id>
+COURSE = [
+    ('manual', ['m_exit', 'm_dice', 'm_grab', 'm_place', 'm_half', 'm_bloom']),
+    ('semi', ['s_button', 's_grab', 's_place', 's_dice', 's_bloom']),
+    ('auto', ['a_exit', 'a_dice', 'a_place', 'a_bloom']),
+]
+# 送り手の名前は訳の表の match.src.<送り手> (keyboard / cli / player)
+SOURCES = ('keyboard', 'cli', 'player')
+# 判定で「自分のノード」に数えないノード (画面の中継, ツール, このシミュレーター)
+# demo_ はお手本 (画面から起動した解答例)
+TOOL_PREFIXES = ('match_sim', 'rosbridge', 'rosapi', 'rviz', 'rqt', 'rosbag2', 'launch_ros_', 'transform_listener_impl', '_ros2cli_daemon',
+                 'demo_')
+# お手本: 種類 -> 解答例の実行ファイル
+DEMOS = {'auto': 'match_auto', 'semi': 'match_semi'}
+DEMO_LOG = os.path.expanduser('~/.publish_or_perish/demo.log')
 
 HOLD_DROP = 0.195        # ハンドの原点 (ボトルの首) からボトルの底まで [m]
 # ハンドの中で並べる位置 (ハンドの中心から 前, 左) [m]. 横 3 x 奥 2. 6 本で 0.22 x 0.15 m (共通ゾーン 1 つに収まる)
@@ -119,18 +170,39 @@ class MatchSim(Node):
         self.conaff = m.geom_conaffinity.copy()
         zone = m.site(f'{self.side}_dice')
         self.dice_zone = (m.site_pos[zone.id][:2].copy(), m.site_size[zone.id][:2].copy())
+        # ゾーンの長方形 (中心 xy, 半分の大きさ xy)
+        self.rect = {m.site(i).name: (m.site_pos[i][:2].copy(), m.site_size[i][:2].copy()) for i in range(m.nsite)}
+        self.sakura = [n for n in self.free if n.startswith(f'{self.side}_sakura')]
+        self.weeds = [n for n in self.free if n.startswith(f'{self.side}_weed')]
+        self.mode = 'free'        # free (自由走行) / course (練習) / match (試合)
+        self.phase = 'ready'      # 試合の段階: ready (始める前) / setting / match / finished
+        self.phase_t = 0.0
+        self.best = self.load_json(BEST_PATH)
+        self.course = self.load_json(COURSE_PATH)   # 済んだ課題の id -> 済んだ日時
+        self.trial = False        # 試し (練習の課題を選んで始めた. 進み具合を保存しない)
+        self.demo = None          # 動かしているお手本 (subprocess.Popen) と種類
+        self.demo_kind = ''
+        self.ui_cmd, self.ui_time = (0.0, 0.0, 0.0), -1.0
         self.reset()
 
         self.cmd = (0.0, 0.0, 0.0)
         self.cmd_time = -1.0
         self.create_subscription(Twist, '/robot/cmd_vel', self.on_cmd, 10)
-        self.create_subscription(Float64, '/robot/arm/extend', lambda msg: self.set_target('extend', msg.data), 10)
-        self.create_subscription(Float64, '/robot/arm/lift', lambda msg: self.set_target('lift', msg.data), 10)
+        self.create_subscription(Float64, '/robot/arm/extend', lambda m: self.on_arm('extend', m.data), 10)
+        self.create_subscription(Float64, '/robot/arm/lift', lambda m: self.on_arm('lift', m.data), 10)
+        self.create_subscription(String, '/match/ui', self.on_ui, 10)
+        self.button_pub = self.create_publisher(Int32, '/operator/button', 10)
+        self.now_pub = {k: self.create_publisher(Float64, f'/robot/arm/{k}_now', 10) for k in ('extend', 'lift')}
+        self.carrying_pub = self.create_publisher(Int32, '/robot/carrying', 10)
+        self.dice_pub = self.create_publisher(Int32, '/robot/dice_top', 10)
+        self.src_cache = {}
         self.pose_pub = self.create_publisher(Pose, '/robot/pose', 10)
         self.status_pub = self.create_publisher(String, '/robot/status', 10)
         self.state_pub = self.create_publisher(String, '/match/state', 10)
-        for name, fn in (('/robot/grab', self.grab), ('/robot/place', self.place), ('/robot/throw', self.throw),
-                         ('/robot/dice', self.roll_dice), ('/robot/signal', self.toggle_signal), ('/match/reset', self.on_reset)):
+        self.match_pub = self.create_publisher(String, '/match/status', 10)
+        self.actions = {'grab': self.grab, 'place': self.place, 'throw': self.throw, 'dice': self.roll_dice, 'signal': self.toggle_signal}
+        for name, fn in [(f'/robot/{k}', f) for k, f in self.actions.items()] + [
+                ('/match/reset', self.on_reset), ('/match/start', self.start), ('/match/retry', self.retry)]:
             self.create_service(Trigger, name, self.service(name, fn))
         self.create_timer(0.01, self.step)        # 物理を進める
         self.create_timer(1 / 30, self.publish)   # 画面・/robot/pose・/robot/status は 30 Hz
@@ -150,8 +222,23 @@ class MatchSim(Node):
         self.last_action = None   # 最後の操作の結果 (msg の形). 画面が訳す
         self.last_ok = True       # その操作がうまくいったか
         self.t0 = time.monotonic()
+        # 判定
+        self.got = {'A': False, 'B': False, 'E': False, 'F': False}
+        self.dice0 = self.dice_top()
+        self.placed = {}          # 桜ボトルの名前 -> (共通ゾーンの番号, 数えるか)
+        self.stopped = None       # 強制リトライで止めている理由 (msg の形)
+        self.message = None       # 画面に大きく出す知らせ (msg の形)
+        self.result = None
+        self.declared = False     # 満開宣言をした (練習で使う)
+        # この回 (最後に最初の位置に戻してから) の操作. 練習の自動・半自動の判定に使う
+        # demo: この回にお手本を動かしたか (動かしている間に R で戻しても, お手本は動き続けるので数えない)
+        self.run = {'drive': set(), 'mech': set(), 't0': self.d.time, 'demo': getattr(self, 'demo', None) is not None}
+        self.events = []          # (時刻, 種類, 送り手, 中身)
+        self.course_note = None   # いまの課題が済まない理由 (msg の形)
 
     def set_target(self, key, value):
+        if self.frozen():
+            return
         hi = EXTEND_MAX if key == 'extend' else LIFT_MAX
         self.target[key] = max(0.0, min(hi, float(value)))
 
@@ -196,14 +283,102 @@ class MatchSim(Node):
         c, s = math.cos(y), math.sin(y)
         return np.array([h[0] + c * fwd - s * lat, h[1] + s * fwd + c * lat, h[2] - HOLD_DROP]), yaw_quat(y)
 
+    # ------------------------------------------------------------ 誰が動かしたか
+    def classify(self, names):
+        cli = any(n.startswith('_ros2cli_') and not n.startswith('_ros2cli_daemon') for n in names)
+        player = any(not n.startswith('_ros2cli_') and not n.startswith(TOOL_PREFIXES) for n in names)
+        return 'player' if player and not cli else 'cli' if cli and not player else 'mixed' if cli and player else ''
+
+    def topic_source(self, topic):
+        """topic を publish しているノードが CLI か自分のノードか. 0.5 秒ごとに調べ直す."""
+        now = time.monotonic()
+        hit = self.src_cache.get(topic)
+        if hit and now - hit[0] < 0.5:
+            return hit[1]
+        src = self.classify([e.node_name for e in self.get_publishers_info_by_topic(topic)])
+        self.src_cache[topic] = (now, src)
+        return src
+
+    def service_source(self, service):
+        """service の client を持っているノードが CLI か自分のノードか (server には呼んだノードが分からないので, グラフから探す)."""
+        names = []
+        for name, ns in self.get_node_names_and_namespaces():
+            try:
+                if any(s == service for s, _ in self.get_client_names_and_types_by_node(name, ns)):
+                    names.append(name)
+            except Exception:
+                continue   # 調べている間にノードが終わった
+        return self.classify(names)
+
+    def used(self, kind, src):
+        """この回に使った操作を覚える. kind は drive (走る) か mech (機構)."""
+        for s_ in ('cli', 'player') if src == 'mixed' else (src,):
+            if s_:
+                self.run[kind].add(s_)
+
     # ------------------------------------------------------------ topic
-    def on_cmd(self, msg):
+    def on_cmd(self, twist):
         clamp = lambda v, lim: max(-lim, min(lim, v))
-        self.cmd = (clamp(msg.linear.x, MAX_LINEAR), clamp(msg.linear.y, MAX_LINEAR), clamp(msg.angular.z, MAX_ANGULAR))
+        self.cmd = (clamp(twist.linear.x, MAX_LINEAR), clamp(twist.linear.y, MAX_LINEAR), clamp(twist.angular.z, MAX_ANGULAR))
         self.cmd_time = time.monotonic()
+        if any(abs(v) > 1e-3 for v in self.cmd):
+            self.used('drive', self.topic_source('/robot/cmd_vel'))
+
+    def on_arm(self, key, value, src=None):
+        src = src or self.topic_source(f'/robot/arm/{key}')
+        if self.frozen():
+            return
+        before = self.target[key]
+        self.set_target(key, value)
+        if abs(self.target[key] - before) > 1e-4:
+            self.used('mech', src)
+            self.events.append((self.d.time, key, src, self.target[key]))
+
+    def on_ui(self, ui):
+        """画面のキーの操作."""
+        w = ui.data.split()
+        try:
+            self.handle_ui(w)
+        except (ValueError, IndexError):
+            self.get_logger().warning(render_en(msg('match.ui_bad', text=ui.data)))
+
+    def handle_ui(self, w):
+        if not w:
+            return
+        if w[0] == 'drive' and len(w) == 4:
+            self.ui_cmd = tuple(max(-MAX_LINEAR, min(MAX_LINEAR, float(v))) for v in w[1:])
+            self.ui_time = time.monotonic()
+            if any(abs(v) > 1e-3 for v in self.ui_cmd):
+                self.used('drive', 'keyboard')
+        elif w[0] == 'arm' and len(w) == 3:
+            self.on_arm(w[1], float(w[2]), 'keyboard')
+        elif w[0] == 'act' and len(w) == 2 and w[1] in self.actions:
+            self.do_action(f'/robot/{w[1]}', self.actions[w[1]], 'keyboard')
+        elif w[0] == 'button' and len(w) == 2:
+            self.events.append((self.d.time, 'button', 'keyboard', int(w[1])))
+            self.button_pub.publish(Int32(data=int(w[1])))
+        elif w[0] == 'mode' and len(w) == 2 and w[1] in ('free', 'course', 'match'):
+            self.mode, self.phase = w[1], 'ready'
+            self.reset()
+        elif w[0] == 'trial' and len(w) == 2:
+            self.end_trial() if w[1] == 'off' else self.start_trial(w[1])
+        elif w[0] == 'skip':
+            self.skip_task()
+        elif w[0] == 'demo' and len(w) == 2:
+            if w[1] == 'stop':
+                self.stop_demo()
+            elif w[1] in DEMOS:
+                self.start_demo(w[1])
+        elif w[0] in ('reset', 'retry', 'start'):
+            ok, m = {'reset': self.on_reset, 'retry': self.retry, 'start': self.start}[w[0]]()
+            self.last_action, self.last_ok = m, ok
 
     def step(self):
         vx, vy, wz = self.cmd if time.monotonic() - self.cmd_time < CMD_TIMEOUT else (0.0, 0.0, 0.0)
+        if time.monotonic() - self.ui_time < UI_TIMEOUT:
+            vx, vy, wz = self.ui_cmd
+        if self.frozen():
+            vx, vy, wz = 0.0, 0.0, 0.0
         # 機体座標の速度をワールドの向きにする (アクチュエーターはワールドの x, y の速度を受ける)
         yaw = self.d.qpos[self.yaw_adr]
         c, s = math.cos(yaw), math.sin(yaw)
@@ -215,6 +390,7 @@ class MatchSim(Node):
         self.advance(min(int(behind / self.m.opt.timestep), 25))
         if behind > 0.5:
             self.t0 += behind - 0.05
+        self.update_phase()
 
     def advance(self, n):
         dt = self.m.opt.timestep
@@ -251,16 +427,357 @@ class MatchSim(Node):
     # ------------------------------------------------------------ service
     def service(self, name, fn):
         def handle(_req, res):
-            res.success, m = fn()
+            src = self.service_source(name) if name.startswith('/robot/') else ''
+            res.success, m = self.do_action(name, fn, src)
             res.message = render_en(m)
-            self.last_action, self.last_ok = m, res.success
-            self.get_logger().info(f'{name}: {res.message}')
             return res
         return handle
 
+    def do_action(self, name, fn, src):
+        if self.frozen() and name.startswith('/robot/'):
+            return False, self.frozen()
+        ok, m = fn()
+        if name.startswith('/robot/'):
+            self.used('mech', src)
+            self.events.append((self.d.time, name.split('/')[-1], src, ok))
+            if src in SOURCES:
+                m = msg('match.by', text=m, src=msg(f'match.src.{src}'))
+        self.last_action, self.last_ok = m, ok
+        self.get_logger().info(f'{name}: {render_en(m)}')
+        return ok, m
+
     def on_reset(self):
+        if self.mode == 'match':
+            self.phase = 'ready'
         self.reset()
         return True, msg('match.reset')
+
+    # ------------------------------------------------------------ 試合の進行
+    def frozen(self):
+        """ロボットを動かせないときはその理由 (msg の形). 動かせるときは None."""
+        if self.mode == 'match' and self.phase == 'setting':
+            return msg('match.frozen.setting')
+        if self.mode == 'match' and self.phase == 'finished':
+            return msg('match.frozen.finished')
+        return self.stopped
+
+    def start(self):
+        self.mode = 'match'
+        if self.phase == 'setting':
+            self.phase, self.phase_t = 'match', self.d.time
+            self.message = msg('match.notice.start')
+            return True, msg('match.start.skip')
+        self.reset()
+        self.phase, self.phase_t = 'setting', self.d.time
+        self.message = msg('match.notice.setting', sec=f'{SETTING_SEC:.0f}')
+        return True, msg('match.start.setting', sec=f'{SETTING_SEC:.0f}')
+
+    def update_phase(self):
+        if self.mode != 'match':
+            return
+        t = self.d.time - self.phase_t
+        if self.phase == 'setting' and t >= SETTING_SEC:
+            self.phase, self.phase_t = 'match', self.d.time
+            self.message = msg('match.notice.start')
+        elif self.phase == 'match' and t >= MATCH_SEC:
+            self.finish(False)
+
+    def remaining(self):
+        if self.phase == 'setting':
+            return max(0.0, SETTING_SEC - (self.d.time - self.phase_t))
+        if self.phase == 'match':
+            return max(0.0, MATCH_SEC - (self.d.time - self.phase_t))
+        return None
+
+    def retry(self):
+        if self.mode == 'match' and self.phase not in ('match', 'ready'):
+            return False, msg('match.retry.not_now')
+        # ロボットをスタートゾーンへ (4.2). 持っていたボトルは最初の位置へ (4.6)
+        for name in list(self.carried):
+            self.release(name)
+            qa, va = self.free_adr(name)
+            self.d.qpos[qa:qa + 7] = self.m.qpos0[qa:qa + 7]
+            self.d.qvel[va:va + 6] = 0
+        for j in ('robot_x', 'robot_y', 'robot_yaw', 'robot_lift', 'robot_extend'):
+            jid = self.m.joint(j).id
+            self.d.qpos[self.m.jnt_qposadr[jid]] = START_YAW if j == 'robot_yaw' else 0.0
+            self.d.qvel[self.m.jnt_dofadr[jid]] = 0.0
+        self.target = {'extend': 0.0, 'lift': 0.0}
+        self.ctrl = {'extend': 0.0, 'lift': 0.0}
+        self.signal = False
+        self.stopped = None
+        mujoco.mj_forward(self.m, self.d)
+        return True, msg('match.retry.done')
+
+    def finish(self, declared):
+        self.phase = 'finished'
+        score, _ = self.score()
+        t = self.d.time - self.phase_t
+        self.result = {'score': score, 'declared': declared, 'time': round(t, 1)}
+        best = self.best
+        # お手本を動かした回と試しの間は, 自己ベストにしない
+        better = not self.run['demo'] and not self.trial and (
+            (declared and (not best.get('declared') or t < best.get('time', 1e9))) or
+            (not best.get('declared') and score > best.get('score', -1e9)))
+        if better:
+            self.best = dict(self.result)
+            self.save_json(BEST_PATH, self.best)
+        key = 'match.notice.declared' if declared else 'match.notice.time_up'
+        self.message = msg(key + ('_best' if better else ''), time=f'{t:.1f}', score=score)
+
+    def load_json(self, path):
+        try:
+            with open(path) as f:
+                return json.load(f)
+        except (OSError, ValueError):
+            return {}
+
+    def save_json(self, path, data):
+        try:
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w') as f:
+                json.dump(data, f, ensure_ascii=False)
+        except OSError:
+            pass
+
+    # ------------------------------------------------------------ 判定
+    def in_rect(self, zone, p, margin=0.0):
+        (cx, cy), (hx, hy) = self.rect[zone]
+        return abs(p[0] - cx) <= hx - margin and abs(p[1] - cy) <= hy - margin
+
+    def grounded_in(self, name, zone, radius):
+        """ボトルが zone の中に完全に接地しているか (立っていて, 底の円が全部 zone の中で, 持たれていない)."""
+        if name in self.carried:
+            return False
+        b = self.free[name]
+        p = self.d.xpos[b]
+        up = self.d.xmat[b].reshape(3, 3)[2, 2]
+        return up > 0.98 and p[2] < 0.005 and self.in_rect(zone, p, radius)
+
+    def robot_points(self):
+        """ロボットの正射影の点 (台車の角と辺の中点, ハンドの角, 腕の中ほど)."""
+        c = self.d.xpos[self.robot_id]
+        y = self.robot_yaw()
+        ux, uy = np.array([math.cos(y), math.sin(y)]), np.array([-math.sin(y), math.cos(y)])
+        pts = [c[:2] + ux * a + uy * b for a in (-0.225, 0, 0.225) for b in (-0.225, 0, 0.225)]
+        h = self.d.site_xpos[self.hand_site][:2]
+        pts += [h + ux * a + uy * b for a in (-0.11, 0.04) for b in (-0.13, 0.13)]
+        pts.append((c[:2] + ux * 0.225 + h) / 2)
+        return pts
+
+    def in_opponent_court(self, p):
+        # 赤と青の境 (x = 0) より右で, 共通ゾーン (梯子の内側とレール) の外
+        if p[0] <= 0.019:
+            return False
+        return not (p[0] <= 0.188 and -2.576 <= p[1] <= 3.462)
+
+    def referee(self):
+        if self.mode == 'match' and self.phase in ('setting', 'finished'):
+            return
+        pts = self.robot_points()
+        if not self.got['A'] and any(self.in_rect(f'{self.side}_area2', p) for p in pts):
+            self.got['A'] = True
+        if not self.got['B']:
+            top = self.dice_top()
+            if top and top != self.dice0:
+                self.got['B'] = True
+        weeds_ok = all(self.grounded_in(w, f'{self.side}_weed', 0.041) for w in self.weeds)
+        for name in self.sakura:
+            zone = next((n for n in range(1, 13) if self.grounded_in(name, f'common_{n}', 0.034)), None)
+            prev = self.placed.get(name)
+            if zone is None:
+                self.placed.pop(name, None)
+                continue
+            if prev and prev[0] == zone:
+                continue
+            # 置いたときに数えるかを決める (共通ゾーンの定義, 雑草ボトル, 満開の定義)
+            valid_zones = {z for z, ok in self.placed.values() if ok}
+            reason = None
+            if not all(k in valid_zones for k in range(1, zone)):
+                reason = msg('match.reason.order', below=zone - 1)
+            elif not weeds_ok:
+                reason = msg('match.reason.weed')
+            elif zone == 12 and len(valid_zones) < 5:
+                reason = msg('match.reason.early')
+            self.placed[name] = (zone, reason is None)
+            self.message = msg('match.notice.placed_skip', zone=zone, reason=reason) if reason else msg('match.notice.placed', zone=zone)
+        zones = {z for z, ok in self.placed.values() if ok}
+        if len(zones) >= 5:
+            self.got['E'] = True
+        if 12 in zones and self.got['E']:
+            self.got['F'] = True
+        if self.signal and 12 in zones and not self.declared:
+            self.declared = True
+            if self.mode == 'match' and self.phase == 'match':
+                self.finish(True)
+            else:
+                self.message = msg('match.notice.declared_free', time=f'{self.d.time - self.run["t0"]:.1f}')
+        if not self.stopped and any(self.in_opponent_court(p) for p in pts):
+            if self.mode == 'match' and self.phase == 'match':
+                self.stopped = msg('match.notice.opponent_stop')
+                self.message = self.stopped
+            elif self.mode == 'course':
+                self.message = msg('match.notice.opponent')
+        if self.mode == 'course':
+            self.check_course()
+
+    # ------------------------------------------------------------ 練習の課題
+    def course_tasks(self):
+        return [(lv, t) for lv, tasks in COURSE for t in tasks]
+
+    def current_task(self):
+        return next((t for _, t in self.course_tasks() if t not in self.course), None)
+
+    def after_button(self, n, kind, src='player', ok=True):
+        """ボタン n を押してから BUTTON_WINDOW 秒の間に, src が kind をしたか."""
+        presses = [t for t, k, s_, v in self.events if k == 'button' and v == n]
+        return any(k == kind and s_ == src and (v is ok if isinstance(ok, bool) else v >= ok) and
+                   any(0 <= t - tp <= BUTTON_WINDOW for tp in presses)
+                   for t, k, s_, v in self.events)
+
+    def only_player(self, kinds):
+        """kinds (drive / mech) の操作が, この回は全部自分のノードだったか. ダメなら理由 (msg の形), よければ None."""
+        for kind in (k for k in kinds if k in ('drive', 'mech')):
+            other = self.run[kind] - {'player'}
+            if other:
+                who = msg(f'match.src.{other.pop()}') if len(other) == 1 else msg('match.src.both')
+                return msg(f'match.note.other_{kind}', who=who)
+            if not self.run[kind]:
+                return msg(f'match.note.none_{kind}')
+        if 'auto' in kinds and any(k == 'button' for _, k, _, _ in self.events):
+            return msg('match.note.button')
+        return None
+
+    def check_course(self):
+        task = self.current_task()
+        if task is None:
+            return
+        if self.run['demo']:
+            self.course_note = msg('match.note.demo')
+            return
+        zones = {z for z, ok in self.placed.values() if ok}
+        carrying = any(n.startswith(f'{self.side}_sakura') for n in self.carried)
+        need, note = False, None
+        if task == 'm_exit':
+            need = self.got['A']
+        elif task == 'm_dice':
+            need = self.dice_top() == 6
+        elif task == 'm_grab':
+            need = carrying
+        elif task == 'm_place':
+            need = 1 in zones
+        elif task == 'm_half':
+            need = self.got['E']
+        elif task == 'm_bloom':
+            need = self.declared
+        elif task == 's_button':
+            need = self.after_button(1, 'lift', ok=0.1)
+            if not need and any(k == 'lift' and s_ != 'player' for _, k, s_, _ in self.events):
+                note = msg('match.note.lift_other')
+        elif task == 's_grab':
+            need = carrying and self.after_button(1, 'grab')
+        elif task == 's_place':
+            need = bool(zones) and self.after_button(2, 'place')
+        elif task == 's_dice':
+            need = self.after_button(3, 'dice')
+        elif task == 's_bloom':
+            need = self.declared
+            note = self.only_player(['mech']) if need else None
+            need = need and not note
+        elif task in ('a_exit', 'a_dice', 'a_place', 'a_bloom'):
+            need = {'a_exit': self.got['A'], 'a_dice': self.dice_top() == 6, 'a_place': 1 in zones,
+                    'a_bloom': self.declared and self.d.time - self.run['t0'] <= MATCH_SEC}[task]
+            kinds = ['drive', 'mech', 'auto'] if task != 'a_exit' else ['drive', 'auto']
+            note = self.only_player(kinds) if need else None
+            need = need and not note
+        self.course_note = note
+        if need:
+            self.course[task] = time.strftime('%Y-%m-%d %H:%M')
+            if not self.trial:
+                self.save_json(COURSE_PATH, self.course)
+            self.message = msg('match.notice.task_done', task=msg(f'match.task.{task}'))
+            self.get_logger().info(render_en(self.message))
+
+    # ------------------------------------------------------------ 試しとお手本
+    def start_trial(self, task):
+        """練習の課題 task から始める. それより前の課題は済みにし, 進み具合は保存しない."""
+        ids = [t for _, t in self.course_tasks()]
+        if task not in ids:
+            return
+        self.trial = True
+        self.course = {t: 'trial' for t in ids[:ids.index(task)]}
+        self.mode, self.phase = 'course', 'ready'
+        self.reset()
+        self.message = msg('match.notice.trial', task=msg(f'match.task.{task}'))
+
+    def end_trial(self):
+        self.trial = False
+        self.course = self.load_json(COURSE_PATH)
+        self.reset()
+        self.message = msg('match.notice.trial_end')
+
+    def skip_task(self):
+        task = self.current_task()
+        if not self.trial:
+            self.message = msg('match.notice.skip_trial_only')
+        elif task:
+            self.course[task] = 'skip'
+            self.message = msg('match.notice.task_done', task=msg(f'match.task.{task}'))
+
+    def start_demo(self, kind):
+        """お手本を動かす. 解答例は最初の位置から動く前提なので, 先に最初の位置に戻す."""
+        self.stop_demo(quiet=True)
+        try:
+            get_package_prefix('publish_or_perish_answers')
+        except PackageNotFoundError:
+            self.message = msg('match.notice.demo_missing')
+            return
+        if self.mode == 'match':
+            self.phase = 'ready'
+        self.reset()
+        exe = DEMOS[kind]
+        cmd = ['ros2', 'run', 'publish_or_perish_answers', exe, '--ros-args', '-r', f'__node:=demo_{exe}']
+        os.makedirs(os.path.dirname(DEMO_LOG), exist_ok=True)
+        with open(DEMO_LOG, 'a') as out:
+            # 自分のプロセスグループにして, ros2 run の子までまとめて止められるようにする
+            self.demo = subprocess.Popen(cmd, stdout=out, stderr=subprocess.STDOUT, start_new_session=True)
+        self.demo_kind = kind
+        self.run['demo'] = True
+        self.message = msg('match.notice.demo_start', cmd=' '.join(cmd))
+        self.get_logger().info(render_en(self.message))
+
+    def stop_demo(self, quiet=False):
+        if self.demo is None:
+            return
+        p, self.demo = self.demo, None
+        try:
+            os.killpg(p.pid, signal.SIGINT)
+            p.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            os.killpg(p.pid, signal.SIGKILL)
+            p.wait()
+        except ProcessLookupError:
+            pass
+        if not quiet:
+            self.message = msg('match.notice.demo_stop')
+
+    def course_status(self):
+        cur = self.current_task()
+        levels = [{'id': lv, 'tasks': [{'id': t, 'done': t in self.course} for t in tasks]} for lv, tasks in COURSE]
+        # run は, この回に台車と機構を動かした送り手 (keyboard / cli / player)
+        return {'levels': levels, 'current': cur, 'note': self.course_note, 'trial': self.trial,
+                'run': {k: sorted(self.run[k]) for k in ('drive', 'mech')},
+                'elapsed': round(self.d.time - self.run['t0'], 1)}
+
+    def score(self):
+        valid = sum(1 for _, ok in self.placed.values() if ok)
+        down = sum(1 for w in self.weeds if not self.grounded_in(w, f'{self.side}_weed', 0.041))
+        items = {'A': POINTS['A'] * self.got['A'], 'B': POINTS['B'] * self.got['B'], 'C': POINTS['C'] * valid,
+                 'D': POINTS['D'] * down, 'E': POINTS['E'] * self.got['E'], 'F': POINTS['F'] * self.got['F']}
+        detail = {k: {'points': v} for k, v in items.items()}
+        detail['C']['count'] = valid
+        detail['D']['count'] = down
+        return sum(items.values()), detail
 
     def grab(self):
         lift = self.d.qpos[self.lift_adr]
@@ -346,6 +863,9 @@ class MatchSim(Node):
 
     # ------------------------------------------------------------ 出力
     def publish(self):
+        if self.demo is not None and self.demo.poll() is not None:
+            self.demo = None   # お手本が自分で終わった (match_auto は全部やると終わる)
+            self.message = msg('match.notice.demo_end')
         # スライドの qpos は body の初期位置からのずれなので, 位置は xpos から取る
         rp = self.d.xpos[self.robot_id]
         w, _, _, z = yaw_quat(self.robot_yaw())
@@ -356,8 +876,21 @@ class MatchSim(Node):
                   'last_action': render_en(self.last_action) if self.last_action else '', 'action': self.last_action,
                   'action_ok': self.last_ok}
         self.status_pub.publish(String(data=json.dumps(status, ensure_ascii=False)))
+        self.now_pub['extend'].publish(Float64(data=float(self.d.qpos[self.ext_adr])))
+        self.now_pub['lift'].publish(Float64(data=float(self.d.qpos[self.lift_adr])))
+        self.carrying_pub.publish(Int32(data=len(self.carried)))
+        self.dice_pub.publish(Int32(data=int(status['dice'])))
+        self.referee()
+        total, items = self.score()
+        rem = self.remaining()
+        match = {'mode': self.mode, 'phase': self.phase, 'remaining': None if rem is None else round(rem, 1), 'score': total, 'items': items,
+                 'stopped': self.stopped, 'message': self.message, 'result': self.result, 'best': self.best,
+                 'placed': {n: {'zone': z, 'counted': ok} for n, (z, ok) in self.placed.items()},
+                 'course': self.course_status() if self.mode == 'course' else None,
+                 'demo': self.demo_kind if self.demo is not None else None, 'demo_run': self.run['demo'], 'trial': self.trial}
+        self.match_pub.publish(String(data=json.dumps(match, ensure_ascii=False)))
         bodies = {self.m.body(b).name: [round(float(v), 4) for v in (*self.d.xpos[b], *self.d.xquat[b])] for b in self.moving}
-        self.state_pub.publish(String(data=json.dumps({'t': round(self.d.time, 3), 'bodies': bodies, 'robot': status},
+        self.state_pub.publish(String(data=json.dumps({'t': round(self.d.time, 3), 'bodies': bodies, 'robot': status, 'match': match},
                                                       separators=(',', ':'), ensure_ascii=False)))
 
 
@@ -366,9 +899,10 @@ def main():
     node = MatchSim()
     try:
         rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    node.destroy_node()
+    except (KeyboardInterrupt, ExternalShutdownException):
+        pass   # Ctrl+C (launch を止めたとき). rclpy が先に終わっているので, ノードは消さずに抜ける
+    finally:
+        node.stop_demo(quiet=True)   # お手本のプロセスを残さない
     rclpy.try_shutdown()
 
 

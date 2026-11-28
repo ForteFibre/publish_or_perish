@@ -26,8 +26,8 @@ export const Bot = z.object({
   tank_max: z.number(),
   seed: z.string(),
   moving: flag,
-  /** 最後に cmd_vel を送ってきたのが誰か */
-  src: z.enum(['', 'cli', 'player', 'mixed']),
+  /** 最後に cmd_vel を送ってきたのが誰か. key は画面のキー (/farm/ui) */
+  src: z.enum(['', 'cli', 'player', 'mixed', 'key', 'demo']),
 })
 
 /** 題・説明・ヒントは訳の表の mission.<id>. unit は単位の種類 (unit.<unit>. 空なら単位なし) */
@@ -38,6 +38,8 @@ export const Mission = z.object({
   value: z.number(),
   done: flag,
   reward: z.number(),
+  /** お手本があるか (0: ない, 1: ある, 2: ある. 移動はキーで). 古い農場は送ってこない */
+  demo: z.union([z.literal(0), z.literal(1), z.literal(2)]).optional(),
 })
 
 /** 題と講習は訳の表の stage.<id> */
@@ -130,6 +132,12 @@ export const FarmState = z.object({
   package: z.string(),
   /** すべてのステージを終えると無い */
   stage: Stage.optional(),
+  /** 試し (選んだステージから, 遊んだ記録とは別の保存で遊んでいる) か */
+  trial: flag.optional(),
+  /** お手本を動かしている課題の id */
+  demo: z.string().nullable().optional(),
+  /** 全部のステージの id (選んで試すときに使う) */
+  stages: z.array(z.string()).optional(),
   /** 準備中のステージ. 名前は訳の表の upcoming.<id> */
   upcoming: z.array(z.string()),
   achievements: z.array(Achievement),
@@ -179,7 +187,20 @@ export function parseFarmState(json: string, check: boolean): FarmState {
 }
 
 /** /farm/ui に送る操作 */
-export type UiCommand = { kind: 'buy'; id: string } | { kind: 'speed'; value: number } | { kind: 'diag'; text: string }
+export type UiCommand =
+  | { kind: 'buy'; id: string }
+  | { kind: 'speed'; value: number }
+  | { kind: 'diag'; text: string }
+  /** キーで動かす (押している間 20 Hz で送る). 速度は機体の向き (x 前 / y 左 [m/s], z まわり [rad/s]) */
+  | { kind: 'drive'; bot: string; vx: number; vy: number; wz: number }
+  /** キーで足元のマスを操作する */
+  | { kind: 'act'; bot: string; what: 'plant' | 'water' | 'harvest' }
+  /** 試し: ステージの番号から始める. off で遊んだ記録に戻る */
+  | { kind: 'trial'; stage: number | 'off' }
+  /** 試しの間だけ: 課題を済みにする */
+  | { kind: 'skip'; id: string }
+  /** お手本を動かす. id が null なら止める */
+  | { kind: 'demo'; id: string | null }
 
 export function encodeUi(c: UiCommand): string {
   switch (c.kind) {
@@ -189,5 +210,15 @@ export function encodeUi(c: UiCommand): string {
       return `speed ${c.value}`
     case 'diag':
       return `diag ${c.text}`
+    case 'drive':
+      return `drive ${c.bot} ${c.vx.toFixed(2)} ${c.vy.toFixed(2)} ${c.wz.toFixed(2)}`
+    case 'act':
+      return `act ${c.bot} ${c.what}`
+    case 'trial':
+      return `trial ${c.stage}`
+    case 'skip':
+      return `skip ${c.id}`
+    case 'demo':
+      return c.id ? `demo ${c.id}` : 'demo stop'
   }
 }

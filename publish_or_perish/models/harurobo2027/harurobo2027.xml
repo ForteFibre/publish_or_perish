@@ -164,7 +164,7 @@
       <site name="common_12" class="zone" pos="0 3.231 0.001" size="0.15 0.231 0.001"/>
     </body>
 
-    <body name="red_sakura_1" pos="-3.387 1.624 0.0005">
+    <body name="red_sakura_1" pos="-3.387 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -172,7 +172,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_2" pos="-3.237 1.624 0.0005">
+    <body name="red_sakura_2" pos="-3.237 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -180,7 +180,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_3" pos="-3.087 1.624 0.0005">
+    <body name="red_sakura_3" pos="-3.087 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -188,7 +188,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_4" pos="-3.387 1.699 0.0005">
+    <body name="red_sakura_4" pos="-3.387 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -196,7 +196,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_5" pos="-3.237 1.699 0.0005">
+    <body name="red_sakura_5" pos="-3.237 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -204,7 +204,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_6" pos="-3.087 1.699 0.0005">
+    <body name="red_sakura_6" pos="-3.087 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -212,7 +212,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_7" pos="-3.387 1.774 0.0005">
+    <body name="red_sakura_7" pos="-3.387 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -220,7 +220,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_8" pos="-3.237 1.774 0.0005">
+    <body name="red_sakura_8" pos="-3.237 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -228,7 +228,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_9" pos="-3.087 1.774 0.0005">
+    <body name="red_sakura_9" pos="-3.087 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -236,7 +236,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_10" pos="-3.387 1.849 0.0005">
+    <body name="red_sakura_10" pos="-3.387 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -244,7 +244,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_11" pos="-3.237 1.849 0.0005">
+    <body name="red_sakura_11" pos="-3.237 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -252,7 +252,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_12" pos="-3.087 1.849 0.0005">
+    <body name="red_sakura_12" pos="-3.087 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -260,7 +260,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_13" pos="-3.387 1.924 0.0005">
+    <body name="red_sakura_13" pos="-3.387 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -268,7 +268,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_14" pos="-3.237 1.924 0.0005">
+    <body name="red_sakura_14" pos="-3.237 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -276,7 +276,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_red"/>
     </body>
-    <body name="red_sakura_15" pos="-3.087 1.924 0.0005">
+    <body name="red_sakura_15" pos="-3.087 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -374,7 +374,7 @@
       <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 -0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
       <geom class="pip" type="cylinder" size="0.011 0.0006" pos="0.0375 -0.075 0.0375" quat="0.7071 0.7071 0 0" material="dice_pip"/>
     </body>
-    <body name="blue_sakura_1" pos="3.387 1.624 0.0005">
+    <body name="blue_sakura_1" pos="3.387 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -382,7 +382,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_2" pos="3.237 1.624 0.0005">
+    <body name="blue_sakura_2" pos="3.237 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -390,7 +390,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_3" pos="3.087 1.624 0.0005">
+    <body name="blue_sakura_3" pos="3.087 1.4 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -398,7 +398,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_4" pos="3.387 1.699 0.0005">
+    <body name="blue_sakura_4" pos="3.387 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -406,7 +406,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_5" pos="3.237 1.699 0.0005">
+    <body name="blue_sakura_5" pos="3.237 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -414,7 +414,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_6" pos="3.087 1.699 0.0005">
+    <body name="blue_sakura_6" pos="3.087 1.475 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -422,7 +422,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_7" pos="3.387 1.774 0.0005">
+    <body name="blue_sakura_7" pos="3.387 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -430,7 +430,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_8" pos="3.237 1.774 0.0005">
+    <body name="blue_sakura_8" pos="3.237 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -438,7 +438,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_9" pos="3.087 1.774 0.0005">
+    <body name="blue_sakura_9" pos="3.087 1.55 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -446,7 +446,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_10" pos="3.387 1.849 0.0005">
+    <body name="blue_sakura_10" pos="3.387 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -454,7 +454,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_11" pos="3.237 1.849 0.0005">
+    <body name="blue_sakura_11" pos="3.237 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -462,7 +462,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_12" pos="3.087 1.849 0.0005">
+    <body name="blue_sakura_12" pos="3.087 2.04 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -470,7 +470,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_13" pos="3.387 1.924 0.0005">
+    <body name="blue_sakura_13" pos="3.387 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -478,7 +478,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_14" pos="3.237 1.924 0.0005">
+    <body name="blue_sakura_14" pos="3.237 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
@@ -486,7 +486,7 @@
       <geom class="bottle" type="cylinder" size="0.0143 0.0075" pos="0 0 0.1906"/>
       <geom class="bottle_cap" type="cylinder" size="0.0155 0.0085" pos="0 0 0.2045" material="cap_blue"/>
     </body>
-    <body name="blue_sakura_15" pos="3.087 1.924 0.0005">
+    <body name="blue_sakura_15" pos="3.087 2.115 0.0005">
       <freejoint/>
       <inertial pos="0 0 0.0852" mass="0.15" diaginertia="0.0006 0.0006 0.0001"/>
       <geom class="bottle" type="cylinder" size="0.034 0.0788" pos="0 0 0.0788"/>
